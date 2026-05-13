@@ -1,0 +1,81 @@
+/* Professional Corporate Aesthetics for Bar Enhanced */
+
+/* General Window Refinements */
+window {
+    background-color: @window_bg_color;
+}
+
+/* Sidebar Styling */
+.navigation-sidebar {
+    background-color: mix(@window_bg_color, @theme_fg_color, 0.02);
+    border-right: 1px solid alpha(@theme_fg_color, 0.05);
+}
+
+/* Preferences Groups (Cards) */
+preferencesgroup > box {
+    background-color: @card_bg_color;
+    border-radius: 12px;
+    border: 1px solid @card_border_color;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    padding: 6px;
+    margin-bottom: 12px;
+}
+
+/* Row Styling */
+row {
+    border-radius: 8px;
+    margin: 2px 4px;
+    transition: background 0.2s ease;
+}
+
+row:hover {
+    background-color: alpha(@theme_fg_color, 0.03);
+}
+
+/* Branding Labels */
+.openbar-title-label {
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    color: @theme_fg_color;
+}
+
+/* Suggested Action Buttons */
+button.suggested-action {
+    background-color: @accent_color;
+    color: @accent_fg_color;
+    font-weight: bold;
+    border-radius: 20px;
+}
+
+/* Destructive Action Buttons */
+button.destructive-action {
+    color: @error_color;
+    font-weight: bold;
+}
+
+/* Custom Banner Styling */
+.banner-container {
+    padding: 32px;
+    background: linear-gradient(180deg, alpha(@accent_color, 0.1) 0%, transparent 100%);
+    border-bottom: 1px solid alpha(@accent_color, 0.1);
+}
+
+/* Scales and Controls */
+scale {
+    margin-left: 12px;
+}
+
+switch {
+    margin-left: 12px;
+}
+
+/* Theme Store Customizations */
+.store-preview {
+    border-radius: 8px;
+    border: 1px solid alpha(@theme_fg_color, 0.1);
+}
+
+.pill {
+    border-radius: 99px;
+    padding: 6px 16px;
+}
