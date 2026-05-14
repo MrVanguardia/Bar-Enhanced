@@ -644,7 +644,8 @@ class BarEnhancedPrefs {
         f.add_button(T("Cancel"), Gtk.ResponseType.CANCEL); f.add_button(T("Save"), Gtk.ResponseType.ACCEPT);
         f.connect('response', (s, r) => {
             if (r == Gtk.ResponseType.ACCEPT) {
-                GLib.spawn_command_line_sync(`dconf dump ${SCHEMA_PATH} > "${f.get_file().get_path()}"`);
+                // Export from the correct path to ensure the file is valid for future imports
+                GLib.spawn_command_line_sync(`dconf dump /org/gnome/shell/extensions/barEnhanced/ > "${f.get_file().get_path()}"`);
             }
             f.destroy();
         });
