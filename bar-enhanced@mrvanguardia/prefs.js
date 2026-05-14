@@ -352,6 +352,7 @@ class BarEnhancedPrefs {
         mGroup.add(this.createSwitchRow('mbg-gradient', T('Surface Linear Gradient')));
         mGroup.add(this.createSwitchRow('smbgoverride', T('Secondary Palette Override')));
         const smRow = new Adw.ActionRow({ title: T('Secondary Surface') }); smRow.add_suffix(this.createColorButton(window, 'smbgcolor')); mGroup.add(smRow);
+        const tileDivRow = new Adw.ActionRow({ title: T('Tile Division Color') }); tileDivRow.add_suffix(this.createColorButton(window, 'qtile-border')); mGroup.add(tileDivRow);
         
         const mBordGroup = new Adw.PreferencesGroup({ title: T('Popups Geometry') });
         menuPage.add(mBordGroup);
@@ -642,10 +643,12 @@ class BarEnhancedPrefs {
     exportSettings(window) {
         let f = new Gtk.FileChooserDialog({ title: T("Export Configuration"), action: Gtk.FileChooserAction.SAVE, transient_for: window });
         f.add_button(T("Cancel"), Gtk.ResponseType.CANCEL); f.add_button(T("Save"), Gtk.ResponseType.ACCEPT);
+        f.set_current_name("bar_enhanced_config"); // Nombre por defecto
         f.connect('response', (s, r) => {
             if (r == Gtk.ResponseType.ACCEPT) {
+                let path = f.get_file().get_path();
                 // Export from the correct path to ensure the file is valid for future imports
-                GLib.spawn_command_line_sync(`dconf dump /org/gnome/shell/extensions/barEnhanced/ > "${f.get_file().get_path()}"`);
+                GLib.spawn_command_line_sync(`sh -c 'dconf dump /org/gnome/shell/extensions/barEnhanced/ > "${path}"'`);
             }
             f.destroy();
         });

@@ -337,6 +337,21 @@
       <summary>Transparency (alpha) Menu border</summary>
       <description>Transparency of Menu border.</description>
     </key>
+    <key type="as" name="qtile-border">
+      <default>['1.0', '1.0', '1.0']</default>
+      <summary>Quick Settings Tile Border Color (RGBA)</summary>
+      <description>Color of Quick Settings Tile Border.</description>
+    </key>
+    <key type="as" name="dark-qtile-border">
+      <default>['1.0', '1.0', '1.0']</default>
+      <summary>Quick Settings Tile Border Color (RGBA)</summary>
+      <description>Color of Quick Settings Tile Border.</description>
+    </key>
+    <key type="as" name="light-qtile-border">
+      <default>['1.0', '1.0', '1.0']</default>
+      <summary>Quick Settings Tile Border Color (RGBA)</summary>
+      <description>Color of Quick Settings Tile Border.</description>
+    </key>
     <key type="as" name="mhcolor">
       <default>['0', '0.7', '0.9']</default>
       <summary>Menu highlight Color (RGBA)</summary>

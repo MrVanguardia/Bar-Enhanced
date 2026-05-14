@@ -57,6 +57,9 @@ To install **Bar Enhanced** correctly, you must clone the repository and then mo
 ![Modern preferences window](screens/b2.png)  
 *New navigation interface with top tabs.*
 
+![Modern interface](screens/b3.png)  
+*Example of the interface.*
+
 
 ## 📜 License
 This program is free software: you can redistribute it and/or modify it under the terms of the **GNU General Public License version 3 (GPL-3.0)**.

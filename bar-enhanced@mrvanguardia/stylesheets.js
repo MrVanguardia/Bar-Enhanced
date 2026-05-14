@@ -1144,6 +1144,7 @@ function getStylesheet(obar, Me) {
     let menuRadius = obar._settings.get_double('menu-radius');
     let notifRadius = obar._settings.get_double('notif-radius');
     let qtoggleRadius = obar._settings.get_double('qtoggle-radius');
+    let qtileBorderColor = obar._settings.get_strv('qtile-border');
     let sliderHeight = obar._settings.get_double('slider-height');
     let sliHandBorder = obar._settings.get_double('handle-border');
     let mbgGradient = obar._settings.get_boolean('mbg-gradient');
@@ -1336,6 +1337,12 @@ function getStylesheet(obar, Me) {
     let mhbg = `rgba(${mhbgred},${mhbggreen},${mhbgblue},${1.0})`;
     // Save menu highlight hex for use in focused svg
     obar.mhHex = rgbToHex(mhbgred, mhbggreen, mhbgblue);
+
+    // Quick Settings Tile Border -
+    let qtbr = parseInt(parseFloat(qtileBorderColor[0]) * 255);
+    let qtbg = parseInt(parseFloat(qtileBorderColor[1]) * 255);
+    let qtbb = parseInt(parseFloat(qtileBorderColor[2]) * 255);
+    let qtcolor = `rgba(${qtbr},${qtbg},${qtbb},1.0)`;
 
     // Sub Menu Auto Highlight
     hgColor = [mhred, mhgreen, mhblue];
@@ -3137,10 +3144,36 @@ function getStylesheet(obar, Me) {
             color: rgba(${smfgred},${smfggreen},${smfgblue},1) !important;
         }
         .app-folder-dialog .folder-name-container .edit-folder-button,
-        .app-folder-dialog .folder-name-container .icon-button {
+        .quick-settings-tile .quick-settings-tile-main-button, 
+        .quick-settings-tile .quick-settings-tile-side-button,
+        .quick-settings-tile .quick-settings-tile-main-button:checked,
+        .quick-settings-tile .quick-settings-tile-side-button:checked,
+        .quick-settings-tile .quick-settings-tile-main-button:active,
+        .quick-settings-tile .quick-settings-tile-side-button:active {
             color: rgba(${mfgred},${mfggreen},${mfgblue},1) !important;
-            background-color: ${mbg} !important;
-            border-color: ${msc} !important;
+            border: 1px solid ${qtcolor} !important;
+            outline: none !important;
+            outline-width: 0 !important;
+            box-shadow: none !important;
+            margin: 0 !important;
+        } 
+        .quick-settings-tile .quick-settings-tile-main-button,
+        .quick-settings-tile .quick-settings-tile-main-button:checked {
+            border-radius: ${qtoggleRadius}px 0 0 ${qtoggleRadius}px !important;
+            border-right-width: 0.5px !important;
+        }
+        .quick-settings-tile .quick-settings-tile-side-button,
+        .quick-settings-tile .quick-settings-tile-side-button:checked {
+            border-radius: 0 ${qtoggleRadius}px ${qtoggleRadius}px 0 !important;
+            border-left-width: 0.5px !important;
+        }
+        .quick-settings-tile-main-button:hover, .quick-settings-tile-side-button:hover,
+        .quick-settings-tile-main-button:focus, .quick-settings-tile-side-button:focus {
+            background-color: ${mhbg} !important;
+            color: rgba(${mhfgred},${mhfggreen},${mhfgblue},1) !important;
+            border: none !important;
+            outline: none !important;
+            outline-width: 0 !important;
         }
         .app-folder-dialog .folder-name-container .edit-folder-button:hover,
         .app-folder-dialog .folder-name-container .edit-folder-button:focus,
