@@ -630,6 +630,7 @@ class BarEnhancedPrefs {
         f.add_button(T("Cancel"), Gtk.ResponseType.CANCEL); f.add_button(T("Open"), Gtk.ResponseType.ACCEPT);
         f.connect('response', (s, r) => {
             if (r == Gtk.ResponseType.ACCEPT) {
+                // Force direct dconf load into the specific path to bypass schema strictness
                 GLib.spawn_command_line_sync(`dconf load /org/gnome/shell/extensions/barEnhanced/ < "${f.get_file().get_path()}"`);
                 this.setTimeoutStyleReload();
             }
