@@ -27,7 +27,7 @@ import Soup from 'gi://Soup?version=3.0';
 import GdkPixbuf from 'gi://GdkPixbuf';
 import {ExtensionPreferences, gettext as _} from 'resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js';
 
-const SCHEMA_PATH = '/org/gnome/shell/extensions/bar-enhanced/';
+const SCHEMA_PATH = '/org/gnome/shell/extensions/barEnhanced/';
 
 // Automated translation fallback for Spanish
 const ES_MAP = {
@@ -630,7 +630,7 @@ class BarEnhancedPrefs {
         f.add_button(T("Cancel"), Gtk.ResponseType.CANCEL); f.add_button(T("Open"), Gtk.ResponseType.ACCEPT);
         f.connect('response', (s, r) => {
             if (r == Gtk.ResponseType.ACCEPT) {
-                GLib.spawn_command_line_sync(`dconf load ${SCHEMA_PATH} < "${f.get_file().get_path()}"`);
+                GLib.spawn_command_line_sync(`dconf load /org/gnome/shell/extensions/barEnhanced/ < "${f.get_file().get_path()}"`);
                 this.setTimeoutStyleReload();
             }
             f.destroy();
