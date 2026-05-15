@@ -25,7 +25,7 @@ import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 import Soup from 'gi://Soup?version=3.0';
 import GdkPixbuf from 'gi://GdkPixbuf';
-import {ExtensionPreferences, gettext as _} from 'resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js';
+import { ExtensionPreferences, gettext as _ } from 'resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js';
 
 const SCHEMA_PATH = '/org/gnome/shell/extensions/barEnhanced/';
 
@@ -108,7 +108,13 @@ const ES_MAP = {
     'Theme Sharing': 'Compartir Tema', 'Export to Code': 'Exportar a Código', 'Import from Code': 'Importar desde Código',
     'Paste theme code here:': 'Pega el código del tema aquí:', 'Copy this code:': 'Copia este código:',
     'Theme code is invalid.': 'El código del tema no es válido.', 'Theme applied successfully!': '¡Tema aplicado con éxito!',
-    'Design Presets': 'Preajustes de Diseño'
+    'Design Presets': 'Preajustes de Diseño', 'Search themes...': 'Buscar temas...', 'Featured Themes & Icons': 'Iconos y Temas Destacados',
+    'Download community styles.': 'Descarga estilos de la comunidad.', 'Searching for': 'Buscando', 'Search failed.': 'Búsqueda fallida.',
+    'Interface Font': 'Fuente de la Interfaz', 'Select custom font for the shell.': 'Selecciona una fuente personalizada para el shell.',
+    'Reset Font': 'Restablecer Fuente', 'Reset to default system font.': 'Restablecer a la fuente predeterminada del sistema.',
+    'Auto-Set Bar foreground color': 'Auto-Ajustar Texto de Barra', 'Auto-Set Menu foreground color': 'Auto-Ajustar Texto de Menú',
+    'True Color': 'Color Real', 'Pastel Theme': 'Tema Pastel', 'Dark Theme': 'Tema Oscuro', 'Light Theme': 'Tema Claro',
+    'Select Theme': 'Seleccionar Tema'
 };
 
 const T = (text) => {
@@ -165,7 +171,7 @@ class BarEnhancedPrefs {
             use_markup: true, justify: Gtk.Justification.CENTER
         });
         bannerBox.append(titleLabel);
-        const introGroup = new Adw.PreferencesGroup({ 
+        const introGroup = new Adw.PreferencesGroup({
             title: T('Architecture & Design'),
             description: T('Open Bar allows you to theme the Top Bar, Pop-up Menus, Dash, Dock and the rest of the GNOME Shell environment.')
         });
@@ -225,12 +231,12 @@ class BarEnhancedPrefs {
         lightRow.connect('notify::selected', () => this._settings.set_string('autotheme-light', darkOptions[lightRow.get_selected()][0]));
         applyGroup.add(lightRow);
 
-        const autoBtn = new Gtk.Button({ 
-            label: T('Apply Auto-Theme Engine'), 
-            halign: Gtk.Align.CENTER, 
+        const autoBtn = new Gtk.Button({
+            label: T('Apply Auto-Theme Engine'),
+            halign: Gtk.Align.CENTER,
             margin_top: 20,
             margin_bottom: 20,
-            css_classes: ['suggested-action', 'pill'] 
+            css_classes: ['suggested-action', 'pill']
         });
         autoBtn.connect('clicked', () => this.triggerAutoTheme());
         applyGroup.add(autoBtn);
@@ -280,12 +286,49 @@ class BarEnhancedPrefs {
         window.add(aesPage);
         const cGroup = new Adw.PreferencesGroup({ title: T('Primary Colors') });
         aesPage.add(cGroup);
-        const fgRow = new Adw.ActionRow({ title: T('Interface Foreground') }); fgRow.add_suffix(this.createColorButton(window, 'fgcolor')); cGroup.add(fgRow);
+        const fgRow = new Adw.ActionRow({ title: T('Interface Foreground') }); 
+        fgRow.add_suffix(this.createColorButton(window, 'fgcolor')); 
+        fgRow.add_suffix(this.createSwitch('autofg-bar'));
+        cGroup.add(fgRow);
         cGroup.add(this.createScaleRow('fgalpha', T('Foreground Opacity'), 0, 1, 0.01));
         const bgRow = new Adw.ActionRow({ title: T('Interface Background') }); bgRow.add_suffix(this.createColorButton(window, 'bgcolor')); cGroup.add(bgRow);
         cGroup.add(this.createScaleRow('bgalpha', T('Background Opacity'), 0, 1, 0.01));
         const boxRow = new Adw.ActionRow({ title: T('Box / Sidebar Color') }); boxRow.add_suffix(this.createColorButton(window, 'boxcolor')); cGroup.add(boxRow);
         
+        // Selector de Fuente en Estética
+        const fontRow = new Adw.ActionRow({ 
+            title: T('Interface Font'),
+            subtitle: T('Select custom font for the shell.')
+        });
+        const fontButton = new Gtk.FontButton({ 
+            valign: Gtk.Align.CENTER,
+            use_font: true,
+            use_size: true
+        });
+        let currentFont = this._settings.get_string('font');
+        if (currentFont === "") {
+            let defFont = fontButton.get_font();
+            this._settings.set_string('default-font', defFont);
+            currentFont = defFont;
+        }
+        fontButton.set_font(currentFont);
+        fontButton.connect('font-set', (w) => this._settings.set_string('font', w.get_font()));
+        this._settings.connect('changed::font', () => fontButton.set_font(this._settings.get_string('font')));
+
+        const resetFontBtn = new Gtk.Button({
+            icon_name: 'edit-clear-all-symbolic',
+            valign: Gtk.Align.CENTER,
+            tooltip_text: T('Reset to default system font.'),
+            css_classes: ['flat']
+        });
+        resetFontBtn.connect('clicked', () => {
+            this._settings.reset('font');
+            fontButton.set_font(this._settings.get_string('default-font'));
+        });
+        fontRow.add_suffix(fontButton);
+        fontRow.add_suffix(resetFontBtn);
+        cGroup.add(fontRow);
+
         const gGroup = new Adw.PreferencesGroup({ title: T('Gradients & Shadows') });
         aesPage.add(gGroup);
         gGroup.add(this.createSwitchRow('gradient', T('Enable Color Gradients')));
@@ -301,7 +344,7 @@ class BarEnhancedPrefs {
         const candyBox = new Gtk.Box({ orientation: Gtk.Orientation.VERTICAL, spacing: 6, margin_top: 10 });
         const cBox1 = new Gtk.Box({ spacing: 4, halign: Gtk.Align.CENTER });
         const cBox2 = new Gtk.Box({ spacing: 4, halign: Gtk.Align.CENTER });
-        for(let i=1; i<=16; i++) { (i<=8?cBox1:cBox2).append(this.createColorButton(window, 'candy'+i)); }
+        for (let i = 1; i <= 16; i++) { (i <= 8 ? cBox1 : cBox2).append(this.createColorButton(window, 'candy' + i)); }
         candyBox.append(cBox1); candyBox.append(cBox2);
         candyGroup.header_widget = candyBox;
 
@@ -333,7 +376,7 @@ class BarEnhancedPrefs {
         radBox.append(this.createToggleButton('TL', 'radius-topleft')); radBox.append(this.createToggleButton('TR', 'radius-topright'));
         radBox.append(this.createToggleButton('BL', 'radius-bottomleft')); radBox.append(this.createToggleButton('BR', 'radius-bottomright'));
         const radRow = new Adw.ActionRow({ title: T('Apply Rounding to') }); radRow.add_suffix(radBox); bGroup.add(radRow);
-        
+
         const bColRow = new Adw.ActionRow({ title: T('Border Stroke Color') }); bColRow.add_suffix(this.createColorButton(window, 'bcolor')); bGroup.add(bColRow);
         bGroup.add(this.createScaleRow('balpha', T('Stroke Transparency'), 0, 1, 0.01));
         bGroup.add(this.createSwitchRow('neon', T('Neon Luminosity Glow')));
@@ -345,7 +388,10 @@ class BarEnhancedPrefs {
         menuPage.add(mGroup);
         mGroup.add(this.createSwitchRow('menustyle', T('Enable Specialized Popup Styles')));
         mGroup.add(this.createSwitchRow('autofg-menu', T('Auto Foreground Contrast')));
-        const mfgRow = new Adw.ActionRow({ title: T('Text Color') }); mfgRow.add_suffix(this.createColorButton(window, 'mfgcolor')); mGroup.add(mfgRow);
+        const mfgRow = new Adw.ActionRow({ title: T('Text Color') }); 
+        mfgRow.add_suffix(this.createColorButton(window, 'mfgcolor')); 
+        mfgRow.add_suffix(this.createSwitch('autofg-menu'));
+        mGroup.add(mfgRow);
         mGroup.add(this.createScaleRow('mfgalpha', T('Text Transparency'), 0, 1, 0.01));
         const mbgRow = new Adw.ActionRow({ title: T('Background Color') }); mbgRow.add_suffix(this.createColorButton(window, 'mbgcolor')); mGroup.add(mbgRow);
         mGroup.add(this.createScaleRow('mbgalpha', T('Background Transparency'), 0, 1, 0.01));
@@ -353,7 +399,7 @@ class BarEnhancedPrefs {
         mGroup.add(this.createSwitchRow('smbgoverride', T('Secondary Palette Override')));
         const smRow = new Adw.ActionRow({ title: T('Secondary Surface') }); smRow.add_suffix(this.createColorButton(window, 'smbgcolor')); mGroup.add(smRow);
         const tileDivRow = new Adw.ActionRow({ title: T('Tile Division Color') }); tileDivRow.add_suffix(this.createColorButton(window, 'qtile-border')); mGroup.add(tileDivRow);
-        
+
         const mBordGroup = new Adw.PreferencesGroup({ title: T('Popups Geometry') });
         menuPage.add(mBordGroup);
         const mbColRow = new Adw.ActionRow({ title: T('Outline Color') }); mbColRow.add_suffix(this.createColorButton(window, 'mbcolor')); mBordGroup.add(mbColRow);
@@ -401,6 +447,8 @@ class BarEnhancedPrefs {
         appGroup.add(this.createSwitchRow('apply-flatpak', T('Extend Support to Flatpak Sandbox')));
         appGroup.add(this.createScaleRow('headerbar-hint', T('Headerbar Luminosity Hint'), 0, 100));
         appGroup.add(this.createScaleRow('sidebar-hint', T('Sidebar Luminosity Hint'), 0, 100));
+        appGroup.add(this.createScaleRow('card-hint', T('Card Luminosity Hint'), 0, 100));
+        appGroup.add(this.createScaleRow('window-hint', T('Main Window Luminosity Hint'), 0, 100));
         appGroup.add(this.createScaleRow('winbradius', T('Global Window Corner Rounding'), 0, 25));
         appGroup.add(this.createSwitchRow('set-yarutheme', T('Coordinate with Yaru System Palette')));
 
@@ -474,6 +522,13 @@ class BarEnhancedPrefs {
 
     // --- HELPER METHODS ---
 
+    createSwitch(key) {
+        const sw = new Gtk.Switch({ valign: Gtk.Align.CENTER });
+        this._settings.bind(key, sw, 'active', Gio.SettingsBindFlags.DEFAULT);
+        sw.connect('state-set', () => this.setTimeoutStyleReload());
+        return sw;
+    }
+
     createSwitchRow(key, title, subtitle = '') {
         const row = new Adw.SwitchRow({ title, subtitle });
         this._settings.bind(key, row, 'active', Gio.SettingsBindFlags.DEFAULT);
@@ -521,6 +576,9 @@ class BarEnhancedPrefs {
             this._settings.set_strv(key, vals);
             const prefix = this._settings.get_string('color-scheme') === 'prefer-dark' ? 'dark-' : 'light-';
             this._settings.set_strv(`${prefix}${key}`, vals);
+            // Connect settings to update/save/reload stylesheet
+            const menuKeys = ['menustyle', 'mfgcolor', 'mfgalpha', 'mbgcolor', 'mbgalpha', 'mbcolor', 'mbalpha', 'mhcolor', 'mscolor', 'mshcolor', 'mshalpha', 'menu-radius', 'notif-radius', 'qtoggle-radius', 'slider-height', 'qtile-border', 'font'];
+            menuKeys.forEach(k => this._settings.connect(`changed::${k}`, () => this.triggerStyleReload()));
             this.triggerStyleReload();
         });
         this._settings.connect(`changed::${key}`, () => {
@@ -751,7 +809,7 @@ class BarEnhancedPrefs {
                 while ((name = dir.read_name())) {
                     if (name !== '.' && name !== '..' && !assets.includes(name)) assets.push(name);
                 }
-            } catch (e) {}
+            } catch (e) { }
         });
         return assets.sort();
     }
@@ -781,7 +839,7 @@ class BarEnhancedPrefs {
             ['curl', '-L', url, '-o', tempPath],
             Gio.SubprocessFlags.NONE
         );
-        
+
         proc.wait_async(null, (p, res) => {
             try {
                 p.wait_finish(res);
@@ -793,12 +851,12 @@ class BarEnhancedPrefs {
     }
 
     installAsset(filePath, callback) {
-        const destDir = filePath.toLowerCase().includes('icon') 
-            ? GLib.get_home_dir() + '/.local/share/icons' 
+        const destDir = filePath.toLowerCase().includes('icon')
+            ? GLib.get_home_dir() + '/.local/share/icons'
             : GLib.get_home_dir() + '/.local/share/themes';
-        
+
         GLib.mkdir_with_parents(destDir, 0o755);
-        
+
         const extractCmd = filePath.endsWith('.zip')
             ? ['unzip', '-o', filePath, '-d', destDir]
             : ['tar', '-xf', filePath, '-C', destDir];
@@ -815,128 +873,320 @@ class BarEnhancedPrefs {
     }
 
     openStoreModal(parent, iconRow) {
-        const storeWindow = new Adw.Window({ 
-            title: T('Theme Store'), 
-            modal: true, 
-            transient_for: parent, 
-            default_width: 500, 
-            default_height: 600 
+        const storeWindow = new Adw.Window({
+            title: T('Theme Store'),
+            modal: true,
+            transient_for: parent,
+            default_width: 500,
+            default_height: 600
         });
         const toolbarView = new Adw.ToolbarView();
         const header = new Adw.HeaderBar();
         toolbarView.add_top_bar(header);
-        
-        const scroll = new Gtk.ScrolledWindow({ vexpand: true });
-        const page = new Adw.PreferencesPage();
-        const group = new Adw.PreferencesGroup({ 
-            title: T('Featured Icons'), 
-            description: T('Download community icons.') 
+
+        const mainBox = new Gtk.Box({ orientation: Gtk.Orientation.VERTICAL });
+
+        // Contenedor fijo para el buscador
+        const searchBox = new Gtk.Box({
+            orientation: Gtk.Orientation.VERTICAL,
+            margin_start: 24,
+            margin_end: 24,
+            margin_top: 12,
+            margin_bottom: 6
         });
-        group.set_margin_start(24);
-        group.set_margin_end(24);
-        group.set_margin_top(12);
-        
-        page.add(group);
-        scroll.set_child(page);
-        toolbarView.set_content(scroll);
-        storeWindow.set_content(toolbarView);
+        const searchBar = new Gtk.SearchEntry({
+            placeholder_text: T('Search themes...')
+        });
+        searchBox.append(searchBar);
+        mainBox.append(searchBox);
+
+        const scroll = new Gtk.ScrolledWindow({
+            vexpand: true,
+            hexpand: true,
+            min_content_height: 450,
+            propagate_natural_height: true
+        });
+
+        const page = new Adw.PreferencesPage();
+        const group = new Adw.PreferencesGroup({
+            title: T('Featured Themes & Icons'),
+            description: T('Download community styles.')
+        });
 
         const loadingLabel = new Gtk.Label({ label: T('Loading themes...'), margin_top: 20 });
         group.add(loadingLabel);
-        
+
+        searchBar.connect('search-changed', () => {
+            const term = searchBar.get_text();
+            if (this.searchTimeoutId) GLib.Source.remove(this.searchTimeoutId);
+
+            if (term.length === 0) {
+                this.fetchOnlineThemes(group, loadingLabel, iconRow);
+            } else if (term.length > 2) {
+                this.searchTimeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 500, () => {
+                    this.searchOnlineThemes(group, term, iconRow);
+                    this.searchTimeoutId = null;
+                    return GLib.SOURCE_REMOVE;
+                });
+            }
+        });
+
+        searchBar.connect('activate', () => {
+            const term = searchBar.get_text();
+            if (term.length > 2) {
+                this.searchOnlineThemes(group, term, iconRow);
+            }
+        });
+
+        // Font Selection Logic from .bat
+        const fontRow = new Adw.ActionRow({
+            title: T('Interface Font'),
+            subtitle: T('Select custom font for the shell.')
+        });
+
+        const fontButton = new Gtk.FontButton({
+            valign: Gtk.Align.CENTER,
+            use_font: true,
+            use_size: true
+        });
+
+        // Initialize default-font if empty
+        let currentFont = this._settings.get_string('font');
+        if (currentFont === "") {
+            let defFont = fontButton.get_font();
+            this._settings.set_string('default-font', defFont);
+            currentFont = defFont;
+        }
+        fontButton.set_font(currentFont);
+
+        fontButton.connect('font-set', (w) => {
+            this._settings.set_string('font', w.get_font());
+        });
+
+        this._settings.connect('changed::font', () => {
+            fontButton.set_font(this._settings.get_string('font'));
+        });
+
+        const resetFontBtn = new Gtk.Button({
+            icon_name: 'edit-clear-all-symbolic',
+            valign: Gtk.Align.CENTER,
+            tooltip_text: T('Reset to default system font.'),
+            css_classes: ['flat']
+        });
+        resetFontBtn.connect('clicked', () => {
+            this._settings.reset('font');
+            fontButton.set_font(this._settings.get_string('default-font'));
+        });
+
+        fontRow.add_suffix(fontButton);
+        fontRow.add_suffix(resetFontBtn);
+        group.add(fontRow);
+
+        page.add(group);
+        scroll.set_child(page);
+        mainBox.append(scroll);
+
+        toolbarView.set_content(mainBox);
+        storeWindow.set_content(toolbarView);
+
         this.fetchOnlineThemes(group, loadingLabel, iconRow);
         storeWindow.show();
     }
 
-    fetchOnlineThemes(group, loadingLabel, iconRow) {
+    searchOnlineThemes(group, term, iconRow) {
+        // Limpiar resultados anteriores
+        group.get_children().forEach(child => {
+            if (child instanceof Adw.ActionRow || child instanceof Gtk.Label) group.remove(child);
+        });
+
+        const loadingLabel = new Gtk.Label({ label: T('Searching for') + ': "' + term + '"...', margin_top: 20 });
+        group.add(loadingLabel);
+
         const session = new Soup.Session();
-        const url = 'https://www.pling.com/ocs/v1/content/data?categories=121&sort=rating&pagesize=100&format=json';
+        // Búsqueda global (search=term)
+        const url = `https://www.pling.com/ocs/v1/content/data?search=${encodeURIComponent(term)}&sort=rating&pagesize=100&format=json`;
         const message = Soup.Message.new('GET', url);
         message.request_headers.append('User-Agent', 'Bar-Enhanced-Extension/1.0');
-        
-        session.send_and_read_async(message, GLib.PRIORITY_DEFAULT, null, (session, res) => {
-            let data = null;
+
+        session.send_and_read_async(message, GLib.PRIORITY_DEFAULT, null, (s, res) => {
             try {
-                const bytes = session.send_and_read_finish(res);
+                const bytes = s.send_and_read_finish(res);
                 const decoder = new TextDecoder('utf-8');
                 const jsonText = decoder.decode(bytes.get_data());
                 const response = JSON.parse(jsonText);
-                data = response.ocs.data.content;
+                const data = response.ocs.data.content;
+                this.renderThemeList(group, loadingLabel, iconRow, data);
             } catch (e) {
-                console.error('API Error, using fallback list:', e);
-                data = [
-                    { name: 'WhiteSur Icons', previewpic1: 'https://www.pling.com/img/d/7/4/1/f45a05b38d39369a4736f88f24a0d92f9f1b.png', downloadlink1: 'https://github.com/vinceliuice/WhiteSur-icon-theme/archive/refs/heads/master.tar.gz' },
-                    { name: 'Tela Circle Icons', previewpic1: 'https://www.pling.com/img/5/0/0/2/026859e43673c6833b666a012c478a29b43d.png', downloadlink1: 'https://github.com/vinceliuice/Tela-circle-icon-theme/archive/refs/heads/master.tar.gz' },
-                    { name: 'Papirus Icons', previewpic1: 'https://www.pling.com/img/7/2/6/4/d17a3a60a80e194a821e905d400269357494.png', downloadlink1: 'https://github.com/PapirusDevelopmentTeam/papirus-icon-theme/archive/refs/heads/master.tar.gz' },
-                    { name: 'Fluent Icons', previewpic1: 'https://www.pling.com/img/6/0/4/b/e26859e43673c6833b666a012c478a29b43d.png', downloadlink1: 'https://github.com/vinceliuice/Fluent-icon-theme/archive/refs/heads/master.tar.gz' }
-                ];
+                loadingLabel.set_label(T('Search failed.'));
             }
+        });
+    }
 
-            if (!data || (Array.isArray(data) && data.length === 0)) {
-                loadingLabel.set_label(T('No themes found or API error.'));
-                return;
-            }
+    fetchOnlineThemes(group, loadingLabel, iconRow) {
+        const session = new Soup.Session();
+        // Categorías: 121 (Icons), 135 (GTK3/4 Themes), 109 (GNOME Shell Themes)
+        const categories = ['121', '135', '109'];
+        let allThemes = [];
+        let completed = 0;
 
-            group.remove(loadingLabel);
-            const themes = Array.isArray(data) ? data : [data];
-            const installedIcons = this.getInstalledAssets('icons');
+        categories.forEach(cat => {
+            const url = `https://www.pling.com/ocs/v1/content/data?categories=${cat}&sort=rating&pagesize=50&format=json`;
+            const message = Soup.Message.new('GET', url);
+            message.request_headers.append('User-Agent', 'Bar-Enhanced-Extension/1.0');
 
-            themes.forEach((item) => {
-                const name = item.name;
-                const link = item.downloadlink1;
-                const preview = item.previewpic1 || item.previewpic2;
-                if (!link || link.length < 10) return;
-                
-                // Check if already installed (simple name match)
-                const isInstalled = installedIcons.some(i => name.toLowerCase().includes(i.toLowerCase()) || i.toLowerCase().includes(name.toLowerCase()));
-
-                const row = new Adw.ActionRow({ title: name });
-                
-                if (preview) {
-                    const picture = new Gtk.Picture({ 
-                        can_shrink: true, 
-                        width_request: 64, 
-                        height_request: 64,
-                        margin_end: 12,
-                        halign: Gtk.Align.START,
-                        valign: Gtk.Align.CENTER,
-                        file: Gio.File.new_for_uri(preview),
-                        css_classes: ['store-preview']
-                    });
-                    row.add_prefix(picture);
+            session.send_and_read_async(message, GLib.PRIORITY_DEFAULT, null, (s, res) => {
+                try {
+                    const bytes = s.send_and_read_finish(res);
+                    const decoder = new TextDecoder('utf-8');
+                    const jsonText = decoder.decode(bytes.get_data());
+                    const response = JSON.parse(jsonText);
+                    const data = response.ocs.data.content;
+                    if (data) {
+                        const items = Array.isArray(data) ? data : [data];
+                        allThemes = [...allThemes, ...items];
+                    }
+                } catch (e) {
+                    console.error('Error fetching cat ' + cat, e);
                 }
 
-                const btn = new Gtk.Button({ 
-                    label: isInstalled ? T('Installed') : T('Install'), 
-                    valign: Gtk.Align.CENTER, 
-                    css_classes: isInstalled ? ['pill', 'flat'] : ['pill', 'suggested-action'],
-                    sensitive: !isInstalled
-                });
-
-                btn.connect('clicked', () => {
-                    btn.set_sensitive(false);
-                    btn.set_label(T('Downloading...'));
-                    this.downloadAndInstall(link, name, () => {
-                        btn.set_label(T('Installed'));
-                        btn.add_css_class('flat');
-                        const icons = this.getInstalledAssets('icons');
-                        const iconModel = new Gtk.StringList(); icons.forEach(i => iconModel.append(i));
-                        iconRow.set_model(iconModel);
-                    });
-                });
-                row.add_suffix(btn);
-                group.add(row);
+                completed++;
+                if (completed === categories.length) {
+                    this.renderThemeList(group, loadingLabel, iconRow, allThemes);
+                }
             });
         });
     }
 
-    // Remote image loading is now handled natively by Gtk.Picture.file
+    renderThemeList(group, loadingLabel, iconRow, data) {
+        if (!data || data.length === 0) {
+            // Fallback ampliado si la API falla
+            data = [
+                { name: 'WhiteSur Icons', previewpic1: 'https://www.pling.com/img/d/7/4/1/f45a05b38d39369a4736f88f24a0d92f9f1b.png', downloadlink1: 'https://github.com/vinceliuice/WhiteSur-icon-theme/archive/refs/heads/master.tar.gz' },
+                { name: 'Tela Circle Icons', previewpic1: 'https://www.pling.com/img/5/0/0/2/026859e43673c6833b666a012c478a29b43d.png', downloadlink1: 'https://github.com/vinceliuice/Tela-circle-icon-theme/archive/refs/heads/master.tar.gz' },
+                { name: 'Fluent GTK Theme', previewpic1: 'https://www.pling.com/img/a/b/c/d/fluent.png', downloadlink1: 'https://github.com/vinceliuice/Fluent-gtk-theme/archive/refs/heads/master.tar.gz' },
+                { name: 'Colloid GTK Theme', previewpic1: 'https://www.pling.com/img/x/y/z/colloid.png', downloadlink1: 'https://github.com/vinceliuice/Colloid-gtk-theme/archive/refs/heads/master.tar.gz' },
+                { name: 'Orchis Theme', previewpic1: 'https://www.pling.com/img/o/r/c/h/orchis.png', downloadlink1: 'https://github.com/vinceliuice/Orchis-theme/archive/refs/heads/master.tar.gz' }
+            ];
+        }
+
+        group.remove(loadingLabel);
+        const session = new Soup.Session();
+        const installedIcons = this.getInstalledAssets('icons');
+        const installedThemes = this.getInstalledAssets('themes');
+        const allInstalled = [...installedIcons, ...installedThemes];
+
+        data.forEach((item) => {
+            const name = item.name;
+            const link = item.downloadlink1;
+            const preview = item.previewpic1 || item.previewpic2;
+            if (!link || link.length < 10) return;
+
+            // Detección mejorada
+            const isInstalled = allInstalled.some(i =>
+                name.toLowerCase().includes(i.toLowerCase()) ||
+                i.toLowerCase().includes(name.toLowerCase().replace(/\s+icons?$/i, ''))
+            );
+
+            const row = new Adw.ActionRow({ title: name });
+
+            const picture = new Gtk.Image({
+                pixel_size: 64,
+                margin_end: 12,
+                halign: Gtk.Align.START,
+                valign: Gtk.Align.CENTER,
+                icon_name: 'image-missing-symbolic'
+            });
+            row.add_prefix(picture);
+
+            if (preview) {
+                const imgMsg = Soup.Message.new('GET', preview);
+                session.send_and_read_async(imgMsg, GLib.PRIORITY_DEFAULT, null, (s, r) => {
+                    try {
+                        const bytes = s.send_and_read_finish(r);
+                        const stream = Gio.MemoryInputStream.new_from_bytes(bytes);
+                        const pixbuf = GdkPixbuf.Pixbuf.new_from_stream_at_scale(stream, 64, 64, true, null);
+                        const paintable = Gtk.Texture.new_for_pixbuf(pixbuf);
+                        picture.set_from_paintable(paintable);
+                    } catch (e) { }
+                });
+            }
+
+            const btn = new Gtk.Button({
+                label: isInstalled ? T('Installed') : T('Install'),
+                valign: Gtk.Align.CENTER,
+                css_classes: isInstalled ? ['pill', 'flat'] : ['pill', 'suggested-action'],
+                sensitive: !isInstalled
+            });
+
+            btn.connect('clicked', () => {
+                btn.set_sensitive(false);
+                btn.set_label(T('Downloading...'));
+                this.downloadAndInstall(link, name, () => {
+                    btn.set_label(T('Installed'));
+                    btn.add_css_class('flat');
+                    const icons = this.getInstalledAssets('icons');
+                    const iconModel = new Gtk.StringList(); icons.forEach(i => iconModel.append(i));
+                    iconRow.set_model(iconModel);
+                });
+            });
+            row.add_suffix(btn);
+            group.add(row);
+        });
+    }
 
     downloadAndInstall(url, name, callback) {
-        const tempPath = `/tmp/${name}.tar.gz`;
-        GLib.spawn_command_line_async(`curl -L "${url}" -o "${tempPath}"`);
-        setTimeout(() => {
-            this.installAsset(tempPath, callback);
-        }, 5000);
+        const tempPath = `/tmp/${name.replace(/\s+/g, '_')}.tar.gz`;
+        const proc = Gio.Subprocess.new(
+            ['curl', '-L', url, '-o', tempPath],
+            Gio.SubprocessFlags.NONE
+        );
+
+        proc.wait_async(null, (p, res) => {
+            try {
+                p.wait_finish(res);
+                this.installAsset(tempPath, callback);
+            } catch (e) {
+                console.error('Download failed:', e);
+            }
+        });
+    }
+
+    factoryReset(window) {
+        const dialog = new Adw.MessageDialog({
+            heading: T('Reset Environment?'),
+            body: T('All customizations will be purged and reverted to factory defaults.'),
+            close_response: 'cancel',
+            default_response: 'reset'
+        });
+        dialog.add_response('cancel', T('Cancel'));
+        dialog.add_response('reset', T('Reset'));
+        dialog.set_response_appearance('reset', Adw.ResponseAppearance.DESTRUCTIVE);
+        dialog.connect('response', (d, r) => {
+            if (r === 'reset') {
+                this._settings.list_keys().forEach(k => {
+                    if (k !== 'import-export' && k !== 'default-font') this._settings.reset(k);
+                });
+                this.triggerStyleReload();
+            }
+        });
+        dialog.present(window);
+    }
+
+    setQuoteLabel(label) {
+        const quotes = [
+            "“Design is not just what it looks like and feels like. Design is how it works.” – Steve Jobs",
+            "“Simplicity is the ultimate sophistication.” – Leonardo da Vinci",
+            "“Good design is obvious. Great design is transparent.” – Joe Sparano",
+            "“Less is more.” – Ludwig Mies van der Rohe",
+            "“Make it simple, but significant.” – Don Draper",
+            "“Content precedes design. Design in the absence of content is not design, it’s decoration.” – Jeffrey Zeldman"
+        ];
+        let i = Math.floor(Math.random() * quotes.length);
+        label.set_label(`<span style="italic" alpha="70%">${quotes[i]}</span>`);
+        GLib.timeout_add(GLib.PRIORITY_DEFAULT, 15000, () => {
+            i = (i + 1) % quotes.length;
+            label.set_label(`<span style="italic" alpha="70%">${quotes[i]}</span>`);
+            return GLib.SOURCE_CONTINUE;
+        });
     }
 }

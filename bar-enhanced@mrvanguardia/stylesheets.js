@@ -3151,21 +3151,41 @@ function getStylesheet(obar, Me) {
         .quick-settings-tile .quick-settings-tile-main-button:active,
         .quick-settings-tile .quick-settings-tile-side-button:active {
             color: rgba(${mfgred},${mfggreen},${mfgblue},1) !important;
+            background-color: ${mbg} !important;
             border: 1px solid ${qtcolor} !important;
+            box-shadow: none !important;
             outline: none !important;
             outline-width: 0 !important;
-            box-shadow: none !important;
             margin: 0 !important;
+            background-clip: padding-box;
         } 
+
         .quick-settings-tile .quick-settings-tile-main-button,
         .quick-settings-tile .quick-settings-tile-main-button:checked {
             border-radius: ${qtoggleRadius}px 0 0 ${qtoggleRadius}px !important;
             border-right-width: 0.5px !important;
+            border-right-color: ${qtcolor} !important;
+            margin-right: 0 !important;
         }
+
         .quick-settings-tile .quick-settings-tile-side-button,
         .quick-settings-tile .quick-settings-tile-side-button:checked {
             border-radius: 0 ${qtoggleRadius}px ${qtoggleRadius}px 0 !important;
+            border-left: 1px solid ${qtcolor} !important;
             border-left-width: 0.5px !important;
+            margin-left: -1px !important;
+        }
+
+        /* Ensure active/checked states don't re-introduce the blue line */
+        .quick-settings-tile-main-button:checked,
+        .quick-settings-tile-side-button:checked {
+            border-color: ${qtcolor} !important;
+        }
+
+        /* Fallback for GNOME 43/44 compatibility */
+        .quick-toggle-arrow {
+            border-left: 1px solid ${qtcolor} !important;
+            box-shadow: none !important;
         }
         .quick-settings-tile-main-button:hover, .quick-settings-tile-side-button:hover,
         .quick-settings-tile-main-button:focus, .quick-settings-tile-side-button:focus {
