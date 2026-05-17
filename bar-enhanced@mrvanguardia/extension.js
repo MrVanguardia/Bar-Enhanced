@@ -37,6 +37,33 @@ import * as Quantize from './quantize.js';
 import * as AutoThemes from './autothemes.js';
 import * as StyleSheets from './stylesheets.js';
 
+const ES_MAP = {
+    'Bar Enhanced': 'Bar Enhanced',
+    'Premium Customize Center': 'Centro de Control Premium',
+    'Top Bar Layouts': 'Diseños de Barra',
+    'Engine Controls': 'Controles de Motor',
+    'Focus Glow: ON': 'Brillo de Foco: SI',
+    'Focus Glow: OFF': 'Brillo de Foco: NO',
+    'Pywal Sync: ON': 'Pywal Sinc: SI',
+    'Pywal Sync: OFF': 'Pywal Sinc: NO',
+    'Floating': 'Flotante',
+    'Islands': 'Islas',
+    'Mainland': 'Continental',
+    'Trilands': 'Trilands'
+};
+
+const T = (text) => {
+    try {
+        const locale = GLib.get_language_names()[0];
+        if (locale && locale.startsWith('es')) {
+            return ES_MAP[text] || _(text);
+        }
+    } catch (e) {
+        // fallback
+    }
+    return _(text);
+};
+
 Gio._promisify(Gio.File.prototype, "copy_async", "copy_finish");
 
 // ConnectManager class to manage connections for events to trigger BarEnhanced style updates
@@ -86,6 +113,163 @@ class ConnectManager {
         })
     }
 }
+
+
+const BarEnhancedDashboard = GObject.registerClass(
+class BarEnhancedDashboard extends PanelMenu.Button {
+    _init(obar) {
+        super._init(0.5, 'Bar Enhanced Dashboard');
+        this.obar = obar;
+
+        // Custom Symbolic paint-palette/color icon representing aesthetics
+        let icon = new St.Icon({
+            icon_name: 'preferences-color-symbolic',
+            style_class: 'system-status-icon'
+        });
+        this.add_child(icon);
+
+        // Build Glassmorphic container
+        let widgetBox = new St.BoxLayout({
+            vertical: true,
+            style_class: 'bar-enhanced-dashboard-menu'
+        });
+
+        // 1. Header
+        let titleLabel = new St.Label({
+            text: T('Bar Enhanced'),
+            style_class: 'bar-enhanced-dashboard-header'
+        });
+        widgetBox.add_child(titleLabel);
+
+        let subtitleLabel = new St.Label({
+            text: T('Premium Customize Center'),
+            style_class: 'bar-enhanced-dashboard-subtitle'
+        });
+        widgetBox.add_child(subtitleLabel);
+
+        // Section: Layouts
+        let layoutTitle = new St.Label({
+            text: T('Top Bar Layouts'),
+            style_class: 'bar-enhanced-dashboard-section-title'
+        });
+        widgetBox.add_child(layoutTitle);
+
+        // Grid rows for layout selection
+        let row1 = new St.BoxLayout({ vertical: false, style_class: 'bar-enhanced-dashboard-row' });
+        let row2 = new St.BoxLayout({ vertical: false, style_class: 'bar-enhanced-dashboard-row' });
+        widgetBox.add_child(row1);
+        widgetBox.add_child(row2);
+
+        const layouts = ['Floating', 'Islands', 'Mainland', 'Trilands'];
+        let layoutBtns = {};
+
+        layouts.forEach((layout, index) => {
+            let btn = new St.Button({
+                label: T(layout),
+                style_class: 'bar-enhanced-dashboard-button',
+                x_expand: true,
+                can_focus: true
+            });
+            
+            btn.connect('clicked', () => {
+                this.obar._settings.set_string('bartype', layout);
+            });
+
+            layoutBtns[layout] = btn;
+
+            if (index < 2) {
+                row1.add_child(btn);
+            } else {
+                row2.add_child(btn);
+            }
+        });
+
+        // Track active layout mode and add/remove style class
+        const updateActiveLayoutHighlight = () => {
+            let activeLayout = this.obar._settings.get_string('bartype');
+            layouts.forEach(l => {
+                let btn = layoutBtns[l];
+                if (btn) {
+                    if (l === activeLayout) {
+                        btn.add_style_class_name('active');
+                    } else {
+                        btn.remove_style_class_name('active');
+                    }
+                }
+            });
+        };
+
+        this.obar._settings.connect('changed::bartype', updateActiveLayoutHighlight);
+        updateActiveLayoutHighlight();
+
+        // Section: Live Toggles
+        let togglesTitle = new St.Label({
+            text: T('Engine Controls'),
+            style_class: 'bar-enhanced-dashboard-section-title'
+        });
+        widgetBox.add_child(togglesTitle);
+
+        // Focus Glow Toggle
+        let focusGlowBtn = new St.Button({
+            label: T('Focus Glow'),
+            style_class: 'bar-enhanced-dashboard-button toggle-button',
+            x_expand: true,
+            can_focus: true
+        });
+
+        const updateFocusGlowBtn = () => {
+            let active = this.obar._settings.get_boolean('focus-glow');
+            focusGlowBtn.set_label(active ? T('Focus Glow: ON') : T('Focus Glow: OFF'));
+            if (active) {
+                focusGlowBtn.add_style_class_name('active');
+            } else {
+                focusGlowBtn.remove_style_class_name('active');
+            }
+        };
+
+        focusGlowBtn.connect('clicked', () => {
+            let active = !this.obar._settings.get_boolean('focus-glow');
+            this.obar._settings.set_boolean('focus-glow', active);
+        });
+
+        this.obar._settings.connect('changed::focus-glow', updateFocusGlowBtn);
+        updateFocusGlowBtn();
+        widgetBox.add_child(focusGlowBtn);
+
+        // Pywal Sync Toggle
+        let pywalSyncBtn = new St.Button({
+            label: T('Pywal Sync'),
+            style_class: 'bar-enhanced-dashboard-button toggle-button',
+            x_expand: true,
+            can_focus: true
+        });
+
+        const updatePywalSyncBtn = () => {
+            let active = this.obar._settings.get_boolean('pywal-sync');
+            pywalSyncBtn.set_label(active ? T('Pywal Sync: ON') : T('Pywal Sync: OFF'));
+            if (active) {
+                pywalSyncBtn.add_style_class_name('active');
+            } else {
+                pywalSyncBtn.remove_style_class_name('active');
+            }
+        };
+
+        pywalSyncBtn.connect('clicked', () => {
+            let active = !this.obar._settings.get_boolean('pywal-sync');
+            this.obar._settings.set_boolean('pywal-sync', active);
+            if (active) {
+                this.obar._syncWithPywal();
+            }
+        });
+
+        this.obar._settings.connect('changed::pywal-sync', updatePywalSyncBtn);
+        updatePywalSyncBtn();
+        widgetBox.add_child(pywalSyncBtn);
+
+        // Add whole box to the menu
+        this.menu.box.add_child(widgetBox);
+    }
+});
 
 
 // BarEnhanced Extension main class
@@ -1418,6 +1602,9 @@ export default class BarEnhanced extends Extension {
         // Connect to the settings changes
         this._settings.connect('changed', (settings, key) => {
             this.updatePanelStyle(settings, key);
+            if (key === 'neon' || key === 'focus-glow') {
+                this._onFocusWindowChanged();
+            }
         });
 
         let connections = [
@@ -1428,6 +1615,7 @@ export default class BarEnhanced extends Extension {
             [global.display, 'in-fullscreen-changed', this.onFullScreen.bind(this), 100],
             [global.display, 'window-entered-monitor', this.setWindowMaxBar.bind(this), 'window-entered-monitor'],
             [global.display, 'window-left-monitor', this.setWindowMaxBar.bind(this), 'window-left-monitor'],
+            [global.display, 'notify::focus-window', this._onFocusWindowChanged.bind(this), 'focus-window'],
             [Main.layoutManager, 'startup-complete', this.postStartup.bind(this)],
             // [ Main.sessionMode, 'updated', this.updatePanelStyle.bind(this), 'session-mode-updated' ],
         ];
@@ -1526,10 +1714,41 @@ export default class BarEnhanced extends Extension {
         // Add 'barEnhanced' class to top panel and panelBox
         panel.add_style_class_name('barEnhanced');
         Main.layoutManager.panelBox.add_style_class_name('barEnhanced');
+
+        // Setup Pywal / Material You color monitor
+        const homeDir = GLib.get_home_dir();
+        const walPath = GLib.build_filenamev([homeDir, '.cache', 'wal', 'colors']);
+        const walFile = Gio.File.new_for_path(walPath);
+
+        this._walMonitor = null;
+        this._walMonitorId = 0;
+
+        try {
+            this._walMonitor = walFile.monitor(Gio.FileMonitorFlags.NONE, null);
+            this._walMonitorId = this._walMonitor.connect('changed', (monitor, file, otherFile, eventType) => {
+                if (eventType === Gio.FileMonitorEvent.CHANGES_DONE_HINT || eventType === Gio.FileMonitorEvent.CREATED) {
+                    this._syncWithPywal();
+                }
+            });
+            // Initial sync on enable if Pywal setting is enabled
+            if (this._settings.get_boolean('pywal-sync')) {
+                this._syncWithPywal();
+            }
+        } catch (e) {
+            console.log('BarEnhanced: Failed to initialize Pywal file monitor: ', e);
+        }
         // Cause stylesheet to save and reload on Enable (also creates gtk css)
         StyleSheets.reloadStyle(this, this);
         // Add Bar Enhanced Flatpak Overrides
         StyleSheets.saveFlatpakOverrides(this, 'enable');
+
+        // Setup and add the custom Glassmorphic Dashboard Widget Center based on user visibility preferences
+        this.dashboardBtn = null;
+        this._showDashboardId = 0;
+        this._updateDashboardVisibility();
+        this._showDashboardId = this._settings.connect('changed::show-dashboard', () => {
+            this._updateDashboardVisibility();
+        });
 
         // Apply the initial style
         this.updatePanelStyle(null, 'enabled');
@@ -1564,15 +1783,51 @@ export default class BarEnhanced extends Extension {
                 this.enableFittsWidgets();
                 this.fittsEnableTimeoutId = null;
             }, 5000);
+
+        // Synchronize with Fedora/GNOME active system accent color in real-time
+        this._interfaceSettings = new Gio.Settings({ schema_id: 'org.gnome.desktop.interface' });
+        if (this._interfaceSettings.settings_schema.has_key('accent-color')) {
+            this._interfaceSettingsId = this._interfaceSettings.connect('changed::accent-color', () => {
+                this._syncWithSystemAccent();
+            });
+        }
+        this._settings.connect('changed::system-accent-sync', () => {
+            this._syncWithSystemAccent();
+        });
+        this._syncWithSystemAccent();
     }
 
     disable() {
         this.disabling = true;
+        this._resetFocusGlow();
+
+        if (this._interfaceSettings && this._interfaceSettingsId > 0) {
+            this._interfaceSettings.disconnect(this._interfaceSettingsId);
+            this._interfaceSettingsId = 0;
+        }
+        this._interfaceSettings = null;
+
+        if (this._walMonitor && this._walMonitorId > 0) {
+            this._walMonitor.disconnect(this._walMonitorId);
+            this._walMonitor.cancel();
+            this._walMonitor = null;
+            this._walMonitorId = 0;
+        }
 
         // Get the top panel
         let panel = Main.panel;
 
         this.disableFittsWidgets();
+
+        if (this._showDashboardId > 0) {
+            this._settings.disconnect(this._showDashboardId);
+            this._showDashboardId = 0;
+        }
+
+        if (this.dashboardBtn) {
+            this.dashboardBtn.destroy();
+            this.dashboardBtn = null;
+        }
 
         this._connections.disconnectAll();
         this._connections = null;
@@ -1661,6 +1916,265 @@ export default class BarEnhanced extends Extension {
         this._intSettings = null;
         this._hcSettings = null;
         this._shellSettings = null;
+    }
+
+    _onFocusWindowChanged() {
+        if (!this._settings || !this._settings.get_boolean('focus-glow') || !this._settings.get_boolean('neon')) {
+            this._resetFocusGlow();
+            return;
+        }
+
+        let focusedWindow = global.display.focus_window;
+        if (!focusedWindow) {
+            this._resetFocusGlow();
+            return;
+        }
+
+        let wmClass = focusedWindow.get_wm_class();
+        if (!wmClass) {
+            this._resetFocusGlow();
+            return;
+        }
+
+        wmClass = wmClass.toLowerCase();
+
+        // Registry of popular app colors to drive our beautiful adaptive Focus Glow
+        const appColors = {
+            'spotify': [29, 185, 84],          // Spotify Green
+            'terminal': [78, 154, 6],          // Terminal Green
+            'gnome-terminal': [78, 154, 6],
+            'kitty': [255, 86, 241],           // Kitty Pink
+            'alacritty': [255, 86, 241],
+            'code': [0, 122, 204],             // VS Code Blue
+            'firefox': [255, 122, 0],          // Firefox Orange
+            'google-chrome': [66, 133, 244],    // Chrome Blue
+            'chromium': [66, 133, 244],
+            'discord': [88, 101, 242],         // Discord Blurple
+            'slack': [74, 21, 75],             // Slack Aubergine
+            'telegram-desktop': [36, 161, 222],    // Telegram Blue
+            'org.gnome.nautilus': [22, 124, 128],  // Nautilus Teal
+            'steam': [23, 26, 33],
+            'gimp': [91, 60, 17],
+            'inkscape': [0, 0, 0]
+        };
+
+        let rgb = null;
+        for (let key in appColors) {
+            if (wmClass.includes(key)) {
+                rgb = appColors[key];
+                break;
+            }
+        }
+
+        if (!rgb) {
+            this._resetFocusGlow();
+            return;
+        }
+
+        let [r, g, b] = rgb;
+        this._applyFocusGlow(r, g, b);
+    }
+
+    _applyFocusGlow(r, g, b) {
+        if (!this._settings) return;
+        let bartype = this._settings.get_string('bartype');
+        let height = this._settings.get_int('height') || 30;
+        let vPad = this._settings.get_int('vpad') || 2;
+        let borderRadius = this._settings.get_double('bradius') || 30.0;
+        let gradient = this._settings.get_boolean('gradient');
+        let balpha = this._settings.get_double('balpha') || 0.85;
+
+        // Spread formula matched to stylesheets.js for flawless, clip-free rendering
+        let padmod = (bartype === 'Mainland' || bartype === 'Floating') ? -2 : vPad;
+        let radThreshold = Math.ceil(((height - 2 * padmod) / 10.0 - 1) * 5);
+        let spread = 0;
+        
+        if (borderRadius <= radThreshold) {
+            spread = gradient ? -3 : 0;
+        } else {
+            spread = 2;
+        }
+
+        // Render breathtaking adaptive neon glow respecting customized border transparency and snappy 100ms transition
+        let styleStr = `box-shadow: 0px 0px 6px ${spread}px rgba(${r}, ${g}, ${b}, 0.65) !important; border-color: rgba(${r}, ${g}, ${b}, ${balpha}) !important; transition-duration: 100ms;`;
+
+        if (bartype === 'Mainland' || bartype === 'Floating') {
+            Main.panel.set_style(styleStr);
+        } else {
+            // Islands or Trilands: Apply style to individual panel buttons
+            for (let box of [Main.panel._leftBox, Main.panel._centerBox, Main.panel._rightBox]) {
+                for (let child of box.get_children()) {
+                    child.set_style(styleStr);
+                }
+            }
+        }
+    }
+
+    _resetFocusGlow() {
+        if (Main && Main.panel) {
+            Main.panel.set_style('');
+            for (let box of [Main.panel._leftBox, Main.panel._centerBox, Main.panel._rightBox]) {
+                for (let child of box.get_children()) {
+                    child.set_style('');
+                }
+            }
+        }
+    }
+
+    _syncWithPywal() {
+        if (!this._settings || !this._settings.get_boolean('pywal-sync')) {
+            return;
+        }
+
+        const homeDir = GLib.get_home_dir();
+        const walPath = GLib.build_filenamev([homeDir, '.cache', 'wal', 'colors']);
+        const walFile = Gio.File.new_for_path(walPath);
+
+        if (!walFile.query_exists(null)) {
+            return;
+        }
+
+        try {
+            let [ok, contents] = GLib.file_get_contents(walPath);
+            if (!ok) return;
+
+            let hexColors = contents.toString().trim().split('\n')
+                .map(c => c.trim())
+                .filter(c => c.startsWith('#') && c.length === 7);
+
+            if (hexColors.length < 8) return;
+
+            // Helper to compute contrast color (white or dark) based on background RGB
+            const getContrastColor = (rVal, gVal, bVal) => {
+                const Y = 0.299 * rVal + 0.587 * gVal + 0.114 * bVal;
+                return Y > 130 ? ['0.100', '0.100', '0.100'] : ['1.000', '1.000', '1.000'];
+            };
+
+            // Pause stylesheet reload during multi-setting changes
+            this._settings.set_boolean('pause-reload', true);
+
+            // Map Pywal colors to candy colors
+            for (let i = 0; i < Math.min(hexColors.length, 16); i++) {
+                let hex = hexColors[i];
+                let r = (parseInt(hex.substring(1, 3), 16) / 255.0).toFixed(3);
+                let g = (parseInt(hex.substring(3, 5), 16) / 255.0).toFixed(3);
+                let b = (parseInt(hex.substring(5, 7), 16) / 255.0).toFixed(3);
+
+                this._settings.set_strv(`candy${i + 1}`, [r, g, b]);
+                this._settings.set_strv(`dark-candy${i + 1}`, [r, g, b]);
+                this._settings.set_strv(`light-candy${i + 1}`, [r, g, b]);
+            }
+
+            // Map primary color (color 0) to panel background and compute contrast
+            let bgHex = hexColors[0];
+            let bgR = (parseInt(bgHex.substring(1, 3), 16) / 255.0).toFixed(3);
+            let bgG = (parseInt(bgHex.substring(3, 5), 16) / 255.0).toFixed(3);
+            let bgB = (parseInt(bgHex.substring(5, 7), 16) / 255.0).toFixed(3);
+            
+            this._settings.set_strv('bgcolor', [bgR, bgG, bgB]);
+            this._settings.set_strv('iscolor', [bgR, bgG, bgB]);
+            this._settings.set_strv('dark-bgcolor', [bgR, bgG, bgB]);
+            this._settings.set_strv('dark-iscolor', [bgR, bgG, bgB]);
+            this._settings.set_strv('light-bgcolor', [bgR, bgG, bgB]);
+            this._settings.set_strv('light-iscolor', [bgR, bgG, bgB]);
+
+            // Calculate and apply bar foreground (text) contrast
+            const fg = getContrastColor(parseInt(bgHex.substring(1, 3), 16), parseInt(bgHex.substring(3, 5), 16), parseInt(bgHex.substring(5, 7), 16));
+            this._settings.set_strv('fgcolor', fg);
+            this._settings.set_strv('dark-fgcolor', fg);
+            this._settings.set_strv('light-fgcolor', fg);
+
+            // Apply primary color to popups / menu background
+            this._settings.set_strv('mbgcolor', [bgR, bgG, bgB]);
+            this._settings.set_strv('dark-mbgcolor', [bgR, bgG, bgB]);
+            this._settings.set_strv('light-mbgcolor', [bgR, bgG, bgB]);
+
+            // Calculate popups / menu foreground (text) contrast
+            this._settings.set_strv('mfgcolor', fg);
+            this._settings.set_strv('dark-mfgcolor', fg);
+            this._settings.set_strv('light-mfgcolor', fg);
+
+            // Apply secondary color (color 1 or 2) to menu tiles / secondary surfaces background
+            let smbgHex = hexColors[2] || hexColors[1];
+            let smbgR = (parseInt(smbgHex.substring(1, 3), 16) / 255.0).toFixed(3);
+            let smbgG = (parseInt(smbgHex.substring(3, 5), 16) / 255.0).toFixed(3);
+            let smbgB = (parseInt(smbgHex.substring(5, 7), 16) / 255.0).toFixed(3);
+            
+            this._settings.set_strv('smbgcolor', [smbgR, smbgG, smbgB]);
+            this._settings.set_strv('dark-smbgcolor', [smbgR, smbgG, smbgB]);
+            this._settings.set_strv('light-smbgcolor', [smbgR, smbgG, smbgB]);
+
+            // Set border color and menu outline to secondary color
+            this._settings.set_strv('bcolor', [smbgR, smbgG, smbgB]);
+            this._settings.set_strv('dark-bcolor', [smbgR, smbgG, smbgB]);
+            this._settings.set_strv('light-bcolor', [smbgR, smbgG, smbgB]);
+            this._settings.set_strv('mbcolor', [smbgR, smbgG, smbgB]);
+            this._settings.set_strv('dark-mbcolor', [smbgR, smbgG, smbgB]);
+            this._settings.set_strv('light-mbcolor', [smbgR, smbgG, smbgB]);
+
+            // Enable manual accent override and set custom accent color to secondary color
+            this._settings.set_boolean('accent-override', true);
+            this._settings.set_strv('accent-color', [smbgR, smbgG, smbgB]);
+            this._settings.set_strv('dark-accent-color', [smbgR, smbgG, smbgB]);
+            this._settings.set_strv('light-accent-color', [smbgR, smbgG, smbgB]);
+
+            // Set menu active toggles color (mscolor) and hover color (mhcolor)
+            this._settings.set_strv('mscolor', [smbgR, smbgG, smbgB]);
+            this._settings.set_strv('dark-mscolor', [smbgR, smbgG, smbgB]);
+            this._settings.set_strv('light-mscolor', [smbgR, smbgG, smbgB]);
+            this._settings.set_strv('mhcolor', [smbgR, smbgG, smbgB]);
+            this._settings.set_strv('dark-mhcolor', [smbgR, smbgG, smbgB]);
+            this._settings.set_strv('light-mhcolor', [smbgR, smbgG, smbgB]);
+
+            // Set system GTK headerbar and sidebars custom colors to primary palette color
+            this._settings.set_strv('hscd-color', [bgR, bgG, bgB]);
+            this._settings.set_strv('dark-hscd-color', [bgR, bgG, bgB]);
+            this._settings.set_strv('light-hscd-color', [bgR, bgG, bgB]);
+            
+            this._settings.set_strv('vw-color', [bgR, bgG, bgB]);
+            this._settings.set_strv('dark-vw-color', [bgR, bgG, bgB]);
+            this._settings.set_strv('light-vw-color', [bgR, bgG, bgB]);
+
+            // Automatically enable system-wide GTK3 / GTK4 theme injection!
+            this._settings.set_boolean('apply-gtk', true);
+
+            // Wait 150ms and trigger a full CSS compilation and reload!
+            GLib.timeout_add(GLib.PRIORITY_DEFAULT, 150, () => {
+                this._settings.set_boolean('pause-reload', false);
+                this._settings.set_boolean('trigger-reload', !this._settings.get_boolean('trigger-reload'));
+                return GLib.SOURCE_REMOVE;
+            });
+        } catch (e) {
+            console.log('BarEnhanced: Error syncing with Pywal: ', e);
+        }
+    }
+
+    _syncWithSystemAccent() {
+        if (!this._settings) return;
+        try {
+            // Simply trigger a full stylesheet compilation. The stylesheet will dynamically detect 
+            // the system accent color if system-accent-sync is true, or fall back to
+            // the user's manual colors if false. Extremely clean and non-destructive!
+            this._settings.set_boolean('trigger-reload', !this._settings.get_boolean('trigger-reload'));
+        } catch (e) {
+            console.log('BarEnhanced: Error syncing with System Accent: ', e);
+        }
+    }
+
+    _updateDashboardVisibility() {
+        if (!this._settings) return;
+        let show = this._settings.get_boolean('show-dashboard');
+        if (show) {
+            if (!this.dashboardBtn) {
+                this.dashboardBtn = new BarEnhancedDashboard(this);
+                Main.panel.addToStatusArea('bar-enhanced-dashboard', this.dashboardBtn, 0, 'right');
+            }
+        } else {
+            if (this.dashboardBtn) {
+                this.dashboardBtn.destroy();
+                this.dashboardBtn = null;
+            }
+        }
     }
 }
 

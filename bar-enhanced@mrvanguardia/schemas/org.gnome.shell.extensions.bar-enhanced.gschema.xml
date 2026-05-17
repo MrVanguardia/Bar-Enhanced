@@ -162,6 +162,11 @@
       <summary>Neon Effect</summary>
       <description>Neon Effect.</description>
     </key>
+    <key type="d" name="neon-intensity">
+      <default>0.55</default>
+      <summary>Neon Glow Intensity</summary>
+      <description>The alpha/opacity intensity of the neon glow effect.</description>
+    </key>
     <key type="b" name="set-overview">
       <default>false</default>
       <summary>Apply in overview</summary>
@@ -1446,6 +1451,26 @@
       <default>1000</default>
       <summary>Monitor width</summary>
       <description>Monitor width.</description>
+    </key>
+    <key type="b" name="focus-glow">
+      <default>true</default>
+      <summary>Dynamic Focus Glow</summary>
+      <description>Dynamically match neon glow of the panel to the active window brand/accent color.</description>
+    </key>
+    <key type="b" name="pywal-sync">
+      <default>false</default>
+      <summary>Pywal / Material You Sync</summary>
+      <description>Automatically sync custom palettes with Pywal colors (~/.cache/wal/colors).</description>
+    </key>
+    <key type="b" name="show-dashboard">
+      <default>true</default>
+      <summary>Show Dashboard Widget Center</summary>
+      <description>Show or hide the customization dashboard icon in the top bar.</description>
+    </key>
+    <key type="b" name="system-accent-sync">
+      <default>false</default>
+      <summary>Sync with System Accent Color</summary>
+      <description>Automatically sync the panel border and neon glow with Fedora's active system accent color.</description>
     </key>
   </schema>
 </schemalist>

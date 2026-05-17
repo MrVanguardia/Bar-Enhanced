@@ -66,8 +66,8 @@ function saveCalEventSVG(obar, Me) {
             });
         });
     }
-    catch(e) {
-      console.log("Failed to write calendar-today.svg file: " + svgpath, e);
+    catch (e) {
+        console.log("Failed to write calendar-today.svg file: " + svgpath, e);
     }
 
 }
@@ -76,7 +76,7 @@ function saveCalEventSVG(obar, Me) {
 function saveToggleSVG(type, obar, Me) {
     let svg, svgpath, svgFill = '', svgStroke = '', hc = '';
     svg =
-    `<svg viewBox="0 0 44 26" xmlns="http://www.w3.org/2000/svg">
+        `<svg viewBox="0 0 44 26" xmlns="http://www.w3.org/2000/svg">
         <g>
             <rect y="4" width="44" height="18" rx="9" ry="9" style="fill:#SVGFILL;stroke:none;stroke-width:1;marker:none"/>
             <rect x="22" y="2" width="22" height="22" rx="11" ry="11" fill="#f8f7f7"/>
@@ -87,7 +87,7 @@ function saveToggleSVG(type, obar, Me) {
     svgFill = obar.msHex;
     svg = svg.replace(`#SVGFILL`, svgFill);
     svgpath = obar.obarRunDir.get_path() + '/assets/toggle-on.svg';
-    if(type == 'on-hc') {
+    if (type == 'on-hc') {
         svgpath = obar.obarRunDir.get_path() + '/assets/toggle-on-hc.svg';
         hc = `<path style="fill:#f8f7f7;fill-opacity:1;stroke:none;stroke-width:2;stroke-linejoin:round;stroke-dashoffset:2" d="M16 8v10h-2V8Z"/>`;
     }
@@ -105,8 +105,8 @@ function saveToggleSVG(type, obar, Me) {
             });
         });
     }
-    catch(e) {
-      console.log("Failed to write toggle-on.svg file: " + svgpath, e);
+    catch (e) {
+        console.log("Failed to write toggle-on.svg file: " + svgpath, e);
     }
 
 }
@@ -114,7 +114,7 @@ function saveToggleSVG(type, obar, Me) {
 // SVG for checkbox buttons (On, On-focused, Off-focused)
 function saveCheckboxSVG(type, obar, Me) {
     let svg, svgpath, svgFill = 'none', svgStroke = 'none';
-    if(type == 'on') {
+    if (type == 'on') {
         svg = `
         <svg width="24" height="24" xmlns="http://www.w3.org/2000/svg">
             <rect x="1.5" y="1.5" width="21" height="21" rx="3" fill="#SVGFILL" stroke="#SVGSTROKE" stroke-linejoin="round" style="stroke-width:1"/>
@@ -126,7 +126,7 @@ function saveCheckboxSVG(type, obar, Me) {
         svgFill = obar.msHex;
         svgStroke = obar.msHex;
     }
-    else if(type == 'on-focused'){
+    else if (type == 'on-focused') {
         svg = `
         <svg width="24" height="24" xmlns="http://www.w3.org/2000/svg">
             <rect x="1.5" y="1.5" width="21" height="21" rx="3" fill="#SVGFILL" stroke="#SVGSTROKE" stroke-linejoin="round"/>
@@ -138,7 +138,7 @@ function saveCheckboxSVG(type, obar, Me) {
         svgFill = obar.msHex;
         svgStroke = obar.mhHex;
     }
-    else if(type == 'off-focused'){
+    else if (type == 'off-focused') {
         svg = `
         <svg width="24" height="24" xmlns="http://www.w3.org/2000/svg">
             <rect x="1.5" y="1.5" width="21" height="21" rx="3" fill="#SVGFILL" stroke="#SVGSTROKE" stroke-linejoin="round"/>
@@ -165,8 +165,8 @@ function saveCheckboxSVG(type, obar, Me) {
             });
         });
     }
-    catch(e) {
-      console.log("Failed to write checkbox-on/off.svg file: " + svgpath, e);
+    catch (e) {
+        console.log("Failed to write checkbox-on/off.svg file: " + svgpath, e);
     }
 
 }
@@ -174,18 +174,18 @@ function saveCheckboxSVG(type, obar, Me) {
 // Create Gtk Stylesheet string
 function createGtkCss(obar, gtk4) {
     // Add hint of Accent color to Headerbar and Sidebar
-    let hBarHint = obar._settings.get_int('headerbar-hint')/100;
+    let hBarHint = obar._settings.get_int('headerbar-hint') / 100;
     let hBarGtk3Only = obar._settings.get_boolean('hbar-gtk3only');
-    let sBarHint = obar._settings.get_int('sidebar-hint')/100;
+    let sBarHint = obar._settings.get_int('sidebar-hint') / 100;
     let sBarGradient = obar._settings.get_string('sbar-gradient');
-    let cdHint = obar._settings.get_int('card-hint')/100;
-    let vHint = obar._settings.get_int('view-hint')/100;
-    let wHint = obar._settings.get_int('window-hint')/100;
-    let hBarHintBd = hBarHint*2/3;
-    let sBarHintBd = sBarHint*2/3;
-    let cdHintBd = cdHint*2/3;
-    let vHintBd = vHint*2/3;
-    let wHintBd = wHint*2/3;
+    let cdHint = obar._settings.get_int('card-hint') / 100;
+    let vHint = obar._settings.get_int('view-hint') / 100;
+    let wHint = obar._settings.get_int('window-hint') / 100;
+    let hBarHintBd = hBarHint * 2 / 3;
+    let sBarHintBd = sBarHint * 2 / 3;
+    let cdHintBd = cdHint * 2 / 3;
+    let vHintBd = vHint * 2 / 3;
+    let wHintBd = wHint * 2 / 3;
     let gtkTransparency = obar._settings.get_double('gtk-transparency');
     let trafficLightButtons = obar._settings.get_boolean('traffic-light');
     let popoverMenu = obar._settings.get_boolean('gtk-popover');
@@ -217,9 +217,9 @@ function createGtkCss(obar, gtk4) {
     const mbgBlue = parseInt(parseFloat(mbgColor[2]) * 255);
 
     let bgRed, bgGreen, bgBlue, cdRed, cdGreen, cdBlue, hbRed, hbGreen, hbBlue,
-    vRed, vGreen, vBlue, sgrRed, sgrGreen, sgrBlue, wRed, wGreen, wBlue;
+        vRed, vGreen, vBlue, sgrRed, sgrGreen, sgrBlue, wRed, wGreen, wBlue;
     const colorScheme = obar._intSettings.get_string('color-scheme');
-    if(colorScheme == 'prefer-dark') {
+    if (colorScheme == 'prefer-dark') {
         hbRed = hbGreen = hbBlue = 55; // Headerbar button BG
         bgRed = bgGreen = bgBlue = 48; // Headerbar/Sidebar BG
         vRed = vGreen = vBlue = 42; // View/Content-Pane BG 44
@@ -237,55 +237,55 @@ function createGtkCss(obar, gtk4) {
     }
 
     // Headerbar BG and Backdrop
-    const hbgRed = parseRGB(hBarHint * hscdRed + (1-hBarHint) * bgRed);
-    const hbgGreen = parseRGB(hBarHint * hscdGreen + (1-hBarHint) * bgGreen);
-    const hbgBlue = parseRGB(hBarHint * hscdBlue + (1-hBarHint) * bgBlue);
-    const hbdRed = parseRGB(hBarHintBd * hscdRed + (1-hBarHintBd) * bgRed);
-    const hbdGreen = parseRGB(hBarHintBd * hscdGreen + (1-hBarHintBd) * bgGreen);
-    const hbdBlue = parseRGB(hBarHintBd * hscdBlue + (1-hBarHintBd) * bgBlue);
+    const hbgRed = parseRGB(hBarHint * hscdRed + (1 - hBarHint) * bgRed);
+    const hbgGreen = parseRGB(hBarHint * hscdGreen + (1 - hBarHint) * bgGreen);
+    const hbgBlue = parseRGB(hBarHint * hscdBlue + (1 - hBarHint) * bgBlue);
+    const hbdRed = parseRGB(hBarHintBd * hscdRed + (1 - hBarHintBd) * bgRed);
+    const hbdGreen = parseRGB(hBarHintBd * hscdGreen + (1 - hBarHintBd) * bgGreen);
+    const hbdBlue = parseRGB(hBarHintBd * hscdBlue + (1 - hBarHintBd) * bgBlue);
     // Sidebar BG and Backdrop
-    const sbgRed = parseRGB(sBarHint * hscdRed + (1-sBarHint) * bgRed);
-    const sbgGreen = parseRGB(sBarHint * hscdGreen + (1-sBarHint) * bgGreen);
-    const sbgBlue = parseRGB(sBarHint * hscdBlue + (1-sBarHint) * bgBlue);
-    const sbdRed = parseRGB(sBarHintBd * hscdRed + (1-sBarHintBd) * bgRed);
-    const sbdGreen = parseRGB(sBarHintBd * hscdGreen + (1-sBarHintBd) * bgGreen);
-    const sbdBlue = parseRGB(sBarHintBd * hscdBlue + (1-sBarHintBd) * bgBlue);
+    const sbgRed = parseRGB(sBarHint * hscdRed + (1 - sBarHint) * bgRed);
+    const sbgGreen = parseRGB(sBarHint * hscdGreen + (1 - sBarHint) * bgGreen);
+    const sbgBlue = parseRGB(sBarHint * hscdBlue + (1 - sBarHint) * bgBlue);
+    const sbdRed = parseRGB(sBarHintBd * hscdRed + (1 - sBarHintBd) * bgRed);
+    const sbdGreen = parseRGB(sBarHintBd * hscdGreen + (1 - sBarHintBd) * bgGreen);
+    const sbdBlue = parseRGB(sBarHintBd * hscdBlue + (1 - sBarHintBd) * bgBlue);
     // Card/Dialog BG and Backdrop
-    const cbgRed = parseRGB(cdHint * hscdRed + (1-cdHint) * cdRed);
-    const cbgGreen = parseRGB(cdHint * hscdGreen + (1-cdHint) * cdGreen);
-    const cbgBlue = parseRGB(cdHint * hscdBlue + (1-cdHint) * cdBlue);
-    const cbdRed = parseRGB(cdHintBd * hscdRed + (1-cdHintBd) * cdRed);
-    const cbdGreen = parseRGB(cdHintBd * hscdGreen + (1-cdHintBd) * cdGreen);
-    const cbdBlue = parseRGB(cdHintBd * hscdBlue + (1-cdHintBd) * cdBlue);
+    const cbgRed = parseRGB(cdHint * hscdRed + (1 - cdHint) * cdRed);
+    const cbgGreen = parseRGB(cdHint * hscdGreen + (1 - cdHint) * cdGreen);
+    const cbgBlue = parseRGB(cdHint * hscdBlue + (1 - cdHint) * cdBlue);
+    const cbdRed = parseRGB(cdHintBd * hscdRed + (1 - cdHintBd) * cdRed);
+    const cbdGreen = parseRGB(cdHintBd * hscdGreen + (1 - cdHintBd) * cdGreen);
+    const cbdBlue = parseRGB(cdHintBd * hscdBlue + (1 - cdHintBd) * cdBlue);
     // View/Content-Pane BG and Backdrop
-    const vbgRed = parseRGB(vHint * vwRed + (1-vHint) * vRed);
-    const vbgGreen = parseRGB(vHint * vwGreen + (1-vHint) * vGreen);
-    const vbgBlue = parseRGB(vHint * vwBlue + (1-vHint) * vBlue);
-    const vbdRed = parseRGB(vHintBd * vwRed + (1-vHintBd) * vRed);
-    const vbdGreen = parseRGB(vHintBd * vwGreen + (1-vHintBd) * vGreen);
-    const vbdBlue = parseRGB(vHintBd * vwBlue + (1-vHintBd) * vBlue);
+    const vbgRed = parseRGB(vHint * vwRed + (1 - vHint) * vRed);
+    const vbgGreen = parseRGB(vHint * vwGreen + (1 - vHint) * vGreen);
+    const vbgBlue = parseRGB(vHint * vwBlue + (1 - vHint) * vBlue);
+    const vbdRed = parseRGB(vHintBd * vwRed + (1 - vHintBd) * vRed);
+    const vbdGreen = parseRGB(vHintBd * vwGreen + (1 - vHintBd) * vGreen);
+    const vbdBlue = parseRGB(vHintBd * vwBlue + (1 - vHintBd) * vBlue);
     // Window BG and Backdrop
-    const wbgRed = parseRGB(wHint * vwRed + (1-wHint) * wRed);
-    const wbgGreen = parseRGB(wHint * vwGreen + (1-wHint) * wGreen);
-    const wbgBlue = parseRGB(wHint * vwBlue + (1-wHint) * wBlue);
-    const wbdRed = parseRGB(wHintBd * vwRed + (1-wHintBd) * wRed);
-    const wbdGreen = parseRGB(wHintBd * vwGreen + (1-wHintBd) * wGreen);
-    const wbdBlue = parseRGB(wHintBd * vwBlue + (1-wHintBd) * wBlue);
+    const wbgRed = parseRGB(wHint * vwRed + (1 - wHint) * wRed);
+    const wbgGreen = parseRGB(wHint * vwGreen + (1 - wHint) * wGreen);
+    const wbgBlue = parseRGB(wHint * vwBlue + (1 - wHint) * wBlue);
+    const wbdRed = parseRGB(wHintBd * vwRed + (1 - wHintBd) * wRed);
+    const wbdGreen = parseRGB(wHintBd * vwGreen + (1 - wHintBd) * wGreen);
+    const wbdBlue = parseRGB(wHintBd * vwBlue + (1 - wHintBd) * wBlue);
     // View and Window Alpha
     const winAlpha = gtkTransparency;
-    const viewAlpha = winAlpha == 1? 1 : winAlpha/2;
+    const viewAlpha = winAlpha == 1 ? 1 : winAlpha / 2;
     // Headerbar Buttons BG and Backdrop
-    const hbbgRed = parseRGB(hBarHint * hscdRed + (1-hBarHint) * hbRed);
-    const hbbgGreen = parseRGB(hBarHint * hscdGreen + (1-hBarHint) * hbGreen);
-    const hbbgBlue = parseRGB(hBarHint * hscdBlue + (1-hBarHint) * hbBlue);
-    const hbbdRed = parseRGB(hBarHintBd * hscdRed + (1-hBarHintBd) * hbRed);
-    const hbbdGreen = parseRGB(hBarHintBd * hscdGreen + (1-hBarHintBd) * hbGreen);
-    const hbbdBlue = parseRGB(hBarHintBd * hscdBlue + (1-hBarHintBd) * hbBlue);
+    const hbbgRed = parseRGB(hBarHint * hscdRed + (1 - hBarHint) * hbRed);
+    const hbbgGreen = parseRGB(hBarHint * hscdGreen + (1 - hBarHint) * hbGreen);
+    const hbbgBlue = parseRGB(hBarHint * hscdBlue + (1 - hBarHint) * hbBlue);
+    const hbbdRed = parseRGB(hBarHintBd * hscdRed + (1 - hBarHintBd) * hbRed);
+    const hbbdGreen = parseRGB(hBarHintBd * hscdGreen + (1 - hBarHintBd) * hbGreen);
+    const hbbdBlue = parseRGB(hBarHintBd * hscdBlue + (1 - hBarHintBd) * hbBlue);
     // Headerbar Buttons BG:hover and BG:checked
     let hbhRed, hbhGreen, hbhBlue, hbcRed, hbcGreen, hbcBlue, fbhRed, fbhGreen, fbhBlue,
-    fbcRed, fbcGreen, fbcBlue, acchRed, acchGreen, acchBlue;
+        fbcRed, fbcGreen, fbcBlue, acchRed, acchGreen, acchBlue;
     let hFactorDark = 0.08, hFactorLight = 0.05;
-    if(getBgDark(hbgRed, hbgGreen, hbgBlue)) { // Dark Mode
+    if (getBgDark(hbgRed, hbgGreen, hbgBlue)) { // Dark Mode
         // Headerbar button hover
         hbhRed = parseRGB(hbbgRed + (255 - hbbgRed) * hFactorDark);
         hbhGreen = parseRGB(hbbgGreen + (255 - hbbgGreen) * hFactorDark);
@@ -336,61 +336,61 @@ function createGtkCss(obar, gtk4) {
 
     // Foreground Colors
     let hfgRed, hfgGreen, hfgBlue;
-    if(getBgDark(hbgRed, hbgGreen, hbgBlue))
+    if (getBgDark(hbgRed, hbgGreen, hbgBlue))
         hfgRed = hfgGreen = hfgBlue = 255;
     else
         hfgRed = hfgGreen = hfgBlue = 20;
 
     let sfgRed, sfgGreen, sfgBlue;
-    if(getBgDark(sbgRed, sbgGreen, sbgBlue))
+    if (getBgDark(sbgRed, sbgGreen, sbgBlue))
         sfgRed = sfgGreen = sfgBlue = 255;
     else
         sfgRed = sfgGreen = sfgBlue = 20;
 
     let afgRed, afgGreen, afgBlue;
-    if(getBgDark(accRed, accGreen, accBlue))
+    if (getBgDark(accRed, accGreen, accBlue))
         afgRed = afgGreen = afgBlue = 255;
     else
         afgRed = afgGreen = afgBlue = 20;
 
     let mfgRed, mfgGreen, mfgBlue;
-    if(getBgDark(mbgRed, mbgGreen, mbgBlue))
+    if (getBgDark(mbgRed, mbgGreen, mbgBlue))
         mfgRed = mfgGreen = mfgBlue = 255;
     else
         mfgRed = mfgGreen = mfgBlue = 20;
 
     let cfgRed, cfgGreen, cfgBlue;
-    if(getBgDark(cbgRed, cbgGreen, cbgBlue))
+    if (getBgDark(cbgRed, cbgGreen, cbgBlue))
         cfgRed = cfgGreen = cfgBlue = 255;
     else
         cfgRed = cfgGreen = cfgBlue = 20;
 
     let wfgRed, wfgGreen, wfgBlue;
-    if(getBgDark(wbgRed, wbgGreen, wbgBlue))
+    if (getBgDark(wbgRed, wbgGreen, wbgBlue))
         wfgRed = wfgGreen = wfgBlue = 255;
     else
         wfgRed = wfgGreen = wfgBlue = 20;
 
     let vfgRed, vfgGreen, vfgBlue;
-    if(getBgDark(vbgRed, vbgGreen, vbgBlue))
+    if (getBgDark(vbgRed, vbgGreen, vbgBlue))
         vfgRed = vfgGreen = vfgBlue = 255;
     else
         vfgRed = vfgGreen = vfgBlue = 20;
 
     let winShadowStyle = '', winBdShadowStyle = '';
-    if(winShadow == 'Default') {
+    if (winShadow == 'Default') {
         winShadowStyle = '';
         winBdShadowStyle = '';
     }
-    else if(winShadow == 'None') {
+    else if (winShadow == 'None') {
         winShadowStyle =
-        `   box-shadow: none;
+            `   box-shadow: none;
         `;
         winBdShadowStyle = winShadowStyle;
     }
-    else if(winShadow == 'Floating') {
+    else if (winShadow == 'Floating') {
         winShadowStyle =
-        `   box-shadow:
+            `   box-shadow:
                 8px 6px 11.5px -1.5px rgba(0,0,0, 0.12),
                 15px 11px 21px -2px rgba(0,0,0, 0.13),
                 26px 20px 36px -2.5px rgba(0,0,0, 0.13),
@@ -401,7 +401,7 @@ function createGtkCss(obar, gtk4) {
                 0 0 0 1px rgba(0,0,0, 0.1);
         `;
         winBdShadowStyle =
-        `   box-shadow:
+            `   box-shadow:
                 8px 6px 11.5px -1.5px rgba(0,0,0, 0.05),
                 15px 11px 21px -2px rgba(0,0,0, 0.05),
                 26px 20px 36px -2.5px rgba(0,0,0, 0.05);
@@ -460,12 +460,12 @@ function createGtkCss(obar, gtk4) {
     window.csd, dialog.csd,
     window.csd > decoration,
     window.csd > decoration-overlay {
-        ${gtk4? `outline`: `border`}: ${winBWidth}px solid rgba(${winBRed}, ${winBGreen}, ${winBBlue}, ${winBAlpha});
+        ${gtk4 ? `outline` : `border`}: ${winBWidth}px solid rgba(${winBRed}, ${winBGreen}, ${winBBlue}, ${winBAlpha});
     }
     window.csd:backdrop, dialog:backdrop.csd,
     window.csd:backdrop > decoration,
     window.csd:backdrop > decoration-overlay {
-        ${gtk4? `outline`: `border`}: ${winBWidth}px solid rgba(${winBRedBd}, ${winBGreenBd}, ${winBBlueBd}, ${winBAlpha});
+        ${gtk4 ? `outline` : `border`}: ${winBWidth}px solid rgba(${winBRedBd}, ${winBGreenBd}, ${winBBlueBd}, ${winBAlpha});
     }
     window.csd.maximized, window.csd.maximized > decoration, window.csd.maximized > decoration-overlay,
     window.csd.maximized > headerbar, window.csd.maximized > .top-bar, window.csd.maximized > .titlebar,
@@ -487,8 +487,8 @@ function createGtkCss(obar, gtk4) {
     }
     `;
 
-    if(gtk4) { // gtk4
-        if(cornerRadius) {
+    if (gtk4) { // gtk4
+        if (cornerRadius) {
             gtkstring += `
             window.csd, dialog.csd,
             window.csd > decoration,
@@ -499,7 +499,7 @@ function createGtkCss(obar, gtk4) {
         }
     }
     else { // gtk3
-        if(cornerRadius) {
+        if (cornerRadius) {
             gtkstring += `
             window.csd, dialog.csd,
             decoration, decoration-overlay {
@@ -626,8 +626,8 @@ function createGtkCss(obar, gtk4) {
         `;
     }
 
-    if( hBarHint &&
-        ( !hBarGtk3Only || (hBarGtk3Only && !gtk4) ) ) {
+    if (hBarHint &&
+        (!hBarGtk3Only || (hBarGtk3Only && !gtk4))) {
 
         gtkstring += `
         @define-color headerbar_bg_color rgb(${hbgRed}, ${hbgGreen}, ${hbgBlue});
@@ -652,7 +652,7 @@ function createGtkCss(obar, gtk4) {
         `;
 
         // Headerbar Buttons (gtk3)
-        if(!gtk4) {
+        if (!gtk4) {
             gtkstring += `
             headerbar .image-button,
             headerbar > button,
@@ -719,13 +719,13 @@ function createGtkCss(obar, gtk4) {
         }
     }
 
-    if(sBarHint) {
+    if (sBarHint) {
         let sbGradStyle =
-        `background-image: linear-gradient(
+            `background-image: linear-gradient(
             ${sBarGradient}, @sidebar_bg_color, rgba(${vbgRed},${vbgGreen},${vbgBlue},${viewAlpha})
         );`
         let sbGradBdStyle =
-        `background-image: linear-gradient(
+            `background-image: linear-gradient(
             ${sBarGradient}, @sidebar_backdrop_color, rgb(${vbgRed},${vbgGreen},${vbgBlue})
         );`
 
@@ -734,7 +734,7 @@ function createGtkCss(obar, gtk4) {
         @define-color sidebar_backdrop_color rgb(${sbdRed}, ${sbdGreen}, ${sbdBlue});
         @define-color sidebar_fg_color rgba(${sfgRed}, ${sfgGreen}, ${sfgBlue}, 0.9);
 
-        @define-color secondary_sidebar_bg_color rgba(${sbgRed}, ${sbgGreen}, ${sbgBlue}, ${0.9*viewAlpha});
+        @define-color secondary_sidebar_bg_color rgba(${sbgRed}, ${sbgGreen}, ${sbgBlue}, ${0.9 * viewAlpha});
         @define-color secondary_sidebar_backdrop_color rgb(${sbdRed}, ${sbdGreen}, ${sbdBlue});
         @define-color secondary_sidebar_fg_color rgba(${sfgRed}, ${sfgGreen}, ${sfgBlue}, 0.9);
 
@@ -760,7 +760,7 @@ function createGtkCss(obar, gtk4) {
         }
         `;
 
-        if(sBarHint - hBarHint > 0.05) {
+        if (sBarHint - hBarHint > 0.05) {
             gtkstring += `
             #NautilusPathBar {
                 ${sBarGradient != 'none' ? `background-color: alpha(@sidebar_bg_color, 0.5);` : `background-color: @sidebar_bg_color;`}
@@ -771,7 +771,7 @@ function createGtkCss(obar, gtk4) {
             `;
         }
         // Planify app
-        if(sBarGradient != 'none') {
+        if (sBarGradient != 'none') {
             gtkstring += `
             .sidebar-pane .card {
                 color: @card_fg_color;
@@ -780,7 +780,7 @@ function createGtkCss(obar, gtk4) {
         }
     }
 
-    if(cdHint) {
+    if (cdHint) {
         gtkstring += `
         @define-color card_bg_color rgba(${cbgRed}, ${cbgGreen}, ${cbgBlue}, ${viewAlpha});
         @define-color card_backdrop_color rgb(${cbdRed}, ${cbdGreen}, ${cbdBlue});
@@ -792,7 +792,7 @@ function createGtkCss(obar, gtk4) {
         `;
     }
 
-    if(popoverMenu) {
+    if (popoverMenu) {
         gtkstring += `
         @define-color popover_bg_color rgba(${mbgRed}, ${mbgGreen}, ${mbgBlue}, ${mbgAlpha});
         @define-color popover_fg_color rgba(${mfgRed}, ${mfgGreen}, ${mfgBlue}, 0.9);
@@ -803,7 +803,7 @@ function createGtkCss(obar, gtk4) {
     }
 
     /* Window Shadow */
-    if(gtk4) {
+    if (gtk4) {
         gtkstring += `
         window.csd {
             ${winShadowStyle}
@@ -824,7 +824,7 @@ function createGtkCss(obar, gtk4) {
         `;
     }
 
-    if(trafficLightButtons) {
+    if (trafficLightButtons) {
         gtkstring += `
         button.titlebutton,
         windowcontrols > button {
@@ -907,7 +907,7 @@ function createGtkCss(obar, gtk4) {
         }
         `;
 
-        if(gtk4) {
+        if (gtk4) {
             gtkstring += `
             button.titlebutton,
             windowcontrols > button {
@@ -933,7 +933,7 @@ function createGtkCss(obar, gtk4) {
 export function saveGtkCss(obar, caller) {
     const importExport = obar._settings.get_boolean('import-export');
     const pauseStyleReload = obar._settings.get_boolean('pause-reload');
-    if(importExport || pauseStyleReload)
+    if (importExport || pauseStyleReload)
         return;
     // console.log('saveGtkCss called with ImportExport false, Pause false');
 
@@ -959,14 +959,14 @@ export function saveGtkCss(obar, caller) {
         const isGtk = file.query_exists(null);
         const isBackupBarEnhanced = backup.query_exists(null);
         let isGtkBarEnhanced = false;
-        if(isGtk) {
+        if (isGtk) {
             try {
                 const [contents] = await file.load_contents_async(null);
-                if(contents) {
+                if (contents) {
                     const decoder = new TextDecoder('utf-8');
                     const contentsString = decoder.decode(contents);
                     const contentsHeader = contentsString.split('\n')[1];
-                    if(contentsHeader)
+                    if (contentsHeader)
                         isGtkBarEnhanced = contentsHeader.includes('/*** Bar Enhanced GTK CSS ***/');
                 }
             }
@@ -976,8 +976,8 @@ export function saveGtkCss(obar, caller) {
         }
 
         // Disable extension or turn off Gtk app style
-        if(caller == 'disable' || !applyGtk) {
-            if(isGtkBarEnhanced && isBackupBarEnhanced) {
+        if (caller == 'disable' || !applyGtk) {
+            if (isGtkBarEnhanced && isBackupBarEnhanced) {
                 try { // Restore backup
                     backup.move_async(file, Gio.FileCopyFlags.OVERWRITE, null, null, null, null);
                 }
@@ -985,7 +985,7 @@ export function saveGtkCss(obar, caller) {
                     console.error('Error restoring gtk.css from backup: ' + e);
                 }
             }
-            else if(isGtkBarEnhanced) {
+            else if (isGtkBarEnhanced) {
                 try {
                     file.delete_async(null, null, null);
                 }
@@ -995,8 +995,8 @@ export function saveGtkCss(obar, caller) {
             }
         }
         // Turn On Gtk: Backup if existing (non-barEnhanced) gtk.css and create new BarEnhanced gtk.css
-        else if(applyGtk) {
-            if(isGtk && !isGtkBarEnhanced) {
+        else if (applyGtk) {
+            if (isGtk && !isGtkBarEnhanced) {
                 try {
                     await file.move_async(backup, Gio.FileCopyFlags.OVERWRITE, null, null, null, null);
                 }
@@ -1041,7 +1041,7 @@ export function saveFlatpakOverrides(obar, caller) {
 
     let keyfile = GLib.KeyFile.new();
     let globalFile = Gio.File.new_for_path(overrideDir.get_path() + '/global');
-    if(!globalFile.query_exists(null)) {
+    if (!globalFile.query_exists(null)) {
         try {
             globalFile.create(Gio.FileCreateFlags.NONE, null);
             keyfile.set_string('Context', 'filesystems', '');
@@ -1060,15 +1060,15 @@ export function saveFlatpakOverrides(obar, caller) {
     }
 
     try {
-        if(caller == 'disable' || !applyFlatpak) {
-            if(!obar.fsystemBackup)
+        if (caller == 'disable' || !applyFlatpak) {
+            if (!obar.fsystemBackup)
                 obar.fsystemBackup = '';
             keyfile.set_string('Context', 'filesystems', obar.fsystemBackup);
             keyfile.save_to_file(globalFile.get_path());
         }
-        else if(applyFlatpak) {
+        else if (applyFlatpak) {
             obar.fsystemBackup = keyfile.get_string('Context', 'filesystems');
-            if(!obar.fsystemBackup)
+            if (!obar.fsystemBackup)
                 obar.fsystemBackup = '';
             let fsystem = obar.fsystemBackup + ';xdg-config/gtk-3.0:ro;xdg-config/gtk-4.0:ro;';
             keyfile.set_string('Context', 'filesystems', fsystem);
@@ -1082,7 +1082,7 @@ export function saveFlatpakOverrides(obar, caller) {
 }
 
 function parseRGB(rgb) {
-    rgb = rgb<0? 0 : rgb>255? 255 : Math.round(rgb);
+    rgb = rgb < 0 ? 0 : rgb > 255 ? 255 : Math.round(rgb);
     return rgb;
 }
 
@@ -1110,6 +1110,7 @@ function getStylesheet(obar, Me) {
     let islandsColor = obar._settings.get_strv('iscolor');
     let isalpha = obar._settings.get_double('isalpha');
     let neon = obar._settings.get_boolean('neon');
+    let neonIntensity = obar._settings.get_double('neon-intensity');
     let shadow = obar._settings.get_boolean('shadow');
     let font = obar._settings.get_string("font");
     let height = obar._settings.get_double('height');
@@ -1132,6 +1133,35 @@ function getStylesheet(obar, Me) {
     let mshAlpha = obar._settings.get_double('mshalpha');
     let msColor = obar._settings.get_strv('mscolor');
     let msAlpha = obar._settings.get_double('msalpha');
+
+    // Dynamic non-destructive System Accent Color Synchronization
+    let systemAccentSync = obar._settings.get_boolean('system-accent-sync');
+    if (systemAccentSync) {
+        try {
+            let Gio = imports.gi.Gio;
+            let interfaceSettings = new Gio.Settings({ schema_id: 'org.gnome.desktop.interface' });
+            if (interfaceSettings.settings_schema.has_key('accent-color')) {
+                let systemAccent = interfaceSettings.get_string('accent-color') || 'blue';
+                const accentRGBs = {
+                    'blue': ['0.208', '0.518', '0.894'],
+                    'teal': ['0.086', '0.627', '0.522'],
+                    'green': ['0.180', '0.761', '0.494'],
+                    'yellow': ['0.961', '0.761', '0.067'],
+                    'orange': ['0.902', '0.380', '0.000'],
+                    'red': ['0.878', '0.106', '0.141'],
+                    'pink': ['0.878', '0.353', '0.541'],
+                    'purple': ['0.569', '0.255', '0.675'],
+                    'slate': ['0.435', '0.471', '0.506']
+                };
+                let rgbRatio = accentRGBs[systemAccent] || accentRGBs['blue'];
+                borderColor = rgbRatio;
+                msColor = rgbRatio;
+            }
+        } catch (e) {
+            // fallback gracefully
+        }
+    }
+
     let smbgColor = obar._settings.get_strv('smbgcolor');
     let smbgOverride = obar._settings.get_boolean('smbgoverride');
     let bgcolorWMax = obar._settings.get_strv('bgcolor-wmax');
@@ -1251,7 +1281,7 @@ function getStylesheet(obar, Me) {
     const msblue = parseInt(parseFloat(msColor[2]) * 255);
     // Save menu selection hex for use in toggle on svg
     obar.msHex = rgbToHex(msred, msgreen, msblue);
-    obar.msHex = obar.msHex + parseInt(parseFloat(msAlpha)*255).toString(16);
+    obar.msHex = obar.msHex + parseInt(parseFloat(msAlpha) * 255).toString(16);
 
     const darkMode = obar._intSettings.get_string('color-scheme') == 'prefer-dark';
 
@@ -1262,19 +1292,19 @@ function getStylesheet(obar, Me) {
     // Sub/Secondary menu color -
     let smbg, smbgred, smbggreen, smbgblue;
     // Manual Override: If 'override' enabled, submenu color with user defined values
-    if(smbgOverride) {
+    if (smbgOverride) {
         smbgred = parseInt(parseFloat(smbgColor[0]) * 255);
         smbggreen = parseInt(parseFloat(smbgColor[1]) * 255);
         smbgblue = parseInt(parseFloat(smbgColor[2]) * 255);
         smbg = `rgba(${smbgred},${smbggreen},${smbgblue},${mbgAlpha})`;
     }
     else {
-    // Auto-generated: go from bgcolor move towards white/black based on bgcolor darkness
+        // Auto-generated: go from bgcolor move towards white/black based on bgcolor darkness
         const lightrgba = `rgba(${255},${255},${255},${1.0})`;
         const darkrgba = `rgba(${0},${0},${0},${1.0})`;
         let bgdark = getBgDark(mbgred, mbggreen, mbgblue);
-        let smbgTarget = bgdark? lightrgba: darkrgba;
-        let [rTarget, gTarget, bTarget] = bgdark? [255,255,255]: [0,0,0];
+        let smbgTarget = bgdark ? lightrgba : darkrgba;
+        let [rTarget, gTarget, bTarget] = bgdark ? [255, 255, 255] : [0, 0, 0];
         smbgred = colorMix(mbgred, rTarget, 0.18);
         smbggreen = colorMix(mbggreen, gTarget, 0.18);
         smbgblue = colorMix(mbgblue, bTarget, 0.18);
@@ -1287,13 +1317,13 @@ function getStylesheet(obar, Me) {
     function getAutoHgColor(bgColor) {
         let bgHsp = getHSP(bgColor);
         let bgSat = Utils.getColorfulness(bgColor);
-        let grayFactor = (255 - bgSat)/255;
+        let grayFactor = (255 - bgSat) / 255;
         let rgb;
-        if(bgHsp <= bgLightThresh) {
-            rgb = bgHsp + 40 + 80*grayFactor;
+        if (bgHsp <= bgLightThresh) {
+            rgb = bgHsp + 40 + 80 * grayFactor;
         }
         else {
-            rgb = bgHsp - 40 - 100*grayFactor;
+            rgb = bgHsp - 40 - 100 * grayFactor;
         }
         rgb = parseRGB(rgb);
         hgColor = [rgb, rgb, rgb];
@@ -1305,7 +1335,7 @@ function getStylesheet(obar, Me) {
     let autohgBar = obar._settings.get_boolean('autohg-bar');
     hgColor = [hred, hgreen, hblue];
     bgColor = [bgred, bggreen, bgblue];
-    if(autohgBar)
+    if (autohgBar)
         hgColor = getAutoHgColor(bgColor);
 
     let hbgred = hgColor[0];
@@ -1316,24 +1346,24 @@ function getStylesheet(obar, Me) {
     // Island Auto Highlight
     hgColor = [hred, hgreen, hblue];
     bgColor = [isred, isgreen, isblue];
-    if(autohgBar)
+    if (autohgBar)
         hgColor = getAutoHgColor(bgColor);
 
-    let ishbgred = parseRGB(isred*(1-hAlpha) + hgColor[0]*hAlpha);
-    let ishbggreen = parseRGB(isgreen*(1-hAlpha) + hgColor[1]*hAlpha);
-    let ishbgblue = parseRGB(isblue*(1-hAlpha) + hgColor[2]*hAlpha);
+    let ishbgred = parseRGB(isred * (1 - hAlpha) + hgColor[0] * hAlpha);
+    let ishbggreen = parseRGB(isgreen * (1 - hAlpha) + hgColor[1] * hAlpha);
+    let ishbgblue = parseRGB(isblue * (1 - hAlpha) + hgColor[2] * hAlpha);
     let ihbg = `rgba(${ishbgred},${ishbggreen},${ishbgblue},${1.0})`;
 
     // Menu Auto Highlight
     let autohgMenu = obar._settings.get_boolean('autohg-menu');
     hgColor = [mhred, mhgreen, mhblue];
     bgColor = [mbgred, mbggreen, mbgblue];
-    if(autohgMenu)
+    if (autohgMenu)
         hgColor = getAutoHgColor(bgColor);
 
-    let mhbgred = parseRGB(mbgred*(1-mhAlpha) + hgColor[0]*mhAlpha);
-    let mhbggreen = parseRGB(mbggreen*(1-mhAlpha) + hgColor[1]*mhAlpha);
-    let mhbgblue = parseRGB(mbgblue*(1-mhAlpha) + hgColor[2]*mhAlpha);
+    let mhbgred = parseRGB(mbgred * (1 - mhAlpha) + hgColor[0] * mhAlpha);
+    let mhbggreen = parseRGB(mbggreen * (1 - mhAlpha) + hgColor[1] * mhAlpha);
+    let mhbgblue = parseRGB(mbgblue * (1 - mhAlpha) + hgColor[2] * mhAlpha);
     let mhbg = `rgba(${mhbgred},${mhbggreen},${mhbgblue},${1.0})`;
     // Save menu highlight hex for use in focused svg
     obar.mhHex = rgbToHex(mhbgred, mhbggreen, mhbgblue);
@@ -1347,30 +1377,30 @@ function getStylesheet(obar, Me) {
     // Sub Menu Auto Highlight
     hgColor = [mhred, mhgreen, mhblue];
     bgColor = [smbgred, smbggreen, smbgblue];
-    if(autohgMenu)
+    if (autohgMenu)
         hgColor = getAutoHgColor(bgColor);
 
-    let smhbgred = parseRGB(smbgred*(1-0.75*mhAlpha) + hgColor[0]*0.75*mhAlpha);
-    let smhbggreen = parseRGB(smbggreen*(1-0.75*mhAlpha) + hgColor[1]*0.75*mhAlpha);
-    let smhbgblue = parseRGB(smbgblue*(1-0.75*mhAlpha) + hgColor[2]*0.75*mhAlpha);
+    let smhbgred = parseRGB(smbgred * (1 - 0.75 * mhAlpha) + hgColor[0] * 0.75 * mhAlpha);
+    let smhbggreen = parseRGB(smbggreen * (1 - 0.75 * mhAlpha) + hgColor[1] * 0.75 * mhAlpha);
+    let smhbgblue = parseRGB(smbgblue * (1 - 0.75 * mhAlpha) + hgColor[2] * 0.75 * mhAlpha);
     let smhbg = `rgba(${smhbgred},${smhbggreen},${smhbgblue},${1.0})`;
 
     // Active/Accent Auto Highlight
     hgColor = [mhred, mhgreen, mhblue];
     bgColor = [msred, msgreen, msblue];
-    if(autohgMenu)
+    if (autohgMenu)
         hgColor = getAutoHgColor(bgColor);
 
-    let mshbgred = parseRGB(msred*(1-mhAlpha) + hgColor[0]*mhAlpha);
-    let mshbggreen = parseRGB(msgreen*(1-mhAlpha) + hgColor[1]*mhAlpha);
-    let mshbgblue = parseRGB(msblue*(1-mhAlpha) + hgColor[2]*mhAlpha);
+    let mshbgred = parseRGB(msred * (1 - mhAlpha) + hgColor[0] * mhAlpha);
+    let mshbggreen = parseRGB(msgreen * (1 - mhAlpha) + hgColor[1] * mhAlpha);
+    let mshbgblue = parseRGB(msblue * (1 - mhAlpha) + hgColor[2] * mhAlpha);
     let mshg = `rgba(${mshbgred},${mshbggreen},${mshbgblue},${1.0})`; //msalpha
 
 
     ///// FG COLORS for BAR and MENU
     // Bar highlight fg color
     let hfgred, hfggreen, hfgblue;
-    if(bartype == 'Mainland' || bartype == 'Floating') {
+    if (bartype == 'Mainland' || bartype == 'Floating') {
         hfgred = colorMix(fgred, hbgred, -0.12);
         hfggreen = colorMix(fggreen, hbggreen, -0.12);
         hfgblue = colorMix(fgblue, hbgblue, -0.12);
@@ -1380,14 +1410,14 @@ function getStylesheet(obar, Me) {
         hfggreen = colorMix(fggreen, ishbggreen, -0.12);
         hfgblue = colorMix(fgblue, ishbgblue, -0.12);
     }
-    if(autofgBar) {
+    if (autofgBar) {
         // Bar auto fg color
         let dark;
-        if(bartype == 'Mainland' || bartype == 'Floating')
+        if (bartype == 'Mainland' || bartype == 'Floating')
             dark = getBgDark(bgred, bggreen, bgblue);
         else
             dark = getBgDark(isred, isgreen, isblue);
-        if(dark) {
+        if (dark) {
             fgred = fggreen = fgblue = 250;
             hfgred = hfggreen = hfgblue = 255;
         }
@@ -1414,9 +1444,9 @@ function getStylesheet(obar, Me) {
     let amhfggreen = colorMix(mfggreen, mshbggreen, -0.12);
     let amhfgblue = colorMix(mfgblue, mshbgblue, -0.12);
 
-    if(autofgMenu) {
+    if (autofgMenu) {
         // Menu auto fg color
-        if(getBgDark(mbgred, mbggreen, mbgblue)) {
+        if (getBgDark(mbgred, mbggreen, mbgblue)) {
             mfgred = mfggreen = mfgblue = 230;
             mhfgred = mhfggreen = mhfgblue = 255;
         }
@@ -1426,7 +1456,7 @@ function getStylesheet(obar, Me) {
         }
 
         // Sub menu auto fg color
-        if(getBgDark(smbgred, smbggreen, smbgblue)) {
+        if (getBgDark(smbgred, smbggreen, smbgblue)) {
             smfgred = smfggreen = smfgblue = 230;
             smhfgred = smhfggreen = smhfgblue = 255;
         }
@@ -1436,7 +1466,7 @@ function getStylesheet(obar, Me) {
         }
 
         // Accent / active auto fg color
-        if(getBgDark(msred, msgreen, msblue)) {
+        if (getBgDark(msred, msgreen, msblue)) {
             amfgred = amfggreen = amfgblue = 250;
             amhfgred = amhfggreen = amhfgblue = 255;
         }
@@ -1460,29 +1490,29 @@ function getStylesheet(obar, Me) {
     //== Define Styles for Bar components ==//
 
     let fgStyle, panelStyle, panelLabelStyle, btnStyle, btnContainerStyle, borderStyle, radiusStyle, fontStyle,
-    islandStyle, dotStyle, neonStyle, gradientStyle, triLeftStyle, triBothStyle, triRightStyle,
-    triMidStyle, triMidNeonStyle, btnHoverStyle;
+        islandStyle, dotStyle, neonStyle, gradientStyle, triLeftStyle, triBothStyle, triRightStyle,
+        triMidStyle, triMidNeonStyle, btnHoverStyle;
 
     // style that applies dynamically to either the panel or the panel buttons as per bar type
     borderStyle =
-    ` border: 0px ${bordertype} rgba(${bred},${bgreen},${bblue},${balpha}); `;
-    if(widthTop) borderStyle += ` border-top-width: ${borderWidth}px; `;
-    if(widthRight) borderStyle += ` border-right-width: ${borderWidth}px; `;
-    if(widthBottom) borderStyle += ` border-bottom-width: ${borderWidth}px; `;
-    if(widthLeft) borderStyle += ` border-left-width: ${borderWidth}px; `;
+        ` border: 0px ${bordertype} rgba(${bred},${bgreen},${bblue},${balpha}); `;
+    if (widthTop) borderStyle += ` border-top-width: ${borderWidth}px; `;
+    if (widthRight) borderStyle += ` border-right-width: ${borderWidth}px; `;
+    if (widthBottom) borderStyle += ` border-bottom-width: ${borderWidth}px; `;
+    if (widthLeft) borderStyle += ` border-left-width: ${borderWidth}px; `;
 
     let rTopLeft, rTopRight, rBottomLeft, rBottomRight;
-    if((bartype == 'Islands' || bartype == 'Trilands') && neon) {
+    if ((bartype == 'Islands' || bartype == 'Trilands') && neon) {
         // Limit on max border radius (border grows inwards for Islands. '-1' for sub-pixel rounding)
         // Limit is needed for proper rendering of border and neon shadow
         let bWidthRound = Math.ceil(borderWidth);
-        if(borderRadius > height/2 - bWidthRound - 1)
-            borderRadius = Math.floor(height/2 - bWidthRound - 1);
+        if (borderRadius > height / 2 - bWidthRound - 1)
+            borderRadius = Math.floor(height / 2 - bWidthRound - 1);
     }
-    rTopLeft = radiusTopLeft? borderRadius: 0;
-    rTopRight = radiusTopRight? borderRadius: 0;
-    rBottomLeft = radiusBottomLeft? borderRadius: 0;
-    rBottomRight = radiusBottomRight? borderRadius: 0;
+    rTopLeft = radiusTopLeft ? borderRadius : 0;
+    rTopRight = radiusTopRight ? borderRadius : 0;
+    rBottomLeft = radiusBottomLeft ? borderRadius : 0;
+    rBottomRight = radiusBottomRight ? borderRadius : 0;
     radiusStyle = ` border-radius: ${rTopLeft}px ${rTopRight}px ${rBottomRight}px ${rBottomLeft}px !important; `;
 
     // if (bordertype == 'double') // Radius not supported on outline
@@ -1490,44 +1520,44 @@ function getStylesheet(obar, Me) {
 
     // foreground style needed for both panel and buttons (all bar types)
     fgStyle =
-    ` color: rgba(${fgred},${fggreen},${fgblue},${fgalpha}) !important; `;
+        ` color: rgba(${fgred},${fggreen},${fgblue},${fgalpha}) !important; `;
 
     // panel style for panel only (all bar types)
     panelStyle =
-    ` background-color: rgba(${bgred},${bggreen},${bgblue},${bgalpha}) !important;
+        ` background-color: rgba(${bgred},${bggreen},${bgblue},${bgalpha}) !important;
       height: ${height}px !important; `;
 
     panelStyle +=
-    ` ${radiusStyle} `;
+        ` ${radiusStyle} `;
 
     // button style for buttons only (all bar types)
     btnStyle =
-    ` margin: 0px; height: ${height}px !important; `;
+        ` margin: 0px; height: ${height}px !important; `;
 
     // island style for buttons (only island bar type)
     islandStyle =
-    ` background-color: rgba(${isred},${isgreen},${isblue},${isalpha}) !important; `;
+        ` background-color: rgba(${isred},${isgreen},${isblue},${isalpha}) !important; `;
 
     // Triland style for left end btn of box (only triland bar type)
     triLeftStyle =
-    ` border-radius: ${borderRadius}px 0px 0px ${borderRadius}px !important; `;
+        ` border-radius: ${borderRadius}px 0px 0px ${borderRadius}px !important; `;
     // Triland style for single btn box (only triland bar type)
     triBothStyle =
-    ` ${radiusStyle} `;
+        ` ${radiusStyle} `;
     // Triland style for right end btn of box (only triland bar type)
     triRightStyle =
-    ` border-radius: 0px ${borderRadius}px ${borderRadius}px 0px !important; `;
+        ` border-radius: 0px ${borderRadius}px ${borderRadius}px 0px !important; `;
     // Triland style for middle btns of box (only triland bar type)
     triMidStyle =
-    ` border-radius: 0px !important; `;
+        ` border-radius: 0px !important; `;
 
     // Workspace dots style
     dotStyle =
-    ` background-color: rgba(${fgred},${fggreen},${fgblue},${fgalpha}) !important; `;
+        ` background-color: rgba(${fgred},${fggreen},${fgblue},${fgalpha}) !important; `;
 
     // Add font style to panelstyle (works on all bar types)
     let font_weight = 400;
-    if (font != ""){
+    if (font != "") {
         let font_desc = Pango.font_description_from_string(font);
         let font_family = font_desc.get_family();
         let font_style_arr = ['normal', 'oblique', 'italic'];
@@ -1535,14 +1565,14 @@ function getStylesheet(obar, Me) {
         let font_stretch_arr = ['ultra-condensed', 'extra-condensed', 'condensed', 'semi-condensed', 'normal', 'semi-expanded', 'expanded', 'extra-expanded', 'ultra-expanded'];
         let font_stretch = font_stretch_arr[font_desc.get_stretch()];
         let font_size = font_desc.get_size() / Pango.SCALE;
-        try{
+        try {
             font_weight = font_desc.get_weight();
-        }catch(e){
-            font_weight = Math.round(font_weight/100)*100;
+        } catch (e) {
+            font_weight = Math.round(font_weight / 100) * 100;
         }
 
         fontStyle =
-        `   font-size: ${font_size}pt;
+            `   font-size: ${font_size}pt;
             font-family: "${font_family}";
             font-style: ${font_style};
             font-stretch: ${font_stretch};
@@ -1552,39 +1582,39 @@ function getStylesheet(obar, Me) {
         fontStyle = '';
     // Apply semi-bold if font weight is less than 500 when auto-theme is applied
     let autothemeApplied = obar._settings.get_boolean('autotheme-font');
-    if(autothemeApplied && font_weight < 500)
+    if (autothemeApplied && font_weight < 500)
         font_weight = 500;
     fontStyle +=
-    `   font-weight: ${font_weight}; `;
+        `   font-weight: ${font_weight}; `;
 
     panelLabelStyle =
-    ` ${fontStyle} `;
+        ` ${fontStyle} `;
 
     // Box shadow not working with rectangular box (for smaller radius), why Gnome??
     // Fix: Negative/low spread to try to contain it in that range. Range depends on bar height
     // padmod: modify formula to account for container padding in islands/trilands
-    let padmod = (bartype == 'Mainland' || bartype == 'Floating')? -2: vPad;
-    let radThreshold = Math.ceil(((height-2*padmod)/10.0 - 1)*5) ;
+    let padmod = (bartype == 'Mainland' || bartype == 'Floating') ? -2 : vPad;
+    let radThreshold = Math.ceil(((height - 2 * padmod) / 10.0 - 1) * 5);
 
     // Add the neon style if enabled
     if (neon) {
         let spread;
-        if(borderRadius <= radThreshold) {
-            spread = gradient? -3: 0;
+        if (borderRadius <= radThreshold) {
+            spread = gradient ? -3 : 0;
         }
         else {
-            if((rTopLeft == 0 && rTopRight == 0) || (rBottomLeft == 0 && rBottomRight == 0))
+            if ((rTopLeft == 0 && rTopRight == 0) || (rBottomLeft == 0 && rBottomRight == 0))
                 spread = 0;
             else
                 spread = 2;
         }
 
         neonStyle =
-        ` box-shadow: 0px 0px 4px ${spread}px rgba(${bred},${bgreen},${bblue},0.55); `;
+            ` box-shadow: 0px 0px 4px ${spread}px rgba(${bred},${bgreen},${bblue},${neonIntensity.toFixed(2)}); `;
 
-        spread = gradient? -3: 0;
+        spread = gradient ? -3 : 0;
         triMidNeonStyle =
-        ` box-shadow: 0px 0px 4px ${spread}px rgba(${bred},${bgreen},${bblue},0.55); `;
+            ` box-shadow: 0px 0px 4px ${spread}px rgba(${bred},${bgreen},${bblue},${neonIntensity.toFixed(2)}); `;
     }
     else {
         neonStyle = ``;
@@ -1594,23 +1624,23 @@ function getStylesheet(obar, Me) {
 
     // Panel hover/focus style
     let triMidNeonHoverStyle = ``;
-    if(hovereffect) { // Hover with border
+    if (hovereffect) { // Hover with border
         btnHoverStyle =
-        ` border: ${height/10.0}px solid rgba(${hred},${hgreen},${hblue},${hAlpha}) !important; `;
-        if(neon && (bartype == 'Islands' || bartype == 'Trilands')) {
+            ` border: ${height / 10.0}px solid rgba(${hred},${hgreen},${hblue},${hAlpha}) !important; `;
+        if (neon && (bartype == 'Islands' || bartype == 'Trilands')) {
             btnHoverStyle += neonStyle.replace(`${bred},${bgreen},${bblue}`, `${hred},${hgreen},${hblue}`);
             triMidNeonHoverStyle += triMidNeonStyle.replace(`${bred},${bgreen},${bblue}`, `${hred},${hgreen},${hblue}`);
         }
     }
     else {
-        if(bartype == 'Mainland' || bartype == 'Floating')
+        if (bartype == 'Mainland' || bartype == 'Floating')
             btnHoverStyle =
-            ` background-color: ${phbg} !important; `;
+                ` background-color: ${phbg} !important; `;
         else
             btnHoverStyle =
-            ` background-color: ${ihbg} !important; `;
+                ` background-color: ${ihbg} !important; `;
     }
-    if(bartype == 'Mainland' || bartype == 'Floating' || !neon) {
+    if (bartype == 'Mainland' || bartype == 'Floating' || !neon) {
         btnHoverStyle += ` box-shadow: none !important; `;
     }
 
@@ -1618,30 +1648,30 @@ function getStylesheet(obar, Me) {
     if (shadow) {
         if (borderRadius < radThreshold) {
             panelStyle +=
-            ` box-shadow: 0px ${shalpha*10}px ${1.5+shalpha*15}px ${shalpha*10}px rgba(${shred},${shgreen},${shblue}, ${0.85*shalpha}); `;
+                ` box-shadow: 0px ${shalpha * 10}px ${1.5 + shalpha * 15}px ${shalpha * 10}px rgba(${shred},${shgreen},${shblue}, ${0.85 * shalpha}); `;
         }
         else {
             panelStyle +=
-            ` box-shadow: 0px ${shalpha*10}px ${1.5+shalpha*15}px ${shalpha*20}px rgba(${shred},${shgreen},${shblue}, ${0.85*shalpha}); `;
+                ` box-shadow: 0px ${shalpha * 10}px ${1.5 + shalpha * 15}px ${shalpha * 20}px rgba(${shred},${shgreen},${shblue}, ${0.85 * shalpha}); `;
         }
     }
     else {
         panelStyle +=
-        ` box-shadow: none; `;
+            ` box-shadow: none; `;
     }
 
     // Add gradient to style if enabled
     if (gradient) {
         let startColor, endColor;
-        if(bartype == 'Islands' || bartype == 'Trilands') {
+        if (bartype == 'Islands' || bartype == 'Trilands') {
             startColor = `rgba(${isred},${isgreen},${isblue},${isalpha})`;
         }
         else {
             startColor = `rgba(${bgred},${bggreen},${bgblue},${bgalpha})`;
         }
         endColor = `rgba(${bgred2},${bggreen2},${bgblue2},${bgalpha2})`;
-        gradientStyle  =
-        ` background-gradient-start: ${startColor};
+        gradientStyle =
+            ` background-gradient-start: ${startColor};
           background-gradient-end: ${endColor};
           background-gradient-direction: ${grDirection}; `;
 
@@ -1654,8 +1684,8 @@ function getStylesheet(obar, Me) {
     let candyalpha = obar._settings.get_double('candyalpha');
     let candyStyleArr = [], candyHighlightArr = [], candyDotStyle = '', candyClockStyle = '';
     let hgCandy = [hred, hgreen, hblue];
-    for(let i=1; i<=16; i++) {
-        let candyColor = obar._settings.get_strv('candy'+i);
+    for (let i = 1; i <= 16; i++) {
+        let candyColor = obar._settings.get_strv('candy' + i);
         let cred = parseInt(parseFloat(candyColor[0]) * 255);
         let cgreen = parseInt(parseFloat(candyColor[1]) * 255);
         let cblue = parseInt(parseFloat(candyColor[2]) * 255);
@@ -1664,19 +1694,19 @@ function getStylesheet(obar, Me) {
 
         // Candybar highlights
         let bgCandy = [cred, cgreen, cblue];
-        if(autohgBar)
+        if (autohgBar)
             hgCandy = getAutoHgColor(bgCandy);
         // Candy Highlight BG
-        let hgalpha = 0.8*hAlpha;
-        let chred = parseRGB(cred*(1-hgalpha) + hgCandy[0]*hgalpha);
-        let chgreen = parseRGB(cgreen*(1-hgalpha) + hgCandy[1]*hgalpha);
-        let chblue = parseRGB(cblue*(1-hgalpha) + hgCandy[2]*hgalpha);
+        let hgalpha = 0.8 * hAlpha;
+        let chred = parseRGB(cred * (1 - hgalpha) + hgCandy[0] * hgalpha);
+        let chgreen = parseRGB(cgreen * (1 - hgalpha) + hgCandy[1] * hgalpha);
+        let chblue = parseRGB(cblue * (1 - hgalpha) + hgCandy[2] * hgalpha);
         let candyHgStyle = `background-color: rgba(${chred},${chgreen},${chblue},${calpha}) !important; `;
 
         // Candybar Auto FG Color
         let cfgred, cfggreen, cfgblue, chfgred, chfggreen, chfgblue;
-        if(autofgBar) {
-            if(getHSP(bgCandy) <= 180) {
+        if (autofgBar) {
+            if (getHSP(bgCandy) <= 180) {
                 cfgred = cfggreen = cfgblue = 250;
                 chfgred = chfggreen = chfgblue = 255;
             }
@@ -1687,7 +1717,7 @@ function getStylesheet(obar, Me) {
             candyStyle += `color: rgba(${cfgred},${cfggreen},${cfgblue},${fgalpha}) !important;`;
             candyHgStyle += `color: rgba(${chfgred},${chfggreen},${chfgblue},${fgalpha}) !important;`;
 
-            if(i==1) {
+            if (i == 1) {
                 candyDotStyle = `background-color: rgba(${cfgred},${cfggreen},${cfgblue},${fgalpha}) !important;`;
                 candyClockStyle = `color: rgba(${chfgred},${chfggreen},${chfgblue},${fgalpha}) !important;`;
             }
@@ -1698,47 +1728,47 @@ function getStylesheet(obar, Me) {
     }
 
 
-    if(bartype == 'Mainland') {
+    if (bartype == 'Mainland') {
         panelStyle +=
-        ` margin: 0px; border-radius: 0px; `;
+            ` margin: 0px; border-radius: 0px; `;
     }
     let setBottomMargin = obar._settings.get_boolean('set-bottom-margin');
     let position = obar._settings.get_string('position');
-    if(bartype == 'Floating') {
-    	if(setBottomMargin) {
-            if(position == 'Top') {
+    if (bartype == 'Floating') {
+        if (setBottomMargin) {
+            if (position == 'Top') {
                 panelStyle +=
-    		    ` margin: ${margin}px ${3*margin}px ${bottomMargin}px ${3*margin}px; `;
+                    ` margin: ${margin}px ${3 * margin}px ${bottomMargin}px ${3 * margin}px; `;
             }
             else {
                 panelStyle +=
-    		    ` margin: ${bottomMargin}px ${3*margin}px ${margin}px ${3*margin}px; `;
+                    ` margin: ${bottomMargin}px ${3 * margin}px ${margin}px ${3 * margin}px; `;
             }
 
-    	} else {
-	        panelStyle +=
-	        ` margin: ${margin}px ${3*margin}px; `;
-    	}
+        } else {
+            panelStyle +=
+                ` margin: ${margin}px ${3 * margin}px; `;
+        }
     }
-    if(bartype == 'Islands' || bartype == 'Trilands') {
-    	if(setBottomMargin) {
-            if(position == 'Top') {
+    if (bartype == 'Islands' || bartype == 'Trilands') {
+        if (setBottomMargin) {
+            if (position == 'Top') {
                 panelStyle +=
-                ` margin: ${margin}px ${1.5*margin}px ${bottomMargin}px ${1.5*margin}px; `;
+                    ` margin: ${margin}px ${1.5 * margin}px ${bottomMargin}px ${1.5 * margin}px; `;
             }
             else {
                 panelStyle +=
-                ` margin: ${bottomMargin}px ${1.5*margin}px ${margin}px ${1.5*margin}px; `;
+                    ` margin: ${bottomMargin}px ${1.5 * margin}px ${margin}px ${1.5 * margin}px; `;
             }
 
-    	} else {
-	        panelStyle +=
-	        ` margin: ${margin}px ${1.5*margin}px; `;
-    	}
+        } else {
+            panelStyle +=
+                ` margin: ${margin}px ${1.5 * margin}px; `;
+        }
         panelStyle += ` ${fgStyle} `;
 
         btnStyle +=
-        ` ${borderStyle}
+            ` ${borderStyle}
           ${radiusStyle}
           ${fgStyle}
           ${islandStyle}
@@ -1746,49 +1776,49 @@ function getStylesheet(obar, Me) {
           ${neonStyle} `;
 
         btnContainerStyle =
-        ` padding: ${vPad}px ${hPad}px;
+            ` padding: ${vPad}px ${hPad}px;
           margin: 0px 0px;
-          border-radius: ${borderRadius+borderWidth}px; `;
+          border-radius: ${borderRadius + borderWidth}px; `;
     }
     else {
         panelStyle +=
-        ` ${fgStyle}
+            ` ${fgStyle}
           ${borderStyle}
           ${gradientStyle}
           ${neonStyle} `;
 
         btnStyle +=
-        ` ${fgStyle}
+            ` ${fgStyle}
           border-radius: ${Math.max(borderRadius, 5)}px;
           border-width: 0px; `;
 
         btnContainerStyle =
-        ` padding: ${borderWidth+vPad}px ${borderWidth+hPad}px;
+            ` padding: ${borderWidth + vPad}px ${borderWidth + hPad}px;
           margin: 0px 0px;
-          border-radius: ${borderRadius+borderWidth}px; `;
+          border-radius: ${borderRadius + borderWidth}px; `;
     }
 
 
     // Panel Menu Style
-    let shadowAlpha = darkMode? mshAlpha : 0.5*mshAlpha;
-    let borderAlpha = darkMode? mbAlpha : 0.6*mbAlpha;
+    let shadowAlpha = darkMode ? mshAlpha : 0.5 * mshAlpha;
+    let borderAlpha = darkMode ? mbAlpha : 0.6 * mbAlpha;
     let menuContentStyle =
-    `   box-shadow: 0 2px 4px 0px rgba(${mshred},${mshgreen},${mshblue},${shadowAlpha}) !important; /* menu shadow */
+        `   box-shadow: 0 2px 4px 0px rgba(${mshred},${mshgreen},${mshblue},${shadowAlpha}) !important; /* menu shadow */
         border: 1px solid rgba(${mbred},${mbgreen},${mbblue},${borderAlpha}) !important; /* menu border */
         /* add menu font */
         background-color: rgba(${mbgred},${mbggreen},${mbgblue},${mbgAlpha}); /* menu bg */
         color: rgba(${mfgred},${mfggreen},${mfgblue},${mfgAlpha}); /* menu fg */
-        border-radius: ${menuRadius > 20? 20: menuRadius}px !important; `;
+        border-radius: ${menuRadius > 20 ? 20 : menuRadius}px !important; `;
     // GTK Popover style
     obar.popoverContentStyle =
-    `   box-shadow: 0 2px 4px 0px rgba(${mshred},${mshgreen},${mshblue},${0.5*mshAlpha});
-        border: 1px solid rgba(${mbred},${mbgreen},${mbblue},${0.5*mbAlpha});
+        `   box-shadow: 0 2px 4px 0px rgba(${mshred},${mshgreen},${mshblue},${0.5 * mshAlpha});
+        border: 1px solid rgba(${mbred},${mbgreen},${mbblue},${0.5 * mbAlpha});
         background-color: rgba(${mbgred},${mbggreen},${mbgblue},${mbgAlpha});
-        color: rgba(${mfgred},${mfggreen},${mfgblue},${0.9*mfgAlpha});
-        border-radius: ${menuRadius > 15? 15: menuRadius}px; `;
-    if(mbgGradient) { // Light Gradient
+        color: rgba(${mfgred},${mfggreen},${mfgblue},${0.9 * mfgAlpha});
+        border-radius: ${menuRadius > 15 ? 15 : menuRadius}px; `;
+    if (mbgGradient) { // Light Gradient
         let mGradientStyle =
-        `   box-shadow: none !important;
+            `   box-shadow: none !important;
             background-image: url(assets/menu.svg);
             background-repeat: no-repeat;
             background-size: cover; `;
@@ -1799,11 +1829,11 @@ function getStylesheet(obar, Me) {
     // Slider
     let sliderBaseColor = `${colorMix(smbgred, mbgred, -0.2)},${colorMix(smbggreen, mbggreen, -0.2)},${colorMix(smbgblue, mbgblue, -0.2)}`;
     let sliderActiveColor = `${colorMix(msred, mbgred, -0.2)},${colorMix(msgreen, mbggreen, -0.2)},${colorMix(msblue, mbgblue, -0.2)}`;
-    let bCol = mfgred > 200? 255: 0; // Slider border color
-    let sliHandRadius = Math.ceil(8 - sliHandBorder/2);
-    if(sliHandRadius < 4) sliHandRadius = 4;
+    let bCol = mfgred > 200 ? 255 : 0; // Slider border color
+    let sliHandRadius = Math.ceil(8 - sliHandBorder / 2);
+    if (sliHandRadius < 4) sliHandRadius = 4;
     let sliderStyle =
-    `   color: rgba(${obar.gnomeVersion >= 47? sliderActiveColor : sliderBaseColor}, 1) !important;
+        `   color: rgba(${obar.gnomeVersion >= 47 ? sliderActiveColor : sliderBaseColor}, 1) !important;
         -barlevel-height: ${sliderHeight}px;
         -barlevel-border-width: 0.5px;
         -barlevel-border-color: rgba(${bCol},${bCol},${bCol},0.25) !important;
@@ -1824,7 +1854,7 @@ function getStylesheet(obar, Me) {
     // If applyALlShell then FG = sub-menu FG and BG = sub-menu-BG
     // else FG = white and BG = Default Dark
     let oFgColor, oHFgColor, oHBgColor;
-    if(applyAllShell) {
+    if (applyAllShell) {
         oFgColor = `rgba(${smfgred},${smfggreen},${smfgblue},1.0)`;
         oHFgColor = `rgba(${smhfgred},${smhfggreen},${smhfgblue},1.0)`;
         oHBgColor = `rgba(${smhbgred},${smhbggreen},${smhbgblue},${mbgAlpha})`;
@@ -1836,20 +1866,20 @@ function getStylesheet(obar, Me) {
     }
     let setOverview = obar._settings.get_boolean('set-overview');
     let overviewStyle, barFgOverview, barHFgOverview, barHBgOverview, dotOverview;
-    if(!setOverview) {
+    if (!setOverview) {
         overviewStyle =
-        `   background-color: transparent !important;
+            `   background-color: transparent !important;
             border-color: transparent !important;
             box-shadow: none !important;
             color: ${oFgColor} !important; `;
         barFgOverview =
-        `   color: ${oFgColor} !important;`;
+            `   color: ${oFgColor} !important;`;
         barHFgOverview =
-        `   color: ${oHFgColor} !important;`;
+            `   color: ${oHFgColor} !important;`;
         barHBgOverview =
-        `   background-color: ${oHBgColor} !important;`;
+            `   background-color: ${oHBgColor} !important;`;
         dotOverview =
-        `   background-color: ${oFgColor} !important;`;
+            `   background-color: ${oFgColor} !important;`;
     }
     else {
         overviewStyle = ``;
@@ -1862,17 +1892,17 @@ function getStylesheet(obar, Me) {
     // Match WMax Bar BG color with Gtk Headerbar Hint, if enabled
     let wmaxBgColorStyle, wmaxBgRed, wmaxBgGreen, wmaxBgBlue, wmBg;
     const wmaxHbar = obar._settings.get_boolean('wmax-hbarhint');
-    if(wmaxHbar) {
-        const hBarHint = obar._settings.get_int('headerbar-hint')/100;
+    if (wmaxHbar) {
+        const hBarHint = obar._settings.get_int('headerbar-hint') / 100;
         const hscdColor = obar._settings.get_strv('hscd-color');
         const hscdRed = parseInt(parseFloat(hscdColor[0]) * 255);
         const hscdGreen = parseInt(parseFloat(hscdColor[1]) * 255);
         const hscdBlue = parseInt(parseFloat(hscdColor[2]) * 255);
         const colorScheme = obar._intSettings.get_string('color-scheme');
-        wmBg = (colorScheme == 'prefer-dark')? 48: 235;
-        wmaxBgRed = parseRGB(hBarHint*hscdRed + (1-hBarHint)*wmBg);
-        wmaxBgGreen = parseRGB(hBarHint*hscdGreen + (1-hBarHint)*wmBg);
-        wmaxBgBlue = parseRGB(hBarHint*hscdBlue + (1-hBarHint)*wmBg);
+        wmBg = (colorScheme == 'prefer-dark') ? 48 : 235;
+        wmaxBgRed = parseRGB(hBarHint * hscdRed + (1 - hBarHint) * wmBg);
+        wmaxBgGreen = parseRGB(hBarHint * hscdGreen + (1 - hBarHint) * wmBg);
+        wmaxBgBlue = parseRGB(hBarHint * hscdBlue + (1 - hBarHint) * wmBg);
 
         bgredwmax = wmaxBgRed;
         bggreenwmax = wmaxBgGreen;
@@ -1880,22 +1910,22 @@ function getStylesheet(obar, Me) {
         bgalphaWMax = 1.0;
     }
     wmaxBgColorStyle =
-    `background-color: rgba(${bgredwmax},${bggreenwmax},${bgbluewmax},${bgalphaWMax}) !important;
+        `background-color: rgba(${bgredwmax},${bggreenwmax},${bgbluewmax},${bgalphaWMax}) !important;
      border-color: rgba(${bgredwmax},${bggreenwmax},${bgbluewmax},${bgalphaWMax}) !important;
     `;
     let wmaxColorStyle, wmaxHoverStyle, wmaxDotStyle;
-    if(bartype == 'Mainland' || bartype == 'Floating' || !btnBgWMax) {
-        if(getBgDark(bgredwmax, bggreenwmax, bgbluewmax)) {
+    if (bartype == 'Mainland' || bartype == 'Floating' || !btnBgWMax) {
+        if (getBgDark(bgredwmax, bggreenwmax, bgbluewmax)) {
             wmaxColorStyle =
-            `color: rgba(250,250,250,1.0) !important; `;
+                `color: rgba(250,250,250,1.0) !important; `;
             wmaxDotStyle =
-            `background-color: rgba(250,250,250,1.0) !important; `;
+                `background-color: rgba(250,250,250,1.0) !important; `;
         }
         else {
             wmaxColorStyle =
-            `color: rgba(5,5,5,1.0) !important; `;
+                `color: rgba(5,5,5,1.0) !important; `;
             wmaxDotStyle =
-            `background-color: rgba(5,5,5,1.0) !important; `;
+                `background-color: rgba(5,5,5,1.0) !important; `;
         }
     }
     else {
@@ -1903,32 +1933,32 @@ function getStylesheet(obar, Me) {
         wmaxDotStyle = ``;
     }
     const candybar = obar._settings.get_boolean('candybar');
-    if(((bartype == 'Mainland' || bartype == 'Floating') && !candybar) || !btnBgWMax) {
+    if (((bartype == 'Mainland' || bartype == 'Floating') && !candybar) || !btnBgWMax) {
         let hgColor = [hred, hgreen, hblue], bgColor = [bgredwmax, bggreenwmax, bgbluewmax];
-        if(autohgBar)
+        if (autohgBar)
             hgColor = getAutoHgColor(bgColor);
         // WMax Highlight BG
         wmaxHoverStyle =
-        `background-color: rgba(${hgColor[0]},${hgColor[1]},${hgColor[2]},${hAlpha}) !important; `;
+            `background-color: rgba(${hgColor[0]},${hgColor[1]},${hgColor[2]},${hAlpha}) !important; `;
     }
     else {
         wmaxHoverStyle = ``;
     }
 
     let heightWMax;
-    if(custMarginWmax) {
-        heightWMax = height + 2*marginWMax;
+    if (custMarginWmax) {
+        heightWMax = height + 2 * marginWMax;
     }
     else {
-        heightWMax = height + 2*margin;
+        heightWMax = height + 2 * margin;
         marginWMax = margin;
     }
 
     // Unlock Dialog
     let unlockStyle, unlockHoverStyle;
-    if(obar.main.sessionMode.isLocked) {
+    if (obar.main.sessionMode.isLocked) {
         unlockStyle =
-        `background-color: transparent !important;
+            `background-color: transparent !important;
          border-color: transparent !important;
          color: rgba(255,255,255,1.0) !important;
          box-shadow: none !important;
@@ -1937,9 +1967,9 @@ function getStylesheet(obar, Me) {
     else {
         unlockStyle = ``;
     }
-    if(obar.main.sessionMode.isLocked) {
+    if (obar.main.sessionMode.isLocked) {
         unlockHoverStyle =
-        `color: rgba(255,255,255,1.0) !important;`;
+            `color: rgba(255,255,255,1.0) !important;`;
     }
     else {
         unlockHoverStyle = ``;
@@ -1948,34 +1978,34 @@ function getStylesheet(obar, Me) {
     // Toggle switch SVG
     let toggleOnSVG = 'toggle-on.svg', toggleOffSVG = 'toggle-off.svg';
     let hcMode = obar._hcSettings.get_boolean('high-contrast');
-    if(hcMode && obar.gnomeVersion <= 45) {
+    if (hcMode && obar.gnomeVersion <= 45) {
         toggleOnSVG = 'toggle-on-hc.svg';
         toggleOffSVG = 'toggle-off-hc.svg';
     }
 
     // Menu rise(margin) for Bar in Bottom Position
     let bottomBarStyle;
-    if(position == 'Bottom') {
+    if (position == 'Bottom') {
         bottomBarStyle =
-        `margin-bottom: 0px !important;`;
+            `margin-bottom: 0px !important;`;
     }
     else
         bottomBarStyle = ``;
 
     // Modal Dialog Link button styles
     let dialogLinkBtnFirstStyle, dialogLinkBtnLastStyle;
-    let btnRadius = menuRadius>20? 20: menuRadius;
-    if(obar.gnomeVersion >= 47) {
+    let btnRadius = menuRadius > 20 ? 20 : menuRadius;
+    if (obar.gnomeVersion >= 47) {
         dialogLinkBtnFirstStyle =
-        `border-radius: ${btnRadius}px 0 0 ${btnRadius}px !important;`;
+            `border-radius: ${btnRadius}px 0 0 ${btnRadius}px !important;`;
         dialogLinkBtnLastStyle =
-        `border-radius: 0 ${btnRadius}px ${btnRadius}px 0 !important;`;
+            `border-radius: 0 ${btnRadius}px ${btnRadius}px 0 !important;`;
     }
     else {
         dialogLinkBtnFirstStyle =
-        `border-radius: 0 0 0 ${btnRadius}px !important;`;
+            `border-radius: 0 0 0 ${btnRadius}px !important;`;
         dialogLinkBtnLastStyle =
-        `border-radius: 0 0 ${btnRadius}px 0 !important;`;
+            `border-radius: 0 0 ${btnRadius}px 0 !important;`;
     }
 
     // Add/Remove .openmenu class to Restrict/Extend menu styles to the shell
@@ -2010,6 +2040,7 @@ function getStylesheet(obar, Me) {
         #panel${barEnhancedClass} {
             ${panelStyle}
             ${unlockStyle}
+            transition-duration: 100ms;
         }
 
         #panel${barEnhancedClass} StLabel {
@@ -2025,6 +2056,7 @@ function getStylesheet(obar, Me) {
             ${wmaxBgColorStyle}
             ${wmaxColorStyle}
             ${unlockStyle}
+            transition-duration: 180ms !important;
         }
 
         #panel${barEnhancedClass} .button-container {
@@ -2040,16 +2072,18 @@ function getStylesheet(obar, Me) {
             ${btnStyle}
             color: rgba(${fgred},${fggreen},${fgblue},${fgalpha});
             ${unlockStyle}
+            transition-duration: 100ms;
         }
         #panel${barEnhancedClass}:windowmax .panel-button {
             ${btnBgWMax? '': 'background-color: transparent !important;'}
             ${borderWMax? '': `border-color: rgba(${bgredwmax},${bggreenwmax},${bgbluewmax},${bgalphaWMax});`}
             ${neonWMax? '': 'box-shadow: none;'}
             ${wmaxColorStyle}
+            transition-duration: 180ms !important;
         }
 
         #panel${barEnhancedClass}:overview, #panel${barEnhancedClass}:overview .panel-button {
-            ${setOverview? '': overviewStyle}
+            ${setOverview ? '' : overviewStyle}
         }
 
         #panel${barEnhancedClass}:overview:windowmax {
@@ -2062,6 +2096,7 @@ function getStylesheet(obar, Me) {
             ${btnHoverStyle}
             color: rgba(${hfgred},${hfggreen},${hfgblue},${fgalpha}) !important;
             ${unlockHoverStyle}
+            transition-duration: 150ms;
         }
         #panel${barEnhancedClass}:windowmax .panel-button:hover, #panel${barEnhancedClass}:windowmax .panel-button:focus,
         #panel${barEnhancedClass}:windowmax .panel-button:active, #panel${barEnhancedClass}:windowmax .panel-button:checked {
@@ -2072,8 +2107,8 @@ function getStylesheet(obar, Me) {
         #panel${barEnhancedClass}:overview .panel-button:checked, #panel${barEnhancedClass}:overview .panel-button:active,
         #panel${barEnhancedClass}:overview .panel-button:overview {
             ${btnHoverStyle}
-            ${setOverview? '': barHFgOverview}
-            ${setOverview? '': barHBgOverview}
+            ${setOverview ? '' : barHFgOverview}
+            ${setOverview ? '' : barHBgOverview}
         }
 
         #panel${barEnhancedClass} .panel-button.clock-display .clock {
@@ -2120,13 +2155,14 @@ function getStylesheet(obar, Me) {
         #panel${barEnhancedClass} .remote-access-indicator, #panel${barEnhancedClass}:windowmax .remote-access-indicator {
             transition-duration: 150ms;
             font-weight: bold;
-            background-color: rgba(${(destructRed+warningRed)/2},${(destructGreen+warningGreen)/2},${(destructBlue+warningBlue)/2}, 0.9) !important;
+            background-color: rgba(${(destructRed + warningRed) / 2},${(destructGreen + warningGreen) / 2},${(destructBlue + warningBlue) / 2}, 0.9) !important;
             box-shadow: none !important;
             color: rgba(255,255,255,1.0) !important;
         }
 
         #panel${barEnhancedClass} .workspace-dot {
             ${dotStyle}
+            transition-duration: 200ms;
         }
         #panel${barEnhancedClass}:overview .workspace-dot {
             ${dotOverview}
@@ -2150,10 +2186,10 @@ function getStylesheet(obar, Me) {
         }
 
         #panel${barEnhancedClass}.trilands:overview .panel-button {
-            ${setOverview? '': 'box-shadow: none;'}
+            ${setOverview ? '' : 'box-shadow: none;'}
         }
         #panel${barEnhancedClass}.trilands:windowmax .panel-button {
-            ${neonWMax? '': 'box-shadow: none;'}
+            ${neonWMax ? '' : 'box-shadow: none;'}
         }
         #panel${barEnhancedClass}.trilands .panel-button:hover, #panel${barEnhancedClass}.trilands .panel-button:focus,
         #panel${barEnhancedClass}.trilands .panel-button:active, #panel${barEnhancedClass}.trilands .panel-button:checked {
@@ -2161,11 +2197,11 @@ function getStylesheet(obar, Me) {
         }
         #panel${barEnhancedClass}.trilands:overview .panel-button:hover, #panel${barEnhancedClass}.trilands:overview .panel-button:focus,
         #panel${barEnhancedClass}.trilands:overview .panel-button:active, #panel${barEnhancedClass}.trilands:overview .panel-button:checked {
-            ${setOverview? '': 'box-shadow: none;'}
+            ${setOverview ? '' : 'box-shadow: none;'}
         }
         #panel${barEnhancedClass}.trilands:windowmax .panel-button:hover, #panel${barEnhancedClass}.trilands:windowmax .panel-button:focus,
         #panel${barEnhancedClass}.trilands:windowmax .panel-button:active, #panel${barEnhancedClass}.trilands:windowmax .panel-button:checked {
-            ${neonWMax? '': 'box-shadow: none;'}
+            ${neonWMax ? '' : 'box-shadow: none;'}
         }
 
     `;
@@ -2310,11 +2346,11 @@ function getStylesheet(obar, Me) {
 
     // Menu styles
     let menustyle = obar._settings.get_boolean('menustyle');
-    if(menustyle) {
+    if (menustyle) {
         stylesheet += `
 
             ${openmenuClass}.popup-menu-boxpointer {
-                -arrow-rise: ${(margin+vPad)? Math.ceil(margin+vPad+2) : 6}px;
+                -arrow-rise: ${(margin + vPad) ? Math.ceil(margin + vPad + 2) : 6}px;
             }
 
             ${openmenuClass}.popup-menu.panel-menu {
@@ -2363,7 +2399,7 @@ function getStylesheet(obar, Me) {
             }
 
         `;
-            // rgba(${smbgred},${smbggreen},${smbgblue},${mbgAlpha})
+        // rgba(${smbgred},${smbggreen},${smbgblue},${mbgAlpha})
         stylesheet += `
             ${openmenuClass}.popup-sub-menu {
                 background-color: ${smbg} !important;
@@ -2461,7 +2497,7 @@ function getStylesheet(obar, Me) {
         stylesheet += `
             ${openmenuClass}.datemenu-popover {
                 border-radius: ${menuRadius}px !important;
-                padding-bottom: ${5 + 0.08*menuRadius}px !important;
+                padding-bottom: ${5 + 0.08 * menuRadius}px !important;
             }
 
             ${openmenuClass}.message-list-placeholder {
@@ -2486,13 +2522,13 @@ function getStylesheet(obar, Me) {
                 color: rgba(${smfgred},${smfggreen},${smfgblue},${mfgAlpha}) !important;
             }
             ${openmenuClass}.message .message-source-icon, ${openmenuClass}.message .message-source-title {
-                color: rgba(${smfgred},${smfggreen},${smfgblue},${mfgAlpha*0.85}) !important;
+                color: rgba(${smfgred},${smfggreen},${smfgblue},${mfgAlpha * 0.85}) !important;
             }
             ${openmenuClass}.message .message-body {
-                color: rgba(${smfgred},${smfggreen},${smfgblue},${mfgAlpha*0.85}) !important;
+                color: rgba(${smfgred},${smfggreen},${smfgblue},${mfgAlpha * 0.85}) !important;
             }
             ${openmenuClass}.message .event-time {
-                color: rgba(${smfgred},${smfggreen},${smfgblue},${mfgAlpha*0.85}) !important;
+                color: rgba(${smfgred},${smfggreen},${smfgblue},${mfgAlpha * 0.85}) !important;
             }
             ${openmenuClass}.message:hover .message-source-icon, ${openmenuClass}.message:focus .message-source-icon,
             ${openmenuClass}.message:hover .message-title, ${openmenuClass}.message:focus .message-title,
@@ -2519,7 +2555,7 @@ function getStylesheet(obar, Me) {
                 color: rgba(${mhfgred},${mhfggreen},${mhfgblue},1) !important;
             }
             ${openmenuClass}.message .message-media-control:insensitive {
-                color: rgba(${smfgred},${smfggreen},${smfgblue},${mfgAlpha*0.5}) !important;
+                color: rgba(${smfgred},${smfggreen},${smfgblue},${mfgAlpha * 0.5}) !important;
             }
             ${openmenuClass}.message .media-message-cover-icon .fallback {
                 color: rgba(${smfgred},${smfggreen},${smfgblue},${mfgAlpha}) !important;
@@ -2574,7 +2610,7 @@ function getStylesheet(obar, Me) {
             }
 
             ${openmenuClass}.datemenu-today-button .date-label, ${openmenuClass}.datemenu-today-button .day-label {
-                color: rgba(${mfgred},${mfggreen},${mfgblue},${mfgAlpha*1.25}) !important;
+                color: rgba(${mfgred},${mfggreen},${mfgblue},${mfgAlpha * 1.25}) !important;
             }
             ${openmenuClass}.datemenu-today-button:hover, ${openmenuClass}.datemenu-today-button:focus {
                 background-color: ${mhbg} !important;  /* 0.9*mhAlpha */
@@ -2596,7 +2632,7 @@ function getStylesheet(obar, Me) {
             ${openmenuClass}.calendar .calendar-month-header .pager-button,
             ${openmenuClass}.calendar .calendar-month-header .pager-button {
                 color: rgba(${smfgred},${smfggreen},${smfgblue},${mfgAlpha}) !important;
-                background-color: rgba(${smbgred},${smbggreen},${smbgblue},${0.5*mbgAlpha}) !important;
+                background-color: rgba(${smbgred},${smbggreen},${smbgblue},${0.5 * mbgAlpha}) !important;
             }
             ${openmenuClass}.calendar .calendar-month-header .pager-button:hover,
             ${openmenuClass}.calendar .calendar-month-header .pager-button:focus {
@@ -2605,14 +2641,14 @@ function getStylesheet(obar, Me) {
             }
             ${openmenuClass}.calendar .calendar-month-label {
                 color: rgba(${smfgred},${smfggreen},${smfgblue},${mfgAlpha}) !important;
-                background-color: rgba(${smbgred},${smbggreen},${smbgblue},${0.5*mbgAlpha}) !important;
+                background-color: rgba(${smbgred},${smbggreen},${smbgblue},${0.5 * mbgAlpha}) !important;
             }
             ${openmenuClass}.calendar .calendar-month-label:focus {
                 box-shadow: inset 0 0 0 2px rgba(${msred},${msgreen},${msblue},${0.65}) !important;
             }
             ${openmenuClass}.calendar-day-heading  {
                 color: rgba(${smfgred},${smfggreen},${smfgblue},${mfgAlpha}) !important;
-                background-color: rgba(${smbgred},${smbggreen},${smbgblue},${0.5*mbgAlpha}) !important;
+                background-color: rgba(${smbgred},${smbggreen},${smbgblue},${0.5 * mbgAlpha}) !important;
             }
             ${openmenuClass}.calendar-day-heading:focus  {
                 color: rgba(${smhfgred},${smhfggreen},${smhfgblue},1) !important;
@@ -2620,7 +2656,7 @@ function getStylesheet(obar, Me) {
                 box-shadow: inset 0 0 0 2px rgba(${msred},${msgreen},${msblue},${0.65}) !important;
             }
             ${openmenuClass}.calendar-day {
-                background-color: rgba(${smbgred},${smbggreen},${smbgblue},${0.5*mbgAlpha}) !important;
+                background-color: rgba(${smbgred},${smbggreen},${smbgblue},${0.5 * mbgAlpha}) !important;
             }
             ${openmenuClass}.calendar-weekday, ${openmenuClass}.calendar-work-day {
                 color: rgba(${smfgred},${smfggreen},${smfgblue},1) !important;
@@ -2670,8 +2706,8 @@ function getStylesheet(obar, Me) {
             ${openmenuClass}.calendar-week-number {
                 font-weight: bold;
                 font-feature-settings: "tnum";
-                background-color: rgba(${mbgred},${mbggreen},${mbgblue},${mbgAlpha*0.7}) !important;
-                color: rgba(${mfgred},${mfggreen},${mfgblue},${mfgAlpha*0.8}) !important;
+                background-color: rgba(${mbgred},${mbggreen},${mbgblue},${mbgAlpha * 0.7}) !important;
+                color: rgba(${mfgred},${mfggreen},${mfgblue},${mfgAlpha * 0.8}) !important;
             }
 
             ${openmenuClass}.events-button {
@@ -2693,10 +2729,10 @@ function getStylesheet(obar, Me) {
                 color: rgba(${smfgred},${smfggreen},${smfgblue},${mfgAlpha}) !important;
             }
             ${openmenuClass}.events-button .events-title {
-                color: rgba(${smfgred},${smfggreen},${smfgblue},${mfgAlpha*0.9}) !important;
+                color: rgba(${smfgred},${smfggreen},${smfgblue},${mfgAlpha * 0.9}) !important;
             }
             ${openmenuClass}.events-button .event-time, ${openmenuClass}.events-button .event-placeholder {
-                color: rgba(${smfgred},${smfggreen},${smfgblue},${mfgAlpha*0.85}) !important;
+                color: rgba(${smfgred},${smfggreen},${smfgblue},${mfgAlpha * 0.85}) !important;
             }
             ${openmenuClass}.events-button:hover .events-list, ${openmenuClass}.events-button:focus .events-list,
             ${openmenuClass}.events-button:hover .events-title, ${openmenuClass}.events-button:focus .events-title,
@@ -2721,10 +2757,10 @@ function getStylesheet(obar, Me) {
                 border-color: transparent !important;
             }
             ${openmenuClass}.world-clocks-button .world-clocks-header, ${openmenuClass}.world-clocks-button .world-clocks-timezone {
-                color: rgba(${smfgred},${smfggreen},${smfgblue},${mfgAlpha*0.9}) !important;
+                color: rgba(${smfgred},${smfggreen},${smfgblue},${mfgAlpha * 0.9}) !important;
             }
             ${openmenuClass}.world-clocks-button .world-clocks-city, ${openmenuClass}.world-clocks-button .world-clocks-time {
-                color: rgba(${smfgred},${smfggreen},${smfgblue},${mfgAlpha*0.85}) !important;
+                color: rgba(${smfgred},${smfggreen},${smfgblue},${mfgAlpha * 0.85}) !important;
             }
             ${openmenuClass}.world-clocks-button:hover .world-clocks-header, ${openmenuClass}.world-clocks-button:focus .world-clocks-header,
             ${openmenuClass}.world-clocks-button:hover .world-clocks-timezone, ${openmenuClass}.world-clocks-button:focus .world-clocks-timezone,
@@ -2755,7 +2791,7 @@ function getStylesheet(obar, Me) {
                 font-weight: normal;
             }
             ${openmenuClass}.weather-button .weather-forecast-time {
-                color: rgba(${smfgred},${smfggreen},${smfgblue},${mfgAlpha*0.85}) !important;
+                color: rgba(${smfgred},${smfggreen},${smfgblue},${mfgAlpha * 0.85}) !important;
             }
             ${openmenuClass}.weather-button:hover .weather-header, ${openmenuClass}.weather-button:focus .weather-header,
             ${openmenuClass}.weather-button:hover .weather-header.location, ${openmenuClass}.weather-button:focus .weather-header.location,
@@ -2793,7 +2829,7 @@ function getStylesheet(obar, Me) {
 
             ${openmenuClass}.quick-toggle-menu .popup-menu-item:checked {
                 color: rgba(${amfgred},${amfggreen},${amfgblue},1.0) !important;
-                background-color: rgba(${msred},${msgreen},${msblue},${msAlpha*1.2}) !important;
+                background-color: rgba(${msred},${msgreen},${msblue},${msAlpha * 1.2}) !important;
             }
             ${openmenuClass}.quick-toggle-menu .popup-menu-item:checked:focus, ${openmenuClass}.quick-toggle-menu .popup-menu-item:checked:hover,
             ${openmenuClass}.quick-toggle-menu .popup-menu-item:checked:selected {
@@ -2812,42 +2848,42 @@ function getStylesheet(obar, Me) {
                 background-color: rgba(${msred},${msgreen},${msblue},${msAlpha}) !important;
             }
             ${openmenuClass}.quick-toggle-menu .icon-button {
-                color: rgba(${mfgred},${mfggreen},${mfgblue},${mfgAlpha*1.2}) !important;
+                color: rgba(${mfgred},${mfggreen},${mfgblue},${mfgAlpha * 1.2}) !important;
                 background-color: rgba(${mbgred},${mbggreen},${mbgblue},${mbgAlpha}) !important;
             }
             ${openmenuClass}.quick-toggle-menu .icon-button:hover, ${openmenuClass}.quick-toggle-menu .icon-button:focus {
-                color: rgba(${mhfgred},${mhfggreen},${mhfgblue},${mfgAlpha*1.2}) !important;
+                color: rgba(${mhfgred},${mhfggreen},${mhfgblue},${mfgAlpha * 1.2}) !important;
                 background-color: rgba(${mhbgred},${mhbggreen},${mhbgblue},${mbgAlpha}) !important;
             }
             ${openmenuClass}.quick-toggle-menu .icon-button:checked {
-                color: rgba(${amfgred},${amfggreen},${amfgblue},${mfgAlpha*1.2}) !important;
+                color: rgba(${amfgred},${amfggreen},${amfgblue},${mfgAlpha * 1.2}) !important;
                 background-color: rgba(${msred},${msgreen},${msblue},${msAlpha}) !important;
             }
             ${openmenuClass}.quick-toggle-menu .icon-button:checked:hover, ${openmenuClass}.quick-toggle-menu .icon-button:checked:focus {
-                color: rgba(${amhfgred},${amhfggreen},${amhfgblue},${mfgAlpha*1.2}) !important;
+                color: rgba(${amhfgred},${amhfggreen},${amhfgblue},${mfgAlpha * 1.2}) !important;
                 background-color: ${mshg} !important;
             }
 
             ${openmenuClass}.quick-settings-system-item .icon-button {
-                color: rgba(${smfgred},${smfggreen},${smfgblue},${mfgAlpha*1.2}) !important;
-                background-color: rgba(${smbgred},${smbggreen},${smbgblue},${mbgAlpha*1.2}) !important;
+                color: rgba(${smfgred},${smfggreen},${smfgblue},${mfgAlpha * 1.2}) !important;
+                background-color: rgba(${smbgred},${smbggreen},${smbgblue},${mbgAlpha * 1.2}) !important;
             }
             ${openmenuClass}.quick-settings .icon-button, ${openmenuClass}.quick-settings .button {
-                color: rgba(${smfgred},${smfggreen},${smfgblue},${mfgAlpha*1.2}) !important;
-                background-color: rgba(${smbgred},${smbggreen},${smbgblue},${mbgAlpha*1.2}) !important;
+                color: rgba(${smfgred},${smfggreen},${smfgblue},${mfgAlpha * 1.2}) !important;
+                background-color: rgba(${smbgred},${smbggreen},${smbgblue},${mbgAlpha * 1.2}) !important;
                 box-shadow: 0 1px 2px 0 rgba(${mshred},${mshgreen},${mshblue},0.05) !important;
                 border: 1px solid rgba(${mshred},${mshgreen},${mshblue},0.13) !important;
             }
             ${openmenuClass}.quick-settings .icon-button:checked, ${openmenuClass}.quick-settings .button:checked {
-                color: rgba(${amfgred},${amfggreen},${amfgblue},${mfgAlpha*1.2}) !important;
+                color: rgba(${amfgred},${amfggreen},${amfgblue},${mfgAlpha * 1.2}) !important;
                 background-color: rgba(${msred},${msgreen},${msblue},${msAlpha}) !important;
             }
             ${openmenuClass}.background-app-item .icon-button {
-                color: rgba(${smfgred},${smfggreen},${smfgblue},${mfgAlpha*1.2}) !important;
-                background-color: rgba(${smbgred},${smbggreen},${smbgblue},${mbgAlpha*1.2}) !important;
+                color: rgba(${smfgred},${smfggreen},${smfgblue},${mfgAlpha * 1.2}) !important;
+                background-color: rgba(${smbgred},${smbggreen},${smbgblue},${mbgAlpha * 1.2}) !important;
             }
             ${openmenuClass}.quick-settings .icon-button.flat {
-                color: rgba(${mfgred},${mfggreen},${mfgblue},${mfgAlpha*1.2}) !important;
+                color: rgba(${mfgred},${mfggreen},${mfgblue},${mfgAlpha * 1.2}) !important;
                 background-color: transparent !important;
                 box-shadow: none !important;
                 border: none !important;
@@ -2935,7 +2971,7 @@ function getStylesheet(obar, Me) {
             ${openmenuClass}.quick-menu-toggle .quick-toggle-arrow,
             ${openmenuClass}.quick-toggle-has-menu .quick-toggle-arrow {
                 color: rgba(${smfgred},${smfggreen},${smfgblue},${mfgAlpha}) !important;
-                background-color: rgba(${smbgred},${smbggreen},${smbgblue},${mbgAlpha*1.2}) !important;
+                background-color: rgba(${smbgred},${smbggreen},${smbgblue},${mbgAlpha * 1.2}) !important;
                 box-shadow: 0 1px 2px 0 rgba(${mshred},${mshgreen},${mshblue},0.05) !important;
                 border: 1px solid rgba(${mshred},${mshgreen},${mshblue},0.13) !important;
             }
@@ -2976,7 +3012,7 @@ function getStylesheet(obar, Me) {
             ${openmenuClass} .quick-toggle-arrow.icon-button:checked,
             ${openmenuClass} .quick-toggle-menu-button.icon-button:checked {
                 color: rgba(${amfgred},${amfggreen},${amfgblue},1.0) !important;
-                background-color: rgba(${msred},${msgreen},${msblue},${msAlpha*1.2}) !important;
+                background-color: rgba(${msred},${msgreen},${msblue},${msAlpha * 1.2}) !important;
                 border: none !important;
             }
             ${openmenuClass} .quick-toggle-arrow.icon-button:checked:ltr,
@@ -2998,19 +3034,19 @@ function getStylesheet(obar, Me) {
     //== BEYOND BAR ==//
 
     function shadeAccent(transparentize, shade) {
-        return colorShade(`rgba(${msred},${msgreen},${msblue},${transparentize*msAlpha})`, shade);
+        return colorShade(`rgba(${msred},${msgreen},${msblue},${transparentize * msAlpha})`, shade);
     }
     function shadeMbg(transparentize, shade) {
-        return colorShade(`rgba(${mbgred},${mbggreen},${mbgblue},${transparentize*mbgAlpha})`, shade);
+        return colorShade(`rgba(${mbgred},${mbggreen},${mbgblue},${transparentize * mbgAlpha})`, shade);
     }
     function shadeSMbg(transparentize, shade) {
-        return colorShade(`rgba(${smbgred},${smbggreen},${smbgblue},${transparentize*mbgAlpha})`, shade);
+        return colorShade(`rgba(${smbgred},${smbggreen},${smbgblue},${transparentize * mbgAlpha})`, shade);
     }
 
     // Shell St Entry Base colors
-    let baseBgColor = darkMode? 'rgba(75, 75, 75, 0.8)' : 'rgba(200, 200, 200, 0.8)';
-    let baseFgColor = darkMode? 'rgb(255, 255, 255)' : 'rgb(25, 25, 25)';
-    let baseHintFgColor = darkMode? 'rgba(255, 255, 255, 0.7)' : 'rgba(25, 25, 25, 0.7)';
+    let baseBgColor = darkMode ? 'rgba(75, 75, 75, 0.8)' : 'rgba(200, 200, 200, 0.8)';
+    let baseFgColor = darkMode ? 'rgb(255, 255, 255)' : 'rgb(25, 25, 25)';
+    let baseHintFgColor = darkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(25, 25, 25, 0.7)';
 
     // let accentColor = `rgba(${msred},${msgreen},${msblue},${msAlpha})`;
     let applyAccentShell, applyMenuNotif, dashDockStyle;
@@ -3018,11 +3054,11 @@ function getStylesheet(obar, Me) {
     applyMenuNotif = obar._settings.get_boolean('apply-menu-notif');
     dashDockStyle = obar._settings.get_string('dashdock-style');
 
-    let tooltipBgRed = 0.8*mbgred + 0.2*(255 - mfgred);
-    let tooltipBgGreen = 0.8*mbggreen + 0.2*(255 - mfggreen);
-    let tooltipBgBlue = 0.8*mbgblue + 0.2*(255 - mfgblue);
+    let tooltipBgRed = 0.8 * mbgred + 0.2 * (255 - mfgred);
+    let tooltipBgGreen = 0.8 * mbggreen + 0.2 * (255 - mfggreen);
+    let tooltipBgBlue = 0.8 * mbgblue + 0.2 * (255 - mfgblue);
 
-    if(applyAllShell) {
+    if (applyAllShell) {
         applyMenuNotif = true;
         applyMenuShell = true;
         applyAccentShell = true;
@@ -3030,7 +3066,7 @@ function getStylesheet(obar, Me) {
 
 
     /* Common Stylings */
-    if(applyAccentShell) {
+    if (applyAccentShell) {
         stylesheet += `
         .slider:not(.quick-slider){
             ${sliderStyle}
@@ -3060,7 +3096,7 @@ function getStylesheet(obar, Me) {
         } `;
     }
 
-    if(applyAllShell) {
+    if (applyAllShell) {
         stylesheet += `
         .workspace-switcher, .resize-popup, .osd-monitor-label {
             box-shadow: 0 5px 10px 0 rgba(${mshred},${mshgreen},${mshblue},${mshAlpha}) !important; /* menu shadow */
@@ -3072,7 +3108,7 @@ function getStylesheet(obar, Me) {
 
 
     /* a11y */
-    if(applyAccentShell) {
+    if (applyAccentShell) {
         stylesheet += `
         /* Location and Activities Ripple */
         .ripple-pointer-location, .ripple-box {
@@ -3091,7 +3127,7 @@ function getStylesheet(obar, Me) {
     }
 
     /* app-grid */
-    if(applyAccentShell) {
+    if (applyAccentShell) {
         stylesheet += `
         .overview-tile:active, .overview-tile:checked,
         .app-well-app:active .overview-icon, .app-well-app:checked .overview-icon
@@ -3106,7 +3142,7 @@ function getStylesheet(obar, Me) {
         } `;
     }
 
-    if(applyAllShell) {
+    if (applyAllShell) {
         stylesheet += `
         .overview-tile {
             background-color: transparent;
@@ -3117,7 +3153,7 @@ function getStylesheet(obar, Me) {
             /*background-color: transparent; Removes default focus from first search result*/
         }
         .overview-tile:hover, .app-well-app:hover .overview-icon, .grid-search-result:hover .overview-icon {
-            background-color: rgba(${smhbgred},${smhbggreen},${smhbgblue},${0.95*mbgAlpha}) ;
+            background-color: rgba(${smhbgred},${smhbggreen},${smhbgblue},${0.95 * mbgAlpha}) ;
             /*transition-duration: 100ms;*/
         }
         .overview-tile:focus, .overview-tile:selected,
@@ -3235,7 +3271,7 @@ function getStylesheet(obar, Me) {
     }
 
     /* App Switcher */
-    if(applyAccentShell) {
+    if (applyAccentShell) {
         stylesheet += `
         .switcher-list .item-box:active {
             background-color: rgba(${msred},${msgreen},${msblue}, 0.9) !important;
@@ -3245,7 +3281,7 @@ function getStylesheet(obar, Me) {
         } `;
     }
 
-    if(applyAllShell) {
+    if (applyAllShell) {
         stylesheet += `
         .switcher-list {
             ${menuContentStyle}
@@ -3265,7 +3301,7 @@ function getStylesheet(obar, Me) {
     }
 
     /* Search */
-    if(applyAllShell) {
+    if (applyAllShell) {
         stylesheet += `
         .search-section-content {
             background-color: ${mbg} !important;
@@ -3315,7 +3351,7 @@ function getStylesheet(obar, Me) {
     }
 
     /* Workspace Overview and Workspace Switcher */
-    if(applyAccentShell) {
+    if (applyAccentShell) {
         stylesheet += `
         .workspace-thumbnail-indicator {
             border: 3px solid ${msc} !important;
@@ -3324,7 +3360,7 @@ function getStylesheet(obar, Me) {
             border-color: ${msc} !important;
         } `;
     }
-    if(applyAllShell) {
+    if (applyAllShell) {
         stylesheet += `
         .workspace-thumbnails .workspace-thumbnail:hover, .workspace-thumbnails .workspace-thumbnail:focus {
             border: 2px solid ${mhbg} !important;
@@ -3359,15 +3395,15 @@ function getStylesheet(obar, Me) {
 
     /* Dash / Dock => Options in settings  */
     let dashBgColor, dashFgColor, dashBorderColor, dashShadowColor, dashHighlightColor, dashBorder = '';
-    if(dashDockStyle == 'Menu') {
+    if (dashDockStyle == 'Menu') {
         dashBgColor = `rgba(${mbgred},${mbggreen},${mbgblue},${mbgAlpha})`;
         dashFgColor = `rgba(${mfgred},${mfggreen},${mfgblue},${mfgAlpha})`;
         dashBorderColor = `rgba(${mbred},${mbgreen},${mbblue},${mbAlpha})`;
         dashShadowColor = `rgba(${mshred},${mshgreen},${mshblue},${mshAlpha})`;
         dashHighlightColor = mhbg;
     }
-    else if(dashDockStyle == 'Bar') {
-        if(bartype == 'Mainland' || bartype == 'Floating') {
+    else if (dashDockStyle == 'Bar') {
+        if (bartype == 'Mainland' || bartype == 'Floating') {
             dashBgColor = `rgba(${bgred},${bggreen},${bgblue},${bgalpha})`;
             dashHighlightColor = phbg;
         }
@@ -3381,11 +3417,11 @@ function getStylesheet(obar, Me) {
         // dashNeon = `box-shadow: 0 0 5px 2px rgba(${bred},${bgreen},${bblue},0.55) !important; `;
         dashBorder = `border-width: ${borderWidth}px !important; `;
     }
-    else if(dashDockStyle == 'Custom') {
+    else if (dashDockStyle == 'Custom') {
         dashBgColor = `rgba(${dbgred},${dbggreen},${dbgblue},${dbgAlpha})`;
         let bgDark = getBgDark(dbgred, dbggreen, dbgblue);
         let dfgred, dfggreen, dfgblue;
-        if(bgDark) {
+        if (bgDark) {
             dfgred = dfggreen = dfgblue = 250;
         }
         else {
@@ -3394,17 +3430,17 @@ function getStylesheet(obar, Me) {
         dashFgColor = `rgba(${dfgred},${dfggreen},${dfgblue},1.0)`;
         dashBorderColor = `rgba(${bred},${bgreen},${bblue},${balpha})`;
         dashShadowColor = `rgba(${mshred},${mshgreen},${mshblue},${mshAlpha})`;
-        let hgColor = getAutoHgColor([dbgred,dbggreen,dbgblue]);
+        let hgColor = getAutoHgColor([dbgred, dbggreen, dbgblue]);
         // Custom Highlight RGB
-        let chred = parseRGB(dbgred*(1-hAlpha) + hgColor[0]*hAlpha);
-        let chgreen = parseRGB(dbggreen*(1-hAlpha) + hgColor[1]*hAlpha);
-        let chblue = parseRGB(dbgblue*(1-hAlpha) + hgColor[2]*hAlpha);
+        let chred = parseRGB(dbgred * (1 - hAlpha) + hgColor[0] * hAlpha);
+        let chgreen = parseRGB(dbggreen * (1 - hAlpha) + hgColor[1] * hAlpha);
+        let chblue = parseRGB(dbgblue * (1 - hAlpha) + hgColor[2] * hAlpha);
         dashHighlightColor = `rgba(${chred},${chgreen},${chblue},${dbgAlpha})`;
     }
 
-    if(dashDockStyle != 'Default') {
-        dashBorderColor = dBorder? dashBorderColor : 'transparent';
-        dashShadowColor = dShadow? dashShadowColor : 'transparent';
+    if (dashDockStyle != 'Default') {
+        dashBorderColor = dBorder ? dashBorderColor : 'transparent';
+        dashShadowColor = dShadow ? dashShadowColor : 'transparent';
 
         stylesheet += `
         .dash-background {
@@ -3453,9 +3489,9 @@ function getStylesheet(obar, Me) {
             width: ${dIconSize}px !important;
         }
         #dash .app-well-app-running-dot, #dash .app-grid-running-dot, #dash .show-apps-running-dot {
-            height: ${dIconSize/15.0}px;
-            width: ${dIconSize/15.0}px;
-            border-radius: ${dIconSize/15.0}px;
+            height: ${dIconSize / 15.0}px;
+            width: ${dIconSize / 15.0}px;
+            border-radius: ${dIconSize / 15.0}px;
             background-color: ${dashFgColor} !important;
             border: 2px solid ${dashFgColor} !important;
         }
@@ -3474,7 +3510,7 @@ function getStylesheet(obar, Me) {
 
 
     /* Modal Dialogs  .end-session-dialog, .message-dialog-content, .run-dialog, .prompt-dialog, */
-    if(applyAccentShell) {
+    if (applyAccentShell) {
         stylesheet += `
         .modal-dialog-linked-button:focus, .modal-dialog-linked-button:selected {
             border-color: ${msc} !important;
@@ -3490,7 +3526,7 @@ function getStylesheet(obar, Me) {
         } `;
     }
 
-    if(applyAllShell) {
+    if (applyAllShell) {
         stylesheet += `
         .modal-dialog  {
             ${menuContentStyle}
@@ -3576,7 +3612,7 @@ function getStylesheet(obar, Me) {
     }
 
     /* Login Dialog */
-    if(applyAccentShell) {
+    if (applyAccentShell) {
         stylesheet += `
         .login-dialog .modal-dialog-button, .unlock-dialog .modal-dialog-button {
             border-color: ${msc} !important;
@@ -3603,7 +3639,7 @@ function getStylesheet(obar, Me) {
     }
 
     /* Entries */
-    if(applyAccentShell) {
+    if (applyAccentShell) {
         stylesheet += `
         StEntry {
             selection-background-color: ${msc} !important;
@@ -3619,7 +3655,7 @@ function getStylesheet(obar, Me) {
             box-shadow: none;
         } `;
     }
-    if(applyAllShell) {
+    if (applyAllShell) {
         stylesheet += `
         StEntry {
             color: ${baseFgColor} !important;
@@ -3630,10 +3666,10 @@ function getStylesheet(obar, Me) {
         } `;
     }
 
-    let mbgShade = getBgDark(mbgred, mbggreen, mbgblue)? -1: 1;
+    let mbgShade = getBgDark(mbgred, mbggreen, mbgblue) ? -1 : 1;
 
     /* On-screen Keyboard */
-    if(applyAccentShell) {
+    if (applyAccentShell) {
         stylesheet += `
         .keyboard-key.enter-key {
             color: rgba(${amfgred},${amfggreen},${amfgblue},1.0) !important;
@@ -3646,14 +3682,14 @@ function getStylesheet(obar, Me) {
             background-color: ${shadeAccent(0.9, 0.3)} !important;
         } `;
     }
-    if(applyAllShell) {
+    if (applyAllShell) {
         stylesheet += `
         #keyboard {
-            background-color: ${shadeMbg(0.9, 0.2*mbgShade)} !important;
+            background-color: ${shadeMbg(0.9, 0.2 * mbgShade)} !important;
         }
         .keyboard-key {
             color: rgba(${smfgred},${smfggreen},${smfgblue},1.0) !important;
-            background-color: ${shadeSMbg(1, -0.2*mbgShade)} !important;
+            background-color: ${shadeSMbg(1, -0.2 * mbgShade)} !important;
         }
         .keyboard-key:focus, .keyboard-key:focus:hover, .keyboard-key:focus:active {
             color: rgba(${smhfgred},${smhfggreen},${smhfgblue},1.0) !important;
@@ -3688,16 +3724,16 @@ function getStylesheet(obar, Me) {
         }
         .keyboard-subkeys, .keyboard-subkeys-boxpointer {
             color: rgba(${smfgred},${smfggreen},${smfgblue},1.0) !important;
-            -arrow-background-color: ${shadeMbg(0.9, 0.2*mbgShade)} !important;
+            -arrow-background-color: ${shadeMbg(0.9, 0.2 * mbgShade)} !important;
         } `;
     }
 
     /* Looking Glass */
-        /* #LookingGlassDialog {
-            color: rgba(${mfgred},${mfggreen},${mfgblue},${mfgAlpha});
-            background-color: ${mbg} !important;
-        }*/
-    if(applyAllShell) {
+    /* #LookingGlassDialog {
+        color: rgba(${mfgred},${mfggreen},${mfgblue},${mfgAlpha});
+        background-color: ${mbg} !important;
+    }*/
+    if (applyAllShell) {
         stylesheet += `
         #Toolbar .lg-toolbar-button {
             color: rgba(${smfgred},${smfggreen},${smfgblue},1.0) !important;
@@ -3716,7 +3752,7 @@ function getStylesheet(obar, Me) {
     /* Overview */
     /* Workspace animation */
     /* Tiled window previews */
-    if(applyAllShell) {
+    if (applyAllShell) {
         stylesheet += `
         #overviewGroup {
             background-color: rgba(${smbgred},${smbggreen},${smbgblue},1.0) !important;
@@ -3731,7 +3767,7 @@ function getStylesheet(obar, Me) {
     }
 
     /* Notifications & Message Tray - chat bubbles?? */
-    if(applyMenuNotif) {
+    if (applyMenuNotif) {
         stylesheet += `
         .notification-banner {
             color: rgba(${smfgred},${smfggreen},${smfgblue},${mfgAlpha}) !important;
@@ -3754,7 +3790,7 @@ function getStylesheet(obar, Me) {
     }
 
     /* OSD Window */
-    if(applyAllShell) {
+    if (applyAllShell) {
         stylesheet += `
         .osd-window, .pad-osd-window {
             color: rgba(${smfgred},${smfggreen},${smfgblue},1.0) !important;
@@ -3763,7 +3799,7 @@ function getStylesheet(obar, Me) {
     }
 
     /* Screenshot UI */
-    if(applyAccentShell) {
+    if (applyAccentShell) {
         stylesheet += `
         .screenshot-ui-type-button:active, .screenshot-ui-type-button:checked {
             color: rgba(${amfgred},${amfggreen},${amfgblue},1.0) !important;
@@ -3798,7 +3834,7 @@ function getStylesheet(obar, Me) {
             background-color: ${msc} !important;
         } `;
     }
-    if(applyAllShell) {
+    if (applyAllShell) {
         stylesheet += `
         .screenshot-ui-panel {
             ${menuContentStyle}
@@ -3814,7 +3850,7 @@ function getStylesheet(obar, Me) {
         }
         .screenshot-ui-type-button:insensitive {
             color: rgba(${smfgred},${smfggreen},${smfgblue},0.5) !important;
-            background-color: rgba(${smbgred},${smbggreen},${smbgblue},${0.5*mbgAlpha}) !important;
+            background-color: rgba(${smbgred},${smbggreen},${smbgblue},${0.5 * mbgAlpha}) !important;
         }
         .screenshot-ui-close-button {
             border: none;
@@ -3858,6 +3894,91 @@ function getStylesheet(obar, Me) {
         .select-area-rubberband {
             background-color: rgba(${mfgred},${mfggreen},${mfgblue},0.6) !important;
             border: 1px solid rgba(${mfgred},${mfggreen},${mfgblue},1.0) !important;
+        }
+
+        /* Glassmorphic Widget Center - Bar Enhanced Dashboard */
+        .bar-enhanced-dashboard-menu {
+            background-color: rgba(18, 18, 24, 0.72) !important;
+            border: 1px solid rgba(255, 255, 255, 0.08) !important;
+            border-radius: 20px !important;
+            box-shadow: 0 16px 48px 0 rgba(0, 0, 0, 0.5) !important;
+            padding: 16px !important;
+            width: 260px !important;
+            margin: 6px !important;
+        }
+
+        .bar-enhanced-dashboard-header {
+            font-size: 13pt !important;
+            font-weight: 800 !important;
+            color: #ffffff !important;
+            margin-bottom: 2px !important;
+            text-align: center !important;
+            text-shadow: 0 2px 10px rgba(255, 255, 255, 0.15) !important;
+        }
+
+        .bar-enhanced-dashboard-subtitle {
+            font-size: 8.5pt !important;
+            color: rgba(255, 255, 255, 0.45) !important;
+            margin-bottom: 14px !important;
+            text-align: center !important;
+            font-style: italic !important;
+        }
+
+        .bar-enhanced-dashboard-section-title {
+            font-size: 9pt !important;
+            font-weight: 800 !important;
+            color: rgba(255, 255, 255, 0.9) !important;
+            margin-bottom: 8px !important;
+            margin-top: 10px !important;
+            text-align: left !important;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+            padding-bottom: 4px !important;
+            letter-spacing: 0.5px !important;
+        }
+
+        .bar-enhanced-dashboard-row {
+            margin-bottom: 6px !important;
+            spacing: 6px !important;
+        }
+
+        .bar-enhanced-dashboard-button {
+            background-color: rgba(255, 255, 255, 0.04) !important;
+            border: 1px solid rgba(255, 255, 255, 0.05) !important;
+            border-radius: 8px !important;
+            color: #d1d1d6 !important;
+            padding: 6px 10px !important;
+            font-size: 9pt !important;
+            font-weight: 500 !important;
+            text-align: center !important;
+            transition-duration: 200ms !important;
+        }
+
+        .bar-enhanced-dashboard-button:hover {
+            background-color: rgba(255, 255, 255, 0.1) !important;
+            border-color: rgba(255, 255, 255, 0.12) !important;
+            color: #ffffff !important;
+        }
+
+        .bar-enhanced-dashboard-button:active {
+            background-color: rgba(255, 255, 255, 0.18) !important;
+        }
+
+        .bar-enhanced-dashboard-button.active {
+            background-color: rgba(0, 180, 216, 0.22) !important;
+            border: 1px solid rgba(0, 180, 216, 0.45) !important;
+            color: #ffffff !important;
+            font-weight: 700 !important;
+            box-shadow: 0 0 12px rgba(0, 180, 216, 0.15) !important;
+        }
+
+        .bar-enhanced-dashboard-button.active:hover {
+            background-color: rgba(0, 180, 216, 0.3) !important;
+            border-color: rgba(0, 180, 216, 0.6) !important;
+        }
+
+        .bar-enhanced-dashboard-button.toggle-button {
+            margin-bottom: 6px !important;
+            padding: 8px 12px !important;
         } `;
 
         // .screenshot-ui-area-selector .screenshot-ui-area-indicator-selection {
@@ -3882,13 +4003,13 @@ async function writeStylesheet(obar, stylesheet) {
         await stream.write_bytes_async(bytearray, GLib.PRIORITY_DEFAULT, null);
         stream.close(null);
     }
-    catch(e) {
-      console.log("Failed to write stylsheet file: " + stylepath, e);
+    catch (e) {
+        console.log("Failed to write stylsheet file: " + stylepath, e);
     }
 }
 
 async function writeSVGs(obar, Me) {
-    if(obar.msSVG) { // Accent color is changed
+    if (obar.msSVG) { // Accent color is changed
         saveToggleSVG('on', obar, Me);
         saveToggleSVG('on-hc', obar, Me);
         saveCheckboxSVG('on', obar, Me);
@@ -3896,20 +4017,20 @@ async function writeSVGs(obar, Me) {
         obar.msSVG = false;
     }
 
-    if(obar.mhSVG) { // Highlight color is changed
+    if (obar.mhSVG) { // Highlight color is changed
         saveCheckboxSVG('on-focused', obar, Me);
         saveCheckboxSVG('off-focused', obar, Me);
         obar.mhSVG = false;
     }
 
-    if(obar.smfgSVG) { // Foreground color is changed
+    if (obar.smfgSVG) { // Foreground color is changed
         saveCalEventSVG(obar, Me);
         obar.smfgSVG = false;
     }
 }
 
 async function writeGtkCss(obar) {
-    if(obar.gtkCSS) { // accent or Gtk/Flatpak settings changed
+    if (obar.gtkCSS) { // accent or Gtk/Flatpak settings changed
         saveGtkCss(obar, 'enable');
         obar.gtkCSS = false;
     }
@@ -3918,7 +4039,7 @@ async function writeGtkCss(obar) {
 export async function reloadStyle(obar, Me) {
     const importExport = obar._settings.get_boolean('import-export');
     const pauseStyleReload = obar._settings.get_boolean('pause-reload');
-    if(importExport || pauseStyleReload)
+    if (importExport || pauseStyleReload)
         return;
     // console.log('reloadStyle called with ImportExport false, Pause false');
     // Get stylesheet string
@@ -3926,13 +4047,13 @@ export async function reloadStyle(obar, Me) {
     try {
         await Promise.all([writeStylesheet(obar, stylesheet), writeSVGs(obar, Me), writeGtkCss(obar)]);
     }
-    catch(e) {
+    catch (e) {
         console.log("Failed to reload stylesheet: ", e);
     }
 
     // Cause stylesheet to reload by toggling 'reloadstyle'
     let reloadstyle = obar._settings.get_boolean('reloadstyle');
-    if(reloadstyle)
+    if (reloadstyle)
         obar._settings.set_boolean('reloadstyle', false);
     else
         obar._settings.set_boolean('reloadstyle', true);

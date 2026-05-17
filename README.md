@@ -1,6 +1,34 @@
 
 # Bar Enhanced (GNOME 4X Extension)  
 
+<p align="center">
+  <a href="https://github.com/MrVanguardia/Bar-Enhanced/stargazers">
+    <img src="https://img.shields.io/github/stars/MrVanguardia/Bar-Enhanced?style=for-the-badge&color=4CAF50&logo=github" alt="Stars" />
+  </a>
+  <a href="https://github.com/MrVanguardia/Bar-Enhanced/network/members">
+    <img src="https://img.shields.io/github/forks/MrVanguardia/Bar-Enhanced?style=for-the-badge&color=2196F3&logo=github" alt="Forks" />
+  </a>
+  <a href="https://github.com/MrVanguardia/Bar-Enhanced/issues">
+    <img src="https://img.shields.io/github/issues/MrVanguardia/Bar-Enhanced?style=for-the-badge&color=F44336&logo=github" alt="Issues" />
+  </a>
+  <a href="https://github.com/MrVanguardia/Bar-Enhanced/blob/main/LICENSE">
+    <img src="https://img.shields.io/github/license/MrVanguardia/Bar-Enhanced?style=for-the-badge&color=FF9800" alt="License" />
+  </a>
+  <a href="https://extensions.gnome.org/">
+    <img src="https://img.shields.io/badge/GNOME-45%20%7C%2046%20%7C%2047%20%7C%2048+-4A154B?style=for-the-badge&logo=gnome" alt="GNOME Shell" />
+  </a>
+  <br/>
+  <img src="https://img.shields.io/badge/Platform-Linux-000000?style=for-the-badge&logo=linux&logoColor=white" alt="Platform Linux" />
+  <img src="https://img.shields.io/badge/Made%20with-JavaScript-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black" alt="JavaScript" />
+  <a href="https://github.com/MrVanguardia/Bar-Enhanced/commits/main">
+    <img src="https://img.shields.io/github/last-commit/MrVanguardia/Bar-Enhanced?style=for-the-badge&color=8E44AD" alt="Last Commit" />
+  </a>
+  <a href="https://github.com/MrVanguardia/Bar-Enhanced/pulls">
+    <img src="https://img.shields.io/badge/PRs-Welcome-brightgreen?style=for-the-badge&logo=git" alt="PRs Welcome" />
+  </a>
+</p>
+
+
 **Bar Enhanced** is a premium GNOME Shell extension designed for high-end desktop customization. It transforms the standard GNOME interface into a balanced, professional environment with modern visual controls, adaptive theming, and an intuitive user experience.
 
 Developed and maintained by **MrVanguardia**, this project is an advanced evolution of the original **Open Bar** extension, preserving its legacy while introducing state-of-the-art features and a modern architectural approach.
@@ -59,6 +87,15 @@ To install **Bar Enhanced** correctly, you must clone the repository and then mo
 
 ![Modern interface](screens/b3.png)  
 *Example of the interface.*
+
+![Modern Theme Store](screens/b4.png)  
+*New community Theme Store with active compatibility checker.*
+
+![Wallpaper Extraction Engine](screens/b5.png)  
+*Real-time wallpaper palette extraction with live contrast-aware bar and menu sync.*
+
+![Complete Desktop Customization](screens/b6b.png)  
+*Complete aesthetic sync matching top bar, popups, and quick settings toggles.*
 
 
 ## 📜 License

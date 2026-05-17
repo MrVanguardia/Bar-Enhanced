@@ -120,7 +120,34 @@ const ES_MAP = {
     'Export as JSON': 'Exportar como JSON', 'Export as TXT': 'Exportar como TXT',
     'Import Successful': 'Importación Exitosa', 'Import Failed': 'Importación Fallida',
     'The configuration profile has been applied correctly.': 'El perfil de configuración se ha aplicado correctamente.',
-    'The configuration profile has been applied on a clean slate.': 'El perfil de configuración se ha aplicado sobre una base limpia.'
+    'The configuration profile has been applied on a clean slate.': 'El perfil de configuración se ha aplicado sobre una base limpia.',
+    'Sync with Fedora System Accent Color': 'Sincronizar con el color de acento de Fedora',
+    'Show Customization Widget Center in Bar': 'Mostrar Centro de Control Personalizado en la Barra',
+    'Pywal / Material You Sync': 'Sincronización con Pywal / Material You',
+    'Sync Pywal Colors Manually': 'Sincronizar Paleta de Pywal',
+    'Instantly extract and apply colors from your current Pywal palette.': 'Extrae y aplica de inmediato los colores de tu paleta activa de Pywal.',
+    'Sync Now': 'Sincronizar',
+    'Applied!': '¡Aplicado!',
+    'Apply Palette to Bar': 'Aplicar Paleta a la Barra',
+    'Pywal Palette Not Found': 'Paleta de Pywal no encontrada',
+    'Please generate a Pywal color scheme first (e.g. run "wal -i wallpaper.jpg") before syncing.': 'Por favor, genera un esquema de colores de Pywal primero (ej. ejecutando "wal -i fondo.jpg") antes de sincronizar.',
+    'OK': 'Aceptar',
+    'Invalid Pywal Palette': 'Paleta de Pywal inválida',
+    'The Pywal color file is invalid or contains too few colors.': 'El archivo de colores de Pywal no es válido o contiene muy pocos colores.',
+    'Dynamic Focus Glow': 'Brillo Reactivo del Foco Dinámico',
+    'Neon Glow Intensity': 'Intensidad del Brillo Neón',
+    'The palette auto-refreshes when the desktop background changes. Click any color to copy its Hex code.': 'La paleta se actualiza automáticamente al cambiar el fondo de pantalla. Haz clic en un color para copiar su código Hex.',
+    'Icon Pack': 'Paquete de Iconos',
+    'GTK Theme': 'Tema de Ventana (GTK)',
+    'Shell Theme': 'Tema del Shell (GNOME)',
+    '100% Compatible': '100% Compatible',
+    'Designed for ancient GNOME 3.x': 'Diseñado para GNOME 3.x antiguo',
+    'Compatible with GNOME': 'Compatible con GNOME',
+    'GTK4 & Libadwaita Support': 'Soporte GTK4 y Libadwaita',
+    'Compatible with legacy apps': 'Compatible con apps antiguas',
+    'Compatible': 'Compatible',
+    'GRUB/Boot Theme': 'Tema de GRUB/Arranque',
+    'Installed': 'Instalado'
 };
 
 const T = (text) => {
@@ -200,18 +227,18 @@ class BarEnhancedPrefs {
         guideGroup.add(new Adw.ActionRow({ title: T('2. Apply Auto-Theme'), subtitle: T('Go to "Auto Themes", select a base mode, and click Apply.') }));
         guideGroup.add(new Adw.ActionRow({ title: T('3. Refine Aesthetics'), subtitle: T('Tweak individual colors, borders, and shadows in the following tabs.') }));
 
-        const quoteGroup = new Adw.PreferencesGroup({ title: T('Daily Inspiration') });
-        welcomePage.add(quoteGroup);
-        const quoteLabel = new Gtk.Label({ label: '', use_markup: true, justify: Gtk.Justification.CENTER, wrap: true, margin_top: 10, margin_bottom: 10 });
-        quoteGroup.header_widget = quoteLabel;
-        this.setQuoteLabel(quoteLabel);
-
         // --- AUTO THEMES PAGE ---
         const autoPage = new Adw.PreferencesPage({ title: T('Auto Themes'), icon_name: 'color-select-symbolic' });
         window.add(autoPage);
         const engineGroup = new Adw.PreferencesGroup({ title: T('Theming Engine Settings') });
         autoPage.add(engineGroup);
         engineGroup.add(this.createSwitchRow('autotheme-refresh', T('Auto-Refresh on Wallpaper Change')));
+        engineGroup.add(this.createSwitchRow('focus-glow', T('Dynamic Focus Glow')));
+        engineGroup.add(this.createSwitchRow('pywal-sync', T('Pywal / Material You Sync')));
+
+
+        engineGroup.add(this.createSwitchRow('system-accent-sync', T('Sync with Fedora System Accent Color')));
+        engineGroup.add(this.createSwitchRow('show-dashboard', T('Show Customization Widget Center in Bar')));
         engineGroup.add(this.createSwitchRow('auto-bgalpha', T('Dynamic Opacity Calculation')));
         engineGroup.add(this.createSwitchRow('autofg-bar', T('Auto-Set Bar Foreground')));
         engineGroup.add(this.createSwitchRow('autofg-menu', T('Auto-Set Menu Foreground')));
@@ -248,17 +275,66 @@ class BarEnhancedPrefs {
         autoBtn.connect('clicked', () => this.triggerAutoTheme());
         applyGroup.add(autoBtn);
 
-        const paletteGroup = new Adw.PreferencesGroup({ title: T('Extracted Color Palette') });
+        const paletteGroup = new Adw.PreferencesGroup({
+            title: T('Extracted Color Palette'),
+            description: T('The palette auto-refreshes when the desktop background changes. Click any color to copy its Hex code.')
+        });
         autoPage.add(paletteGroup);
-        const paletteBox = new Gtk.Box({ orientation: Gtk.Orientation.VERTICAL, spacing: 6, margin_top: 10, margin_bottom: 10 });
-        const pBox1 = new Gtk.Box({ spacing: 6, halign: Gtk.Align.CENTER });
-        const pBox2 = new Gtk.Box({ spacing: 6, halign: Gtk.Align.CENTER });
+        const paletteBox = new Gtk.Box({
+            orientation: Gtk.Orientation.VERTICAL,
+            spacing: 12,
+            margin_top: 12,
+            margin_bottom: 12,
+            margin_start: 12,
+            margin_end: 12
+        });
+        const pBox1 = new Gtk.Box({ spacing: 8, halign: Gtk.Align.CENTER });
+        const pBox2 = new Gtk.Box({ spacing: 8, halign: Gtk.Align.CENTER });
         this.createPaletteDisplay(window, pBox1, pBox2);
-        paletteBox.append(pBox1); paletteBox.append(pBox2);
-        const refreshBtn = new Gtk.Button({ label: T('Update Palette Data'), halign: Gtk.Align.CENTER });
+        paletteBox.append(pBox1);
+        paletteBox.append(pBox2);
+        const btnBox = new Gtk.Box({ 
+            orientation: Gtk.Orientation.HORIZONTAL, 
+            spacing: 12, 
+            halign: Gtk.Align.CENTER, 
+            margin_top: 12 
+        });
+
+        const refreshBtn = new Gtk.Button({
+            label: T('Update Palette Data'),
+            css_classes: ['pill']
+        });
         refreshBtn.connect('clicked', () => this.triggerBackgroundPalette(window));
-        paletteBox.append(refreshBtn);
-        paletteGroup.header_widget = paletteBox;
+        btnBox.append(refreshBtn);
+
+        const applyPaletteBtn = new Gtk.Button({
+            label: T('Apply Palette to Bar'),
+            css_classes: ['pill', 'suggested-action']
+        });
+        applyPaletteBtn.connect('clicked', () => this.applyExtractedPalette(window, applyPaletteBtn));
+        btnBox.append(applyPaletteBtn);
+
+        const resetPaletteBtn = new Gtk.Button({
+            label: T('Restore GNOME Defaults'),
+            css_classes: ['pill', 'destructive-action'],
+            halign: Gtk.Align.CENTER,
+            margin_top: 12
+        });
+        resetPaletteBtn.connect('clicked', () => this.resetToGnomeDefaults(window, resetPaletteBtn));
+
+        paletteBox.append(btnBox);
+        paletteBox.append(resetPaletteBtn);
+        paletteGroup.add(paletteBox);
+
+        this._settings.connect('changed::bg-change', () => {
+            let i = 1;
+            window.paletteButtons.forEach(b => {
+                const c = this._settings.get_strv('palette' + i++);
+                const hex = this.rgbToHex(c[0], c[1], c[2]);
+                b.child.label = `<span bgcolor="${hex}" font_size="150%">       </span>`;
+                b.tooltip_text = hex;
+            });
+        });
 
         // --- TOP BAR PAGE ---
         const barPage = new Adw.PreferencesPage({ title: T('Top Bar'), icon_name: 'view-paged-symbolic' });
@@ -399,6 +475,7 @@ class BarEnhancedPrefs {
         const bColRow = new Adw.ActionRow({ title: T('Border Stroke Color') }); bColRow.add_suffix(this.createColorButton(window, 'bcolor')); bGroup.add(bColRow);
         bGroup.add(this.createScaleRow('balpha', T('Stroke Transparency'), 0, 1, 0.01));
         bGroup.add(this.createSwitchRow('neon', T('Neon Luminosity Glow')));
+        bGroup.add(this.createScaleRow('neon-intensity', T('Neon Glow Intensity'), 0.05, 1.0, 0.05));
 
         // --- POPUP MENUS PAGE ---
         const menuPage = new Adw.PreferencesPage({ title: T('Menus'), icon_name: 'open-menu-symbolic' });
@@ -495,7 +572,9 @@ class BarEnhancedPrefs {
         gtkRow.set_model(gtkModel);
         gtkRow.set_selected(gtkThemes.indexOf(this._interfaceSettings.get_string('gtk-theme')));
         gtkRow.connect('notify::selected', () => {
-            this._interfaceSettings.set_string('gtk-theme', gtkThemes[gtkRow.get_selected()]);
+            const selectedTheme = gtkThemes[gtkRow.get_selected()];
+            this._interfaceSettings.set_string('gtk-theme', selectedTheme);
+            this.applyGtk4ThemeEcosystem(selectedTheme);
         });
         assetGroup.add(gtkRow);
 
@@ -641,7 +720,10 @@ class BarEnhancedPrefs {
             const hex = this.rgbToHex(p[0], p[1], p[2]);
             const label = new Gtk.Label({ label: `<span bgcolor="${hex}" font_size="150%">       </span>`, use_markup: true });
             const btn = new Gtk.Button({ child: label, tooltip_text: hex });
-            btn.connect('clicked', () => clipboard.set(hex));
+            btn.connect('clicked', () => {
+                const currentHex = btn.get_tooltip_text();
+                clipboard.set(currentHex);
+            });
             (i <= 6 ? box1 : box2).append(btn);
             window.paletteButtons.push(btn);
         }
@@ -650,14 +732,19 @@ class BarEnhancedPrefs {
     rgbToHex(r, g, b) { return "#" + (1 << 24 | r << 16 | g << 8 | b).toString(16).slice(1); }
 
     triggerBackgroundPalette(window) {
-        window.paletteButtons.forEach(b => b.child.label = '<span bgcolor="#7d7d7d" font_size="150%">       </span>');
+        window.paletteButtons.forEach(b => {
+            b.child.label = '<span bgcolor="#7d7d7d" font_size="150%">       </span>';
+            b.tooltip_text = '#7d7d7d';
+        });
         let p = this._settings.get_boolean('bgpalette');
         this._settings.set_boolean('bgpalette', !p);
         setTimeout(() => {
             let i = 1;
             window.paletteButtons.forEach(b => {
                 const c = this._settings.get_strv('palette' + i++);
-                b.child.label = `<span bgcolor="${this.rgbToHex(c[0], c[1], c[2])}" font_size="150%">       </span>`;
+                const hex = this.rgbToHex(c[0], c[1], c[2]);
+                b.child.label = `<span bgcolor="${hex}" font_size="150%">       </span>`;
+                b.tooltip_text = hex;
             });
         }, 500);
     }
@@ -1096,6 +1183,11 @@ class BarEnhancedPrefs {
             GLib.get_home_dir() + '/.local/share/' + type,
             '/usr/share/' + type
         ];
+        if (type === 'themes') {
+            dirs.push(GLib.get_home_dir() + '/.themes');
+        } else if (type === 'icons') {
+            dirs.push(GLib.get_home_dir() + '/.icons');
+        }
         let assets = [];
         dirs.forEach(path => {
             try {
@@ -1132,8 +1224,13 @@ class BarEnhancedPrefs {
         f.show();
     }
 
-    downloadAndInstall(url, name, callback) {
-        const tempPath = `/tmp/${name.replace(/\s+/g, '_')}.tar.gz`;
+    downloadAndInstall(url, name, type, callback) {
+        let ext = '.tar.gz';
+        if (url.toLowerCase().includes('.zip')) ext = '.zip';
+        else if (url.toLowerCase().includes('.tar.xz')) ext = '.tar.xz';
+        else if (url.toLowerCase().includes('.tar.bz2')) ext = '.tar.bz2';
+
+        const tempPath = `/tmp/${name.replace(/\s+/g, '_')}${ext}`;
         const proc = Gio.Subprocess.new(
             ['curl', '-L', url, '-o', tempPath],
             Gio.SubprocessFlags.NONE
@@ -1142,15 +1239,15 @@ class BarEnhancedPrefs {
         proc.wait_async(null, (p, res) => {
             try {
                 p.wait_finish(res);
-                this.installAsset(tempPath, callback);
+                this.installAsset(tempPath, type, callback);
             } catch (e) {
                 console.error('Download failed:', e);
             }
         });
     }
 
-    installAsset(filePath, callback) {
-        const destDir = filePath.toLowerCase().includes('icon')
+    installAsset(filePath, type, callback) {
+        const destDir = (type === 'icons' || filePath.toLowerCase().includes('icon'))
             ? GLib.get_home_dir() + '/.local/share/icons'
             : GLib.get_home_dir() + '/.local/share/themes';
 
@@ -1166,9 +1263,104 @@ class BarEnhancedPrefs {
                 p.wait_finish(res);
                 if (callback) callback();
             } catch (e) {
-                console.error('Installation failed:', e);
+                console.error('Extraction failed:', e);
             }
         });
+    }
+
+    applyGtk4ThemeEcosystem(themeName) {
+        try {
+            const configDir = GLib.get_user_config_dir();
+            const gtk4ConfigDir = Gio.File.new_for_path(`${configDir}/gtk-4.0`);
+            if (!gtk4ConfigDir.query_exists(null)) {
+                gtk4ConfigDir.make_directory_with_parents(null);
+            }
+
+            const localThemePath = `${GLib.get_home_dir()}/.local/share/themes/${themeName}/gtk-4.0`;
+            const legacyThemePath = `${GLib.get_home_dir()}/.themes/${themeName}/gtk-4.0`;
+            const systemThemePath = `/usr/share/themes/${themeName}/gtk-4.0`;
+
+            let sourceDir = null;
+            if (Gio.File.new_for_path(localThemePath).query_exists(null)) {
+                sourceDir = localThemePath;
+            } else if (Gio.File.new_for_path(legacyThemePath).query_exists(null)) {
+                sourceDir = legacyThemePath;
+            } else if (Gio.File.new_for_path(systemThemePath).query_exists(null)) {
+                sourceDir = systemThemePath;
+            }
+
+            const gtkCssFile = Gio.File.new_for_path(`${configDir}/gtk-4.0/gtk.css`);
+
+            const cleanThemeFiles = () => {
+                const filesToClean = ['gtk.css', 'gtk-dark.css', 'assets'];
+                filesToClean.forEach(fName => {
+                    const f = Gio.File.new_for_path(`${configDir}/gtk-4.0/${fName}`);
+                    if (f.query_exists(null)) {
+                        try {
+                            if (fName === 'assets') {
+                                Gio.Subprocess.new(['rm', '-rf', f.get_path()], Gio.SubprocessFlags.NONE).wait_sync(null);
+                            } else {
+                                f.delete(null);
+                            }
+                        } catch (err) {}
+                    }
+                });
+            };
+
+            if (sourceDir) {
+                // Back up original user css if it exists and is not ours
+                if (gtkCssFile.query_exists(null)) {
+                    try {
+                        const [contents] = gtkCssFile.load_contents(null);
+                        const decoder = new TextDecoder('utf-8');
+                        const contentsStr = decoder.decode(contents);
+                        if (!contentsStr.includes('/*** Bar Enhanced GTK CSS ***/') && !contentsStr.includes('/*** GTK4 Theme Ecosystem ***/')) {
+                            const backupFile = Gio.File.new_for_path(`${configDir}/gtk-4.0/gtk_backup_user.css`);
+                            gtkCssFile.copy(backupFile, Gio.FileCopyFlags.OVERWRITE, null, null);
+                        }
+                    } catch (err) {}
+                }
+
+                // Clean the slate before copying
+                cleanThemeFiles();
+
+                // Copy recursively using cp
+                const proc = Gio.Subprocess.new(
+                    ['cp', '-rf', `${sourceDir}/.`, `${configDir}/gtk-4.0/`],
+                    Gio.SubprocessFlags.NONE
+                );
+                proc.wait_async(null, (p, res) => {
+                    try {
+                        p.wait_finish(res);
+                        // Add our header so we know it's injected
+                        if (gtkCssFile.query_exists(null)) {
+                            const [contents] = gtkCssFile.load_contents(null);
+                            const decoder = new TextDecoder('utf-8');
+                            let contentsStr = decoder.decode(contents);
+                            if (!contentsStr.includes('/*** GTK4 Theme Ecosystem ***/')) {
+                                contentsStr = `/*** GTK4 Theme Ecosystem ***/\n` + contentsStr;
+                                const encoder = new TextEncoder();
+                                const bytes = encoder.encode(contentsStr);
+                                gtkCssFile.replace_contents(bytes, null, false, Gio.FileCreateFlags.REPLACE_DESTINATION, null);
+                            }
+                        }
+                    } catch (e) {}
+                });
+            } else {
+                // Clean the slate
+                cleanThemeFiles();
+
+                // Restore user's backup if it exists
+                const backupFile = Gio.File.new_for_path(`${configDir}/gtk-4.0/gtk_backup_user.css`);
+                if (backupFile.query_exists(null)) {
+                    try {
+                        backupFile.move(gtkCssFile, Gio.FileCopyFlags.OVERWRITE, null, null);
+                    } catch (err) {}
+                }
+            }
+        } catch (e) {
+            console.error('Error applying GTK4 theme:', e);
+        }
     }
 
     openStoreModal(parent, iconRow) {
@@ -1176,7 +1368,7 @@ class BarEnhancedPrefs {
             title: T('Theme Store'),
             modal: true,
             transient_for: parent,
-            default_width: 500,
+            default_width: 680,
             default_height: 600
         });
         const toolbarView = new Adw.ToolbarView();
@@ -1212,18 +1404,21 @@ class BarEnhancedPrefs {
             description: T('Download community styles.')
         });
 
+        const themeContainer = new Gtk.Box({ orientation: Gtk.Orientation.VERTICAL, spacing: 6 });
+        group.add(themeContainer);
+
         const loadingLabel = new Gtk.Label({ label: T('Loading themes...'), margin_top: 20 });
-        group.add(loadingLabel);
+        themeContainer.append(loadingLabel);
 
         searchBar.connect('search-changed', () => {
             const term = searchBar.get_text();
             if (this.searchTimeoutId) GLib.Source.remove(this.searchTimeoutId);
 
             if (term.length === 0) {
-                this.fetchOnlineThemes(group, loadingLabel, iconRow);
+                this.fetchOnlineThemes(themeContainer, loadingLabel, iconRow);
             } else if (term.length > 2) {
                 this.searchTimeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 500, () => {
-                    this.searchOnlineThemes(group, term, iconRow);
+                    this.searchOnlineThemes(themeContainer, term, iconRow);
                     this.searchTimeoutId = null;
                     return GLib.SOURCE_REMOVE;
                 });
@@ -1233,7 +1428,7 @@ class BarEnhancedPrefs {
         searchBar.connect('activate', () => {
             const term = searchBar.get_text();
             if (term.length > 2) {
-                this.searchOnlineThemes(group, term, iconRow);
+                this.searchOnlineThemes(themeContainer, term, iconRow);
             }
         });
 
@@ -1244,30 +1439,34 @@ class BarEnhancedPrefs {
         toolbarView.set_content(mainBox);
         storeWindow.set_content(toolbarView);
 
-        this.fetchOnlineThemes(group, loadingLabel, iconRow);
-        storeWindow.show();
+        this.fetchOnlineThemes(themeContainer, loadingLabel, iconRow);
+        storeWindow.present();
     }
 
     _getSoupSession() {
         if (!this._soupSession) {
             this._soupSession = new Soup.Session();
             this._soupSession.set_user_agent('Mozilla/5.0 (GNOME Shell; Bar-Enhanced)');
+            try {
+                this._soupSession.http2 = false;
+            } catch (e) {}
         }
         return this._soupSession;
     }
 
-    searchOnlineThemes(group, term, iconRow) {
-        group.get_children().forEach(child => {
-            if (child instanceof Adw.ActionRow || child instanceof Gtk.Label) {
-                try { group.remove(child); } catch (e) {}
-            }
-        });
+    searchOnlineThemes(container, term, iconRow) {
+        let child = container.get_first_child();
+        while (child) {
+            let next = child.get_next_sibling();
+            container.remove(child);
+            child = next;
+        }
 
         const loadingLabel = new Gtk.Label({ label: T('Searching for') + ': "' + term + '"...', margin_top: 20 });
-        group.add(loadingLabel);
+        container.append(loadingLabel);
 
         const url = `https://api.pling.com/ocs/v1/content/data?search=${encodeURIComponent(term)}&sort=rating&pagesize=100&format=json`;
-        const message = Soup.Message.new('GET', url);
+        const message = Soup.Message.new_from_uri('GET', GLib.Uri.parse(url, GLib.UriFlags.NONE));
 
         this._getSoupSession().send_and_read_async(message, GLib.PRIORITY_DEFAULT, null, (s, res) => {
             try {
@@ -1275,24 +1474,36 @@ class BarEnhancedPrefs {
                 const decoder = new TextDecoder('utf-8');
                 const jsonText = decoder.decode(bytes.get_data());
                 const response = JSON.parse(jsonText);
-                const rawData = response?.ocs?.data?.content;
-                
+                const rawData = response?.data;
                 const data = rawData ? (Array.isArray(rawData) ? rawData : [rawData]) : [];
-                this.renderThemeList(group, loadingLabel, iconRow, data);
+                this.renderThemeList(container, loadingLabel, iconRow, data);
             } catch (e) {
+                console.error('searchOnlineThemes exception:', e);
                 if (loadingLabel.get_parent()) loadingLabel.set_label(T('No results or API error.'));
             }
         });
     }
 
-    fetchOnlineThemes(group, loadingLabel, iconRow) {
+    fetchOnlineThemes(container, loadingLabel, iconRow) {
+        let child = container.get_first_child();
+        while (child) {
+            let next = child.get_next_sibling();
+            container.remove(child);
+            child = next;
+        }
+
+        if (loadingLabel && !loadingLabel.get_parent()) {
+            container.append(loadingLabel);
+            loadingLabel.set_label(T('Loading themes...'));
+        }
+
         const categories = ['121', '135', '109'];
         let allThemes = [];
         let completed = 0;
 
         categories.forEach(cat => {
             const url = `https://api.pling.com/ocs/v1/content/data?categories=${cat}&sort=rating&pagesize=50&format=json`;
-            const message = Soup.Message.new('GET', url);
+            const message = Soup.Message.new_from_uri('GET', GLib.Uri.parse(url, GLib.UriFlags.NONE));
 
             this._getSoupSession().send_and_read_async(message, GLib.PRIORITY_DEFAULT, null, (s, res) => {
                 try {
@@ -1300,25 +1511,80 @@ class BarEnhancedPrefs {
                     const decoder = new TextDecoder('utf-8');
                     const jsonText = decoder.decode(bytes.get_data());
                     const response = JSON.parse(jsonText);
-                    const rawData = response?.ocs?.data?.content;
+                    const rawData = response?.data;
                     if (rawData) {
                         const items = Array.isArray(rawData) ? rawData : [rawData];
                         allThemes = [...allThemes, ...items];
                     }
-                } catch (e) {}
+                } catch (e) {
+                    console.error('fetchOnlineThemes exception:', e);
+                }
 
                 completed++;
                 if (completed === categories.length) {
                     allThemes.sort((a, b) => (parseInt(b.rating) || 0) - (parseInt(a.rating) || 0));
-                    this.renderThemeList(group, loadingLabel, iconRow, allThemes);
+                    this.renderThemeList(container, loadingLabel, iconRow, allThemes);
                 }
             });
         });
     }
 
-    renderThemeList(group, loadingLabel, iconRow, data) {
+    getGnomeShellVersion() {
         try {
-            if (loadingLabel && loadingLabel.get_parent()) group.remove(loadingLabel);
+            let [res, stdout, stderr, status] = GLib.spawn_command_line_sync('gnome-shell --version');
+            if (res) {
+                const output = new TextDecoder().decode(stdout).trim();
+                const match = output.match(/(\d+\.?\d*)/);
+                if (match) {
+                    const parts = match[1].split('.');
+                    return parts[0];
+                }
+            }
+        } catch (e) {}
+        return '45';
+    }
+
+    checkCompatibility(item, gnomeMajorVersion) {
+        const name = (item.name || '').toLowerCase();
+        const typename = (item.typename || '').toLowerCase();
+        const typeid = String(item.typeid || '');
+
+        if (name.includes('grub') || name.includes('boot') || name.includes('plymouth')) {
+            return { compatible: false, reason: T('GRUB/Boot Theme') };
+        }
+
+        if (typeid === '121' || typename.includes('icon')) {
+            return { compatible: true, reason: T('100% Compatible') };
+        }
+
+        const ancientGnomePatterns = [
+            /\b(3\.(30|32|34|36|38))\b/,
+            /gnome\s*3\b/
+        ];
+        for (const pattern of ancientGnomePatterns) {
+            if (pattern.test(name)) {
+                return { compatible: false, reason: T('Designed for ancient GNOME 3.x') };
+            }
+        }
+
+        if (typeid === '109' || typename.includes('shell')) {
+            return { compatible: true, reason: T('Compatible with GNOME') + ' ' + gnomeMajorVersion };
+        }
+
+        if (typeid === '135' || typename.includes('gtk')) {
+            const hasGtk4 = name.includes('gtk4') || name.includes('libadwaita') || name.includes('gtk 4');
+            if (hasGtk4) {
+                return { compatible: true, reason: T('GTK4 & Libadwaita Support') };
+            }
+            return { compatible: true, reason: T('Compatible with legacy apps') };
+        }
+
+        return { compatible: true, reason: T('Compatible') };
+    }
+
+    renderThemeList(container, loadingLabel, iconRow, data) {
+        try {
+            if (loadingLabel && loadingLabel.get_parent()) container.remove(loadingLabel);
         } catch (e) {}
 
         if (!data || !Array.isArray(data) || data.length === 0) {
@@ -1328,6 +1594,7 @@ class BarEnhancedPrefs {
             ];
         }
 
+        const gnomeMajor = this.getGnomeShellVersion();
         const installedIcons = this.getInstalledAssets('icons');
         const installedThemes = this.getInstalledAssets('themes');
         const allInstalled = [...installedIcons, ...installedThemes];
@@ -1336,14 +1603,42 @@ class BarEnhancedPrefs {
             const name = item.name;
             const link = item.downloadlink1;
             const preview = item.previewpic1 || item.previewpic2;
-            if (!link || link.length < 10) return;
+            if (!item.id && !link) return;
 
-            const isInstalled = allInstalled.some(i =>
-                name.toLowerCase().includes(i.toLowerCase()) ||
-                i.toLowerCase().includes(name.toLowerCase().replace(/\s+icons?$/i, ''))
-            );
+            const compat = this.checkCompatibility(item, gnomeMajor);
+            if (!compat.compatible) return;
 
-            const row = new Adw.ActionRow({ title: name });
+            const cleanName = name.toLowerCase().replace(/[^a-z0-9]/g, '');
+            const isInstalled = allInstalled.some(i => {
+                const cleanInstalled = i.toLowerCase().replace(/[^a-z0-9]/g, '');
+                return cleanName.includes(cleanInstalled) || cleanInstalled.includes(cleanName) ||
+                       name.toLowerCase().includes(i.toLowerCase()) || i.toLowerCase().includes(name.toLowerCase().replace(/\s+icons?$/i, ''));
+            });
+
+            let typeLabelText = '';
+            const typeid = String(item.typeid || '');
+            if (typeid === '121') {
+                typeLabelText = T('Icon Pack');
+            } else if (typeid === '135') {
+                typeLabelText = T('GTK Theme');
+            } else if (typeid === '109') {
+                typeLabelText = T('Shell Theme');
+            } else if (item.typename) {
+                typeLabelText = item.typename;
+            } else {
+                typeLabelText = T('Icon Pack');
+            }
+
+            let subtitleText = `${typeLabelText}  •  ${compat.reason}`;
+            if (isInstalled) {
+                subtitleText += `  •  ${T('Installed')}`;
+            }
+
+            const row = new Adw.ActionRow({
+                title: name,
+                subtitle: subtitleText
+            });
+
             const picture = new Gtk.Image({
                 pixel_size: 64, margin_end: 12, halign: Gtk.Align.START, valign: Gtk.Align.CENTER,
                 icon_name: 'image-missing-symbolic'
@@ -1351,15 +1646,17 @@ class BarEnhancedPrefs {
             row.add_prefix(picture);
 
             if (preview) {
-                const imgMsg = Soup.Message.new('GET', preview);
+                const imgMsg = Soup.Message.new_from_uri('GET', GLib.Uri.parse(preview, GLib.UriFlags.NONE));
                 this._getSoupSession().send_and_read_async(imgMsg, GLib.PRIORITY_DEFAULT, null, (s, r) => {
                     try {
                         const bytes = s.send_and_read_finish(r);
                         const stream = Gio.MemoryInputStream.new_from_bytes(bytes);
                         const pixbuf = GdkPixbuf.Pixbuf.new_from_stream_at_scale(stream, 64, 64, true, null);
-                        const paintable = Gtk.Texture.new_for_pixbuf(pixbuf);
+                        const paintable = Gdk.Texture.new_for_pixbuf(pixbuf);
                         picture.set_from_paintable(paintable);
-                    } catch (e) {}
+                    } catch (e) {
+                        console.error('IMAGE FETCH/CONVERSION ERROR for ' + name + ' (URL: ' + preview + '): ' + e);
+                    }
                 });
             }
 
@@ -1373,35 +1670,60 @@ class BarEnhancedPrefs {
             btn.connect('clicked', () => {
                 btn.set_sensitive(false);
                 btn.set_label(T('Downloading...'));
-                this.downloadAndInstall(link, name, () => {
-                    btn.set_label(T('Installed'));
-                    btn.add_css_class('flat');
-                    if (iconRow) {
-                        const icons = this.getInstalledAssets('icons');
-                        const iconModel = new Gtk.StringList(); icons.forEach(i => iconModel.append(i));
-                        iconRow.set_model(iconModel);
+
+                const performDownload = (downloadUrl) => {
+                    let assetType = 'themes';
+                    const typeid = String(item.typeid || '');
+                    if (typeid === '121' || (item.typename && item.typename.toLowerCase().includes('icon')) || name.toLowerCase().includes('icon')) {
+                        assetType = 'icons';
                     }
-                });
+                    this.downloadAndInstall(downloadUrl, name, assetType, () => {
+                        btn.set_label(T('Installed'));
+                        btn.add_css_class('flat');
+                        if (iconRow) {
+                            const icons = this.getInstalledAssets('icons');
+                            const iconModel = new Gtk.StringList(); icons.forEach(i => iconModel.append(i));
+                            iconRow.set_model(iconModel);
+                        }
+                    });
+                };
+
+                if (link && (link.includes('github') || link.includes('dl.pling') || link.includes('files06') || link.endsWith('.tar.gz') || link.endsWith('.zip') || link.endsWith('.tar.xz'))) {
+                    performDownload(link);
+                } else if (item.id) {
+                    const downloadApiUrl = `https://api.pling.com/ocs/v1/content/download/${item.id}/1?format=json`;
+                    const msg = Soup.Message.new_from_uri('GET', GLib.Uri.parse(downloadApiUrl, GLib.UriFlags.NONE));
+                    this._getSoupSession().send_and_read_async(msg, GLib.PRIORITY_DEFAULT, null, (s, res) => {
+                        try {
+                            const bytes = s.send_and_read_finish(res);
+                            const decoder = new TextDecoder('utf-8');
+                            const jsonText = decoder.decode(bytes.get_data());
+                            const resp = JSON.parse(jsonText);
+                            let realLink = resp?.data?.[0]?.downloadlink || resp?.data?.downloadlink;
+                            if (!realLink && resp?.ocs?.data) {
+                                const dataObj = resp.ocs.data;
+                                realLink = dataObj.downloadlink || dataObj.link;
+                            }
+                            if (!realLink && resp?.ocs?.data?.content) {
+                                const content = resp.ocs.data.content;
+                                const firstItem = Array.isArray(content) ? content[0] : content;
+                                realLink = firstItem?.downloadlink1 || firstItem?.downloadlink;
+                            }
+                            if (realLink) {
+                                performDownload(realLink);
+                            } else {
+                                performDownload(link || `https://www.pling.com/p/${item.id}/dw/`);
+                            }
+                        } catch (err) {
+                            performDownload(link || `https://www.pling.com/p/${item.id}/dw/`);
+                        }
+                    });
+                } else {
+                    performDownload(link);
+                }
             });
             row.add_suffix(btn);
-            group.add(row);
-        });
-    }
-
-    downloadAndInstall(url, name, callback) {
-        const tempPath = `/tmp/${name.replace(/\s+/g, '_')}.tar.gz`;
-        const proc = Gio.Subprocess.new(
-            ['curl', '-L', url, '-o', tempPath],
-            Gio.SubprocessFlags.NONE
-        );
-
-        proc.wait_async(null, (p, res) => {
-            try {
-                p.wait_finish(res);
-                this.installAsset(tempPath, callback);
-            } catch (e) {
-                console.error('Download failed:', e);
-            }
+            container.append(row);
         });
     }
 
@@ -1425,22 +1747,213 @@ class BarEnhancedPrefs {
         });
         dialog.present(window);
     }
+    applyExtractedPalette(window, btn) {
+        try {
+            // Helper to compute contrast color (white or dark) based on background RGB
+            const getContrastColor = (rVal, gVal, bVal) => {
+                const Y = 0.299 * rVal + 0.587 * gVal + 0.114 * bVal;
+                // If light background, return dark text. Else, return white text.
+                return Y > 130 ? ['0.100', '0.100', '0.100'] : ['1.000', '1.000', '1.000'];
+            };
 
-    setQuoteLabel(label) {
-        const quotes = [
-            "“Design is not just what it looks like and feels like. Design is how it works.” – Steve Jobs",
-            "“Simplicity is the ultimate sophistication.” – Leonardo da Vinci",
-            "“Good design is obvious. Great design is transparent.” – Joe Sparano",
-            "“Less is more.” – Ludwig Mies van der Rohe",
-            "“Make it simple, but significant.” – Don Draper",
-            "“Content precedes design. Design in the absence of content is not design, it’s decoration.” – Jeffrey Zeldman"
-        ];
-        let i = Math.floor(Math.random() * quotes.length);
-        label.set_label(`<span style="italic" alpha="70%">${quotes[i]}</span>`);
-        GLib.timeout_add(GLib.PRIORITY_DEFAULT, 15000, () => {
-            i = (i + 1) % quotes.length;
-            label.set_label(`<span style="italic" alpha="70%">${quotes[i]}</span>`);
-            return GLib.SOURCE_CONTINUE;
-        });
+            // Pause stylesheet reload during multi-setting changes
+            this._settings.set_boolean('pause-reload', true);
+
+            // Copy palette1-12 to candy1-12, dark-candy1-12, and light-candy1-12
+            for (let i = 1; i <= 12; i++) {
+                const c = this._settings.get_strv(`palette${i}`);
+                if (c && c.length === 3) {
+                    let r = (parseInt(c[0]) / 255.0).toFixed(3);
+                    let g = (parseInt(c[1]) / 255.0).toFixed(3);
+                    let b = (parseInt(c[2]) / 255.0).toFixed(3);
+
+                    this._settings.set_strv(`candy${i}`, [r, g, b]);
+                    this._settings.set_strv(`dark-candy${i}`, [r, g, b]);
+                    this._settings.set_strv(`light-candy${i}`, [r, g, b]);
+                }
+            }
+
+            // Set background color to primary palette color and compute bar foreground contrast
+            const bg = this._settings.get_strv('palette1');
+            if (bg && bg.length === 3) {
+                let r = (parseInt(bg[0]) / 255.0).toFixed(3);
+                let g = (parseInt(bg[1]) / 255.0).toFixed(3);
+                let b = (parseInt(bg[2]) / 255.0).toFixed(3);
+                
+                this._settings.set_strv('bgcolor', [r, g, b]);
+                this._settings.set_strv('iscolor', [r, g, b]);
+                this._settings.set_strv('dark-bgcolor', [r, g, b]);
+                this._settings.set_strv('dark-iscolor', [r, g, b]);
+                this._settings.set_strv('light-bgcolor', [r, g, b]);
+                this._settings.set_strv('light-iscolor', [r, g, b]);
+
+                // Calculate and apply bar foreground (text) contrast
+                const fg = getContrastColor(parseInt(bg[0]), parseInt(bg[1]), parseInt(bg[2]));
+                this._settings.set_strv('fgcolor', fg);
+                this._settings.set_strv('dark-fgcolor', fg);
+                this._settings.set_strv('light-fgcolor', fg);
+
+                // Apply primary palette color to popups / menu background
+                this._settings.set_strv('mbgcolor', [r, g, b]);
+                this._settings.set_strv('dark-mbgcolor', [r, g, b]);
+                this._settings.set_strv('light-mbgcolor', [r, g, b]);
+
+                // Calculate popups / menu foreground (text) contrast
+                const mfg = getContrastColor(parseInt(bg[0]), parseInt(bg[1]), parseInt(bg[2]));
+                this._settings.set_strv('mfgcolor', mfg);
+                this._settings.set_strv('dark-mfgcolor', mfg);
+                this._settings.set_strv('light-mfgcolor', mfg);
+            }
+
+            // Apply secondary palette color to menu tiles / secondary surfaces background
+            const smbg = this._settings.get_strv('palette2') || this._settings.get_strv('palette1');
+            if (smbg && smbg.length === 3) {
+                let r = (parseInt(smbg[0]) / 255.0).toFixed(3);
+                let g = (parseInt(smbg[1]) / 255.0).toFixed(3);
+                let b = (parseInt(smbg[2]) / 255.0).toFixed(3);
+                this._settings.set_strv('smbgcolor', [r, g, b]);
+                this._settings.set_strv('dark-smbgcolor', [r, g, b]);
+                this._settings.set_strv('light-smbgcolor', [r, g, b]);
+            }
+
+            // Set border color to tertiary or secondary palette color
+            const border = this._settings.get_strv('palette3') || this._settings.get_strv('palette2');
+            if (border && border.length === 3) {
+                let r = (parseInt(border[0]) / 255.0).toFixed(3);
+                let g = (parseInt(border[1]) / 255.0).toFixed(3);
+                let b = (parseInt(border[2]) / 255.0).toFixed(3);
+                this._settings.set_strv('bcolor', [r, g, b]);
+                this._settings.set_strv('dark-bcolor', [r, g, b]);
+                this._settings.set_strv('light-bcolor', [r, g, b]);
+
+                // Also apply this color to menu border outline
+                this._settings.set_strv('mbcolor', [r, g, b]);
+                this._settings.set_strv('dark-mbcolor', [r, g, b]);
+                this._settings.set_strv('light-mbcolor', [r, g, b]);
+            }
+
+            // Enable manual accent override and set custom accent color
+            this._settings.set_boolean('accent-override', true);
+            const acc = this._settings.get_strv('palette2') || this._settings.get_strv('palette1');
+            if (acc && acc.length === 3) {
+                let r = (parseInt(acc[0]) / 255.0).toFixed(3);
+                let g = (parseInt(acc[1]) / 255.0).toFixed(3);
+                let b = (parseInt(acc[2]) / 255.0).toFixed(3);
+                this._settings.set_strv('accent-color', [r, g, b]);
+                this._settings.set_strv('dark-accent-color', [r, g, b]);
+                this._settings.set_strv('light-accent-color', [r, g, b]);
+
+                // Set menu active toggles color (mscolor) to this accent color!
+                this._settings.set_strv('mscolor', [r, g, b]);
+                this._settings.set_strv('dark-mscolor', [r, g, b]);
+                this._settings.set_strv('light-mscolor', [r, g, b]);
+            }
+
+            // Set menu hover indicators color (mhcolor) to tertiary palette color or accent
+            const hoverCol = this._settings.get_strv('palette3') || this._settings.get_strv('palette2');
+            if (hoverCol && hoverCol.length === 3) {
+                let r = (parseInt(hoverCol[0]) / 255.0).toFixed(3);
+                let g = (parseInt(hoverCol[1]) / 255.0).toFixed(3);
+                let b = (parseInt(hoverCol[2]) / 255.0).toFixed(3);
+                this._settings.set_strv('mhcolor', [r, g, b]);
+                this._settings.set_strv('dark-mhcolor', [r, g, b]);
+                this._settings.set_strv('light-mhcolor', [r, g, b]);
+            }
+
+            // Set system GTK headerbar and sidebars custom colors to primary palette color
+            const hscd = this._settings.get_strv('palette1');
+            if (hscd && hscd.length === 3) {
+                let r = (parseInt(hscd[0]) / 255.0).toFixed(3);
+                let g = (parseInt(hscd[1]) / 255.0).toFixed(3);
+                let b = (parseInt(hscd[2]) / 255.0).toFixed(3);
+                this._settings.set_strv('hscd-color', [r, g, b]);
+                this._settings.set_strv('dark-hscd-color', [r, g, b]);
+                this._settings.set_strv('light-hscd-color', [r, g, b]);
+                
+                this._settings.set_strv('vw-color', [r, g, b]);
+                this._settings.set_strv('dark-vw-color', [r, g, b]);
+                this._settings.set_strv('light-vw-color', [r, g, b]);
+            }
+
+            // Automatically enable system-wide GTK3 / GTK4 theme injection!
+            this._settings.set_boolean('apply-gtk', true);
+
+            // Wait 150ms for all GSettings changes to synchronize to GNOME Shell,
+            // then unpause and trigger a full CSS compilation and stylesheet reload!
+            GLib.timeout_add(GLib.PRIORITY_DEFAULT, 150, () => {
+                this._settings.set_boolean('pause-reload', false);
+                this._settings.set_boolean('trigger-reload', !this._settings.get_boolean('trigger-reload'));
+                return GLib.SOURCE_REMOVE;
+            });
+
+            // Show a temporary success state on the button
+            const oldLabel = btn.get_label();
+            btn.set_label(T('Applied!'));
+            btn.add_css_class('success');
+            GLib.timeout_add(GLib.PRIORITY_DEFAULT, 2000, () => {
+                btn.set_label(oldLabel);
+                btn.remove_css_class('success');
+                return GLib.SOURCE_REMOVE;
+            });
+        } catch (e) {
+            console.error('Error applying extracted palette:', e);
+        }
+    }
+    resetToGnomeDefaults(window, btn) {
+        try {
+            // Pause stylesheet reload during multi-setting changes
+            this._settings.set_boolean('pause-reload', true);
+
+            // List of keys modified by the wallpaper customizer
+            const keysToReset = [
+                'bgcolor', 'dark-bgcolor', 'light-bgcolor',
+                'iscolor', 'dark-iscolor', 'light-iscolor',
+                'fgcolor', 'dark-fgcolor', 'light-fgcolor',
+                'mbgcolor', 'dark-mbgcolor', 'light-mbgcolor',
+                'mfgcolor', 'dark-mfgcolor', 'light-mfgcolor',
+                'smbgcolor', 'dark-smbgcolor', 'light-smbgcolor',
+                'bcolor', 'dark-bcolor', 'light-bcolor',
+                'mbcolor', 'dark-mbcolor', 'light-mbcolor',
+                'accent-override',
+                'accent-color', 'dark-accent-color', 'light-accent-color',
+                'mscolor', 'dark-mscolor', 'light-mscolor',
+                'mhcolor', 'dark-mhcolor', 'light-mhcolor',
+                'hscd-color', 'dark-hscd-color', 'light-hscd-color',
+                'vw-color', 'dark-vw-color', 'light-vw-color',
+                'apply-gtk'
+            ];
+
+            // Reset candy color slots candy1-12, dark-candy1-12, light-candy1-12
+            for (let i = 1; i <= 12; i++) {
+                keysToReset.push(`candy${i}`);
+                keysToReset.push(`dark-candy${i}`);
+                keysToReset.push(`light-candy${i}`);
+            }
+
+            // Perform the resets
+            keysToReset.forEach(k => {
+                this._settings.reset(k);
+            });
+
+            // Wait 150ms for all GSettings changes to synchronize to GNOME Shell,
+            // then unpause and trigger a full CSS compilation and stylesheet reload!
+            GLib.timeout_add(GLib.PRIORITY_DEFAULT, 150, () => {
+                this._settings.set_boolean('pause-reload', false);
+                this._settings.set_boolean('trigger-reload', !this._settings.get_boolean('trigger-reload'));
+                return GLib.SOURCE_REMOVE;
+            });
+
+            // Show a temporary success state on the button
+            const oldLabel = btn.get_label();
+            btn.set_label(T('Restored!'));
+            btn.add_css_class('success');
+            GLib.timeout_add(GLib.PRIORITY_DEFAULT, 2000, () => {
+                btn.set_label(oldLabel);
+                btn.remove_css_class('success');
+                return GLib.SOURCE_REMOVE;
+            });
+        } catch (e) {
+            console.error('Error restoring GNOME defaults:', e);
+        }
     }
 }
