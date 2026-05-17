@@ -27,7 +27,7 @@ import Soup from 'gi://Soup?version=3.0';
 import GdkPixbuf from 'gi://GdkPixbuf';
 import { ExtensionPreferences, gettext as _ } from 'resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js';
 
-const SCHEMA_PATH = '/org/gnome/shell/extensions/barEnhanced/';
+const SCHEMA_PATH = '/org/gnome/shell/extensions/bar-enhanced/';
 
 // Automated translation fallback for Spanish
 const ES_MAP = {
@@ -114,7 +114,13 @@ const ES_MAP = {
     'Reset Font': 'Restablecer Fuente', 'Reset to default system font.': 'Restablecer a la fuente predeterminada del sistema.',
     'Auto-Set Bar foreground color': 'Auto-Ajustar Texto de Barra', 'Auto-Set Menu foreground color': 'Auto-Ajustar Texto de Menú',
     'True Color': 'Color Real', 'Pastel Theme': 'Tema Pastel', 'Dark Theme': 'Tema Oscuro', 'Light Theme': 'Tema Claro',
-    'Select Theme': 'Seleccionar Tema'
+    'Select Theme': 'Seleccionar Tema', 'Export Format': 'Formato de Exportación',
+    'Choose the format for your configuration profile:': 'Elige el formato para tu perfil de configuración:',
+    'JSON (Modern/Full)': 'JSON (Moderno/Completo)', 'TXT (Legacy/Dconf)': 'TXT (Legado/Dconf)',
+    'Export as JSON': 'Exportar como JSON', 'Export as TXT': 'Exportar como TXT',
+    'Import Successful': 'Importación Exitosa', 'Import Failed': 'Importación Fallida',
+    'The configuration profile has been applied correctly.': 'El perfil de configuración se ha aplicado correctamente.',
+    'The configuration profile has been applied on a clean slate.': 'El perfil de configuración se ha aplicado sobre una base limpia.'
 };
 
 const T = (text) => {
@@ -218,8 +224,9 @@ class BarEnhancedPrefs {
         const applyGroup = new Adw.PreferencesGroup({ title: T('Apply Engine Configuration') });
         autoPage.add(applyGroup);
         const applyBox = new Gtk.Box({ orientation: Gtk.Orientation.VERTICAL, spacing: 10, margin_top: 10, margin_bottom: 10 });
+        const darkOptions = [['Select Theme', T('Select Theme')], ['Color', T('True Color')], ['Pastel', T('Pastel Theme')], ['Dark', T('Dark Theme')], ['Light', T('Light Theme')], ['vanguard_gold', 'Vanguard Gold']];
+        const lightOptions = [['Select Theme', T('Select Theme')], ['Color', T('True Color')], ['Pastel', T('Pastel Theme')], ['Dark', T('Dark Theme')], ['Light', T('Light Theme')], ['vanguard_silver', 'Vanguard Silver']];
         const darkRow = new Adw.ComboRow({ title: T('Dark Mode Base Theme') });
-        const darkOptions = [['Select Theme', T('Select Theme')], ['Color', T('True Color')], ['Pastel', T('Pastel Theme')], ['Dark', T('Dark Theme')], ['Light', T('Light Theme')]];
         const darkModel = new Gtk.StringList(); darkOptions.forEach(opt => darkModel.append(opt[1])); darkRow.set_model(darkModel);
         darkRow.set_selected(darkOptions.findIndex(opt => opt[0] === this._settings.get_string('autotheme-dark')));
         darkRow.connect('notify::selected', () => this._settings.set_string('autotheme-dark', darkOptions[darkRow.get_selected()][0]));
@@ -286,34 +293,44 @@ class BarEnhancedPrefs {
         window.add(aesPage);
         const cGroup = new Adw.PreferencesGroup({ title: T('Primary Colors') });
         aesPage.add(cGroup);
-        const fgRow = new Adw.ActionRow({ title: T('Interface Foreground') }); 
-        fgRow.add_suffix(this.createColorButton(window, 'fgcolor')); 
+        const fgRow = new Adw.ActionRow({ title: T('Interface Foreground') });
+        fgRow.add_suffix(this.createColorButton(window, 'fgcolor'));
         fgRow.add_suffix(this.createSwitch('autofg-bar'));
         cGroup.add(fgRow);
         cGroup.add(this.createScaleRow('fgalpha', T('Foreground Opacity'), 0, 1, 0.01));
         const bgRow = new Adw.ActionRow({ title: T('Interface Background') }); bgRow.add_suffix(this.createColorButton(window, 'bgcolor')); cGroup.add(bgRow);
         cGroup.add(this.createScaleRow('bgalpha', T('Background Opacity'), 0, 1, 0.01));
         const boxRow = new Adw.ActionRow({ title: T('Box / Sidebar Color') }); boxRow.add_suffix(this.createColorButton(window, 'boxcolor')); cGroup.add(boxRow);
-        
+
         // Selector de Fuente en Estética
-        const fontRow = new Adw.ActionRow({ 
+        const fontRow = new Adw.ActionRow({
             title: T('Interface Font'),
             subtitle: T('Select custom font for the shell.')
         });
-        const fontButton = new Gtk.FontButton({ 
+        const fontButton = new Gtk.FontButton({
             valign: Gtk.Align.CENTER,
             use_font: true,
-            use_size: true
+            use_size: true,
+            hexpand: true
         });
-        let currentFont = this._settings.get_string('font');
-        if (currentFont === "") {
-            let defFont = fontButton.get_font();
-            this._settings.set_string('default-font', defFont);
-            currentFont = defFont;
+
+        let font = this._settings.get_string('font');
+        if (font === "") {
+            let defaultFont = fontButton.get_font();
+            this._settings.set_string('default-font', defaultFont);
+            font = defaultFont;
         }
-        fontButton.set_font(currentFont);
-        fontButton.connect('font-set', (w) => this._settings.set_string('font', w.get_font()));
-        this._settings.connect('changed::font', () => fontButton.set_font(this._settings.get_string('font')));
+        fontButton.set_font(font);
+
+        fontButton.connect('font-set', (w) => {
+            let value = w.get_font();
+            this._settings.set_string('font', value);
+        });
+
+        this._settings.connect('changed::font', () => {
+            let newFont = this._settings.get_string('font');
+            fontButton.set_font(newFont);
+        });
 
         const resetFontBtn = new Gtk.Button({
             icon_name: 'edit-clear-all-symbolic',
@@ -323,8 +340,10 @@ class BarEnhancedPrefs {
         });
         resetFontBtn.connect('clicked', () => {
             this._settings.reset('font');
-            fontButton.set_font(this._settings.get_string('default-font'));
+            let defFont = this._settings.get_string('default-font');
+            fontButton.set_font(defFont);
         });
+
         fontRow.add_suffix(fontButton);
         fontRow.add_suffix(resetFontBtn);
         cGroup.add(fontRow);
@@ -388,8 +407,8 @@ class BarEnhancedPrefs {
         menuPage.add(mGroup);
         mGroup.add(this.createSwitchRow('menustyle', T('Enable Specialized Popup Styles')));
         mGroup.add(this.createSwitchRow('autofg-menu', T('Auto Foreground Contrast')));
-        const mfgRow = new Adw.ActionRow({ title: T('Text Color') }); 
-        mfgRow.add_suffix(this.createColorButton(window, 'mfgcolor')); 
+        const mfgRow = new Adw.ActionRow({ title: T('Text Color') });
+        mfgRow.add_suffix(this.createColorButton(window, 'mfgcolor'));
         mfgRow.add_suffix(this.createSwitch('autofg-menu'));
         mGroup.add(mfgRow);
         mGroup.add(this.createScaleRow('mfgalpha', T('Text Transparency'), 0, 1, 0.01));
@@ -684,31 +703,200 @@ class BarEnhancedPrefs {
         this.quoteBlank = !this.quoteBlank;
     }
 
+    _setTypedValue(settings, key, value) {
+        try {
+            const schemaKey = settings.get_settings_schema().get_key(key);
+            const type = schemaKey.get_value_type().dup_string();
+            console.log(`Bar Enhanced: Setting ${key} (type ${type}) to ${JSON.stringify(value)}`);
+
+            if (type === 'b') settings.set_boolean(key, Boolean(value));
+            else if (type === 's') settings.set_string(key, String(value));
+            else if (type === 'd') settings.set_double(key, parseFloat(value));
+            else if (type === 'i') settings.set_int(key, parseInt(value));
+            else {
+                settings.set_value(key, new GLib.Variant(type, value));
+            }
+        } catch (e) {
+            console.warn(`Bar Enhanced: Failed to set ${key}: ${e}`);
+        }
+    }
+
     importSettings(window) {
-        let f = new Gtk.FileChooserDialog({ title: T("Import Configuration"), action: Gtk.FileChooserAction.OPEN, transient_for: window });
-        f.add_button(T("Cancel"), Gtk.ResponseType.CANCEL); f.add_button(T("Open"), Gtk.ResponseType.ACCEPT);
+        let f = new Gtk.FileChooserNative({
+            title: T("Import Configuration"),
+            action: Gtk.FileChooserAction.OPEN,
+            transient_for: window,
+            modal: true
+        });
         f.connect('response', (s, r) => {
             if (r == Gtk.ResponseType.ACCEPT) {
-                // Force direct dconf load into the specific path to bypass schema strictness
-                GLib.spawn_command_line_sync(`dconf load /org/gnome/shell/extensions/barEnhanced/ < "${f.get_file().get_path()}"`);
-                this.setTimeoutStyleReload();
+                try {
+                    const file = f.get_file();
+                    if (!file) return;
+
+                    const [success, contents] = GLib.file_get_contents(file.get_path());
+                    if (success) {
+                        const rawContent = new TextDecoder().decode(contents);
+
+                        try {
+                            const data = JSON.parse(rawContent);
+                            const allKeys = this._settings.list_keys();
+
+                            console.log('Bar Enhanced: Starting JSON import...');
+                            this._settings.set_boolean('import-export', true);
+
+                            // Handle both categoried and flat JSON
+                            let mainData = data.main || (data.metadata ? data : null);
+                            let enhData = data.enhanced || {};
+
+                            // If it's a completely flat legacy JSON
+                            if (!mainData) {
+                                mainData = data;
+                            }
+
+                            Object.keys(mainData).forEach(k => {
+                                if (allKeys.includes(k) && !['import-export', 'default-font'].includes(k)) {
+                                    this._setTypedValue(this._settings, k, mainData[k]);
+                                }
+                            });
+
+                            Object.keys(enhData).forEach(k => {
+                                if (allKeys.includes(k) && !['import-export', 'default-font'].includes(k)) {
+                                    this._setTypedValue(this._settings, k, enhData[k]);
+                                }
+                            });
+
+                            GLib.timeout_add(GLib.PRIORITY_DEFAULT, 800, () => {
+                                console.log('Bar Enhanced: Releasing Silent Mode and reloading...');
+                                this._settings.set_boolean('import-export', false);
+                                this.triggerStyleReload();
+                                return GLib.SOURCE_REMOVE;
+                            });
+
+                            let d = new Gtk.MessageDialog({
+                                modal: true,
+                                transient_for: window,
+                                title: T('Import Successful'),
+                                text: T('The configuration profile has been applied correctly.'),
+                                buttons: Gtk.ButtonsType.OK
+                            });
+                            d.connect('response', () => d.destroy());
+                            d.show();
+
+                        } catch (jsonErr) {
+                            console.log('Bar Enhanced: Applying TXT profile...');
+                            this._settings.set_boolean('import-export', true);
+
+                            const lines = rawContent.split('\n');
+                            lines.forEach(line => {
+                                line = line.trim();
+                                if (line.includes('=') && !line.startsWith('#') && !line.startsWith('[')) {
+                                    let eqIdx = line.indexOf('=');
+                                    let key = line.substring(0, eqIdx).trim();
+                                    let value = line.substring(eqIdx + 1).trim();
+
+                                    try {
+                                        const variant = GLib.Variant.parse(null, value, null, null);
+                                        if (this._settings.list_keys().includes(key)) {
+                                            this._settings.set_value(key, variant);
+                                        }
+                                    } catch (e) {
+                                        console.warn(`Bar Enhanced: Failed to parse TXT key ${key}: ${e}`);
+                                    }
+                                }
+                            });
+
+                            GLib.timeout_add(GLib.PRIORITY_DEFAULT, 800, () => {
+                                this._settings.set_boolean('import-export', false);
+                                this.triggerStyleReload();
+                                return GLib.SOURCE_REMOVE;
+                            });
+                        }
+                    }
+                } catch (e) {
+                    console.error('Bar Enhanced: Import failed: ' + e);
+                }
             }
-            f.destroy();
         });
         f.show();
     }
 
     exportSettings(window) {
-        let f = new Gtk.FileChooserDialog({ title: T("Export Configuration"), action: Gtk.FileChooserAction.SAVE, transient_for: window });
-        f.add_button(T("Cancel"), Gtk.ResponseType.CANCEL); f.add_button(T("Save"), Gtk.ResponseType.ACCEPT);
-        f.set_current_name("bar_enhanced_config"); // Nombre por defecto
+        let d = new Gtk.MessageDialog({
+            modal: true,
+            transient_for: window,
+            title: T('Export Format'),
+            text: T('Choose the format for your configuration profile:'),
+            buttons: Gtk.ButtonsType.NONE
+        });
+
+        d.add_button(T('JSON (Modern/Full)'), 1);
+        d.add_button(T('TXT (Legacy/Dconf)'), 2);
+        d.add_button(T('Cancel'), Gtk.ResponseType.CANCEL);
+
+        d.connect('response', (s, responseId) => {
+            d.destroy();
+            if (responseId === 1 || responseId === 2) {
+                this._openExportFileChooser(window, responseId);
+            }
+        });
+        d.show();
+    }
+
+    _openExportFileChooser(window, formatId) {
+        const isJson = formatId === 1;
+        let f = new Gtk.FileChooserNative({
+            title: isJson ? T("Export as JSON") : T("Export as TXT"),
+            action: Gtk.FileChooserAction.SAVE,
+            transient_for: window,
+            modal: true
+        });
+        f.set_current_name(isJson ? "bar-enhanced-profile.json" : "bar-enhanced-profile.txt");
+
         f.connect('response', (s, r) => {
             if (r == Gtk.ResponseType.ACCEPT) {
-                let path = f.get_file().get_path();
-                // Export from the correct path to ensure the file is valid for future imports
-                GLib.spawn_command_line_sync(`sh -c 'dconf dump /org/gnome/shell/extensions/barEnhanced/ > "${path}"'`);
+                try {
+                    let path = f.get_file().get_path();
+                    if (!path) return;
+
+                    let content = '';
+                    if (isJson) {
+                        let data = {
+                            metadata: {
+                                author: 'MrVanguardia',
+                                version: '1.0',
+                                created: new Date().toISOString(),
+                                engine: 'Bar Enhanced'
+                            },
+                            main: {},
+                            enhanced: {}
+                        };
+                        this._settings.list_keys().forEach(k => {
+                            if (!['import-export', 'default-font'].includes(k))
+                                data.main[k] = this._settings.get_value(k).deep_unpack();
+                        });
+                        this._settings.list_keys().forEach(k => {
+                            data.enhanced[k] = this._settings.get_value(k).deep_unpack();
+                        });
+                        content = JSON.stringify(data, null, 4);
+                    } else {
+                        // Manual dconf-style generation for reliability
+                        let lines = ['[org.gnome.shell.extensions.bar-enhanced]'];
+                        this._settings.list_keys().forEach(k => {
+                            if (!['import-export', 'default-font'].includes(k)) {
+                                let val = this._settings.get_value(k).print(true);
+                                lines.push(`${k}=${val}`);
+                            }
+                        });
+                        content = lines.join('\n');
+                    }
+
+                    GLib.file_set_contents(path, content);
+                    console.log(`Bar Enhanced: Profile successfully saved as ${isJson ? 'JSON' : 'TXT'} to ${path}`);
+                } catch (e) {
+                    console.error('Bar Enhanced: Export failed: ' + e);
+                }
             }
-            f.destroy();
         });
         f.show();
     }
@@ -761,40 +949,147 @@ class BarEnhancedPrefs {
     }
 
     exportToCode(window) {
-        let data = {};
-        this._settings.list_keys().forEach(k => {
-            if (['import-export', 'default-font'].includes(k)) return;
-            data[k] = this._settings.get_value(k).deep_unpack();
-        });
-        const code = btoa(JSON.stringify(data));
-        let d = new Gtk.MessageDialog({ modal: true, title: T('Export to Code'), transient_for: window });
-        let entry = new Gtk.Entry({ text: code, editable: false, margin_top: 10 });
-        d.get_content_area().append(new Gtk.Label({ label: T('Copy this code:'), halign: Gtk.Align.START }));
-        d.get_content_area().append(entry);
-        d.add_button(_("Close"), Gtk.ResponseType.CLOSE);
-        d.show();
+        console.log('Bar Enhanced: Generating theme code...');
+        try {
+            let data = { main: {}, enhanced: {} };
+            const allKeys = this._settings.list_keys();
+            allKeys.forEach(k => {
+                if (['import-export', 'default-font'].includes(k)) return;
+                const val = this._settings.get_value(k).deep_unpack();
+                if (k.startsWith('palette') || k.startsWith('count') || k.startsWith('candy')) {
+                    data.enhanced[k] = val;
+                } else {
+                    data.main[k] = val;
+                }
+            });
+
+            const json = JSON.stringify(data);
+            const bytes = new TextEncoder().encode(json);
+            const code = GLib.base64_encode(bytes);
+
+            let d = new Adw.MessageDialog({
+                transient_for: window,
+                modal: true,
+                heading: T('Export to Code'),
+                body: T('Use this code to share your theme with others.'),
+            });
+
+            const scroll = new Gtk.ScrolledWindow({
+                height_request: 120,
+                propagate_natural_height: true,
+                hscrollbar_policy: Gtk.PolicyType.NEVER,
+                css_classes: ['card']
+            });
+
+            const textView = new Gtk.TextView({
+                editable: false,
+                wrap_mode: Gtk.WrapMode.CHAR,
+                left_margin: 8,
+                right_margin: 8,
+                top_margin: 8,
+                bottom_margin: 8,
+                css_classes: ['view']
+            });
+            textView.get_buffer().set_text(code, -1);
+            scroll.set_child(textView);
+            d.set_extra_child(scroll);
+
+            d.add_response('close', T('Close'));
+            d.add_response('copy', T('Copy Code'));
+            d.set_default_response('copy');
+            d.set_close_response('close');
+
+            d.connect('response', (s, response) => {
+                if (response === 'copy') {
+                    try {
+                        const clipboard = Gdk.Display.get_default().get_clipboard();
+                        clipboard.set_content(Gdk.ContentProvider.new_for_value(code));
+                    } catch (err) {
+                        console.error('Bar Enhanced: Clipboard error: ' + err);
+                    }
+                }
+                d.destroy();
+            });
+
+            d.show();
+        } catch (e) {
+            console.error('Bar Enhanced: Export to Code failed: ' + e);
+        }
     }
 
     importFromCode(window) {
-        let d = new Gtk.MessageDialog({ modal: true, title: T('Import from Code'), transient_for: window });
-        let entry = new Gtk.Entry({ placeholder_text: T('Paste theme code here:'), margin_top: 10 });
-        d.get_content_area().append(entry);
-        d.add_button(T("Cancel"), Gtk.ResponseType.CANCEL);
-        d.add_button(T("Import"), Gtk.ResponseType.ACCEPT);
-        d.connect('response', (s, r) => {
-            if (r == Gtk.ResponseType.ACCEPT) {
-                try {
-                    let data = JSON.parse(atob(entry.text));
-                    Object.keys(data).forEach(k => {
-                        this._settings.set_value(k, new GLib.Variant(this._settings.get_settings_schema().get_key(k).get_value_type().dup_string(), data[k]));
-                    });
-                    this.setTimeoutStyleReload();
-                } catch (e) { console.error(e); }
-            }
-            d.destroy();
-        });
-        d.show();
+        console.log('Bar Enhanced: Opening theme import dialog...');
+        try {
+            let d = new Adw.MessageDialog({
+                transient_for: window,
+                modal: true,
+                heading: T('Import from Code'),
+                body: T('Paste the theme code below to apply it.'),
+            });
+
+            const entry = new Gtk.Entry({
+                placeholder_text: 'Paste code here...',
+                margin_top: 12
+            });
+            d.set_extra_child(entry);
+
+            d.add_response('cancel', T('Cancel'));
+            d.add_response('import', T('Import'));
+            d.set_default_response('import');
+            d.set_close_response('cancel');
+
+            d.connect('response', (s, response) => {
+                if (response === 'import') {
+                    try {
+                        const code = entry.get_buffer().get_text().trim();
+                        if (!code) return;
+
+                        console.log('Bar Enhanced: Decoding theme code...');
+                        const decodedBytes = GLib.base64_decode(code);
+                        const json = new TextDecoder().decode(decodedBytes);
+                        const data = JSON.parse(json);
+
+                        const allKeys = this._settings.list_keys();
+                        this._settings.set_boolean('import-export', true);
+
+                        // Handle both categoried and flat JSON
+                        let mainData = data.main || (data.metadata ? data : null);
+                        let enhData = data.enhanced || {};
+                        if (!mainData) mainData = data;
+
+                        Object.keys(mainData).forEach(k => {
+                            if (allKeys.includes(k) && !['import-export', 'default-font'].includes(k)) {
+                                this._setTypedValue(this._settings, k, mainData[k]);
+                            }
+                        });
+
+                        Object.keys(enhData).forEach(k => {
+                            if (allKeys.includes(k) && !['import-export', 'default-font'].includes(k)) {
+                                this._setTypedValue(this._settings, k, enhData[k]);
+                            }
+                        });
+
+                        GLib.timeout_add(GLib.PRIORITY_DEFAULT, 800, () => {
+                            console.log('Bar Enhanced: Releasing Silent Mode and reloading...');
+                            this._settings.set_boolean('import-export', false);
+                            this.triggerStyleReload();
+                            return GLib.SOURCE_REMOVE;
+                        });
+
+                        console.log('Bar Enhanced: Theme code applied successfully');
+                    } catch (e) {
+                        console.error('Bar Enhanced: Import from Code failed: ' + e);
+                    }
+                }
+                d.destroy();
+            });
+
+            d.show();
+        } catch (e) {
+            console.error('Bar Enhanced: Import from Code dialog failed: ' + e);
+        }
     }
+
 
     getInstalledAssets(type) {
         const dirs = [
@@ -815,8 +1110,12 @@ class BarEnhancedPrefs {
     }
 
     installAssetDialog(window, iconRow, gtkRow) {
-        let f = new Gtk.FileChooserDialog({ title: T("Install Theme from File"), action: Gtk.FileChooserAction.OPEN, transient_for: window });
-        f.add_button(T("Cancel"), Gtk.ResponseType.CANCEL); f.add_button(T("Open"), Gtk.ResponseType.ACCEPT);
+        let f = new Gtk.FileChooserNative({
+            title: T("Install Theme from File"),
+            action: Gtk.FileChooserAction.OPEN,
+            transient_for: window,
+            modal: true
+        });
         f.connect('response', (s, r) => {
             if (r == Gtk.ResponseType.ACCEPT) {
                 this.installAsset(f.get_file().get_path(), () => {
@@ -938,50 +1237,6 @@ class BarEnhancedPrefs {
             }
         });
 
-        // Font Selection Logic from .bat
-        const fontRow = new Adw.ActionRow({
-            title: T('Interface Font'),
-            subtitle: T('Select custom font for the shell.')
-        });
-
-        const fontButton = new Gtk.FontButton({
-            valign: Gtk.Align.CENTER,
-            use_font: true,
-            use_size: true
-        });
-
-        // Initialize default-font if empty
-        let currentFont = this._settings.get_string('font');
-        if (currentFont === "") {
-            let defFont = fontButton.get_font();
-            this._settings.set_string('default-font', defFont);
-            currentFont = defFont;
-        }
-        fontButton.set_font(currentFont);
-
-        fontButton.connect('font-set', (w) => {
-            this._settings.set_string('font', w.get_font());
-        });
-
-        this._settings.connect('changed::font', () => {
-            fontButton.set_font(this._settings.get_string('font'));
-        });
-
-        const resetFontBtn = new Gtk.Button({
-            icon_name: 'edit-clear-all-symbolic',
-            valign: Gtk.Align.CENTER,
-            tooltip_text: T('Reset to default system font.'),
-            css_classes: ['flat']
-        });
-        resetFontBtn.connect('clicked', () => {
-            this._settings.reset('font');
-            fontButton.set_font(this._settings.get_string('default-font'));
-        });
-
-        fontRow.add_suffix(fontButton);
-        fontRow.add_suffix(resetFontBtn);
-        group.add(fontRow);
-
         page.add(group);
         scroll.set_child(page);
         mainBox.append(scroll);
@@ -993,64 +1248,68 @@ class BarEnhancedPrefs {
         storeWindow.show();
     }
 
+    _getSoupSession() {
+        if (!this._soupSession) {
+            this._soupSession = new Soup.Session();
+            this._soupSession.set_user_agent('Mozilla/5.0 (GNOME Shell; Bar-Enhanced)');
+        }
+        return this._soupSession;
+    }
+
     searchOnlineThemes(group, term, iconRow) {
-        // Limpiar resultados anteriores
         group.get_children().forEach(child => {
-            if (child instanceof Adw.ActionRow || child instanceof Gtk.Label) group.remove(child);
+            if (child instanceof Adw.ActionRow || child instanceof Gtk.Label) {
+                try { group.remove(child); } catch (e) {}
+            }
         });
 
         const loadingLabel = new Gtk.Label({ label: T('Searching for') + ': "' + term + '"...', margin_top: 20 });
         group.add(loadingLabel);
 
-        const session = new Soup.Session();
-        // Búsqueda global (search=term)
-        const url = `https://www.pling.com/ocs/v1/content/data?search=${encodeURIComponent(term)}&sort=rating&pagesize=100&format=json`;
+        const url = `https://api.pling.com/ocs/v1/content/data?search=${encodeURIComponent(term)}&sort=rating&pagesize=100&format=json`;
         const message = Soup.Message.new('GET', url);
-        message.request_headers.append('User-Agent', 'Bar-Enhanced-Extension/1.0');
 
-        session.send_and_read_async(message, GLib.PRIORITY_DEFAULT, null, (s, res) => {
+        this._getSoupSession().send_and_read_async(message, GLib.PRIORITY_DEFAULT, null, (s, res) => {
             try {
                 const bytes = s.send_and_read_finish(res);
                 const decoder = new TextDecoder('utf-8');
                 const jsonText = decoder.decode(bytes.get_data());
                 const response = JSON.parse(jsonText);
-                const data = response.ocs.data.content;
+                const rawData = response?.ocs?.data?.content;
+                
+                const data = rawData ? (Array.isArray(rawData) ? rawData : [rawData]) : [];
                 this.renderThemeList(group, loadingLabel, iconRow, data);
             } catch (e) {
-                loadingLabel.set_label(T('Search failed.'));
+                if (loadingLabel.get_parent()) loadingLabel.set_label(T('No results or API error.'));
             }
         });
     }
 
     fetchOnlineThemes(group, loadingLabel, iconRow) {
-        const session = new Soup.Session();
-        // Categorías: 121 (Icons), 135 (GTK3/4 Themes), 109 (GNOME Shell Themes)
         const categories = ['121', '135', '109'];
         let allThemes = [];
         let completed = 0;
 
         categories.forEach(cat => {
-            const url = `https://www.pling.com/ocs/v1/content/data?categories=${cat}&sort=rating&pagesize=50&format=json`;
+            const url = `https://api.pling.com/ocs/v1/content/data?categories=${cat}&sort=rating&pagesize=50&format=json`;
             const message = Soup.Message.new('GET', url);
-            message.request_headers.append('User-Agent', 'Bar-Enhanced-Extension/1.0');
 
-            session.send_and_read_async(message, GLib.PRIORITY_DEFAULT, null, (s, res) => {
+            this._getSoupSession().send_and_read_async(message, GLib.PRIORITY_DEFAULT, null, (s, res) => {
                 try {
                     const bytes = s.send_and_read_finish(res);
                     const decoder = new TextDecoder('utf-8');
                     const jsonText = decoder.decode(bytes.get_data());
                     const response = JSON.parse(jsonText);
-                    const data = response.ocs.data.content;
-                    if (data) {
-                        const items = Array.isArray(data) ? data : [data];
+                    const rawData = response?.ocs?.data?.content;
+                    if (rawData) {
+                        const items = Array.isArray(rawData) ? rawData : [rawData];
                         allThemes = [...allThemes, ...items];
                     }
-                } catch (e) {
-                    console.error('Error fetching cat ' + cat, e);
-                }
+                } catch (e) {}
 
                 completed++;
                 if (completed === categories.length) {
+                    allThemes.sort((a, b) => (parseInt(b.rating) || 0) - (parseInt(a.rating) || 0));
                     this.renderThemeList(group, loadingLabel, iconRow, allThemes);
                 }
             });
@@ -1058,19 +1317,17 @@ class BarEnhancedPrefs {
     }
 
     renderThemeList(group, loadingLabel, iconRow, data) {
-        if (!data || data.length === 0) {
-            // Fallback ampliado si la API falla
+        try {
+            if (loadingLabel && loadingLabel.get_parent()) group.remove(loadingLabel);
+        } catch (e) {}
+
+        if (!data || !Array.isArray(data) || data.length === 0) {
             data = [
                 { name: 'WhiteSur Icons', previewpic1: 'https://www.pling.com/img/d/7/4/1/f45a05b38d39369a4736f88f24a0d92f9f1b.png', downloadlink1: 'https://github.com/vinceliuice/WhiteSur-icon-theme/archive/refs/heads/master.tar.gz' },
-                { name: 'Tela Circle Icons', previewpic1: 'https://www.pling.com/img/5/0/0/2/026859e43673c6833b666a012c478a29b43d.png', downloadlink1: 'https://github.com/vinceliuice/Tela-circle-icon-theme/archive/refs/heads/master.tar.gz' },
-                { name: 'Fluent GTK Theme', previewpic1: 'https://www.pling.com/img/a/b/c/d/fluent.png', downloadlink1: 'https://github.com/vinceliuice/Fluent-gtk-theme/archive/refs/heads/master.tar.gz' },
-                { name: 'Colloid GTK Theme', previewpic1: 'https://www.pling.com/img/x/y/z/colloid.png', downloadlink1: 'https://github.com/vinceliuice/Colloid-gtk-theme/archive/refs/heads/master.tar.gz' },
-                { name: 'Orchis Theme', previewpic1: 'https://www.pling.com/img/o/r/c/h/orchis.png', downloadlink1: 'https://github.com/vinceliuice/Orchis-theme/archive/refs/heads/master.tar.gz' }
+                { name: 'Tela Circle Icons', previewpic1: 'https://www.pling.com/img/5/0/0/2/026859e43673c6833b666a012c478a29b43d.png', downloadlink1: 'https://github.com/vinceliuice/Tela-circle-icon-theme/archive/refs/heads/master.tar.gz' }
             ];
         }
 
-        group.remove(loadingLabel);
-        const session = new Soup.Session();
         const installedIcons = this.getInstalledAssets('icons');
         const installedThemes = this.getInstalledAssets('themes');
         const allInstalled = [...installedIcons, ...installedThemes];
@@ -1081,33 +1338,28 @@ class BarEnhancedPrefs {
             const preview = item.previewpic1 || item.previewpic2;
             if (!link || link.length < 10) return;
 
-            // Detección mejorada
             const isInstalled = allInstalled.some(i =>
                 name.toLowerCase().includes(i.toLowerCase()) ||
                 i.toLowerCase().includes(name.toLowerCase().replace(/\s+icons?$/i, ''))
             );
 
             const row = new Adw.ActionRow({ title: name });
-
             const picture = new Gtk.Image({
-                pixel_size: 64,
-                margin_end: 12,
-                halign: Gtk.Align.START,
-                valign: Gtk.Align.CENTER,
+                pixel_size: 64, margin_end: 12, halign: Gtk.Align.START, valign: Gtk.Align.CENTER,
                 icon_name: 'image-missing-symbolic'
             });
             row.add_prefix(picture);
 
             if (preview) {
                 const imgMsg = Soup.Message.new('GET', preview);
-                session.send_and_read_async(imgMsg, GLib.PRIORITY_DEFAULT, null, (s, r) => {
+                this._getSoupSession().send_and_read_async(imgMsg, GLib.PRIORITY_DEFAULT, null, (s, r) => {
                     try {
                         const bytes = s.send_and_read_finish(r);
                         const stream = Gio.MemoryInputStream.new_from_bytes(bytes);
                         const pixbuf = GdkPixbuf.Pixbuf.new_from_stream_at_scale(stream, 64, 64, true, null);
                         const paintable = Gtk.Texture.new_for_pixbuf(pixbuf);
                         picture.set_from_paintable(paintable);
-                    } catch (e) { }
+                    } catch (e) {}
                 });
             }
 
@@ -1124,9 +1376,11 @@ class BarEnhancedPrefs {
                 this.downloadAndInstall(link, name, () => {
                     btn.set_label(T('Installed'));
                     btn.add_css_class('flat');
-                    const icons = this.getInstalledAssets('icons');
-                    const iconModel = new Gtk.StringList(); icons.forEach(i => iconModel.append(i));
-                    iconRow.set_model(iconModel);
+                    if (iconRow) {
+                        const icons = this.getInstalledAssets('icons');
+                        const iconModel = new Gtk.StringList(); icons.forEach(i => iconModel.append(i));
+                        iconRow.set_model(iconModel);
+                    }
                 });
             });
             row.add_suffix(btn);

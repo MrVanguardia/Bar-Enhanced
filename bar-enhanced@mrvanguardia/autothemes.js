@@ -343,6 +343,756 @@ export function autoApplyBGPalette(obar, requestMode) {
 
     }
 
+    // VANGUARD GOLD THEME (Atomic Master Preset)
+    if(theme == 'vanguard_gold') {
+        // =====================================================================
+        // SECTION [/] — MAIN SETTINGS
+        // =====================================================================
+
+        if (darkTheme) {
+            // --- DARK MODE COLOR ARRAYS ---
+            obar._settings.set_strv('accent-color', ['0.651', '0.576', '0.412']);
+            obar._settings.set_strv('bcolor', ['1.0', '1.0', '1.0']);
+            obar._settings.set_strv('bgcolor', ['1.000', '1.000', '1.000']);
+            obar._settings.set_strv('bgcolor-wmax', ['1.000', '1.000', '1.000']);
+            obar._settings.set_strv('bgcolor2', ['1.000', '1.000', '1.000']);
+            obar._settings.set_strv('boxcolor', ['0.482', '0.435', '0.337']);
+            obar._settings.set_strv('destruct-color', ['0.75', '0.11', '0.16']);
+            obar._settings.set_strv('fgcolor', ['0.651', '0.576', '0.412']);
+            obar._settings.set_strv('hcolor', ['0.604', '0.600', '0.588']);
+            obar._settings.set_strv('hscd-color', ['0.651', '0.576', '0.412']);
+            obar._settings.set_strv('iscolor', ['0.000', '0.000', '0.000']);
+            obar._settings.set_strv('mbcolor', ['0.604', '0.600', '0.588']);
+            obar._settings.set_strv('mbgcolor', ['0.000', '0.000', '0.000']);
+            obar._settings.set_strv('mfgcolor', ['0.651', '0.576', '0.412']);
+            obar._settings.set_strv('mhcolor', ['0.651', '0.576', '0.412']);
+            obar._settings.set_strv('mscolor', ['0.651', '0.576', '0.412']);
+            obar._settings.set_strv('mshcolor', ['0.651', '0.576', '0.412']);
+            obar._settings.set_strv('shcolor', ['1.000', '1.000', '1.000']);
+            obar._settings.set_strv('smbgcolor', ['0.482', '0.435', '0.337']);
+            obar._settings.set_strv('success-color', ['0.15', '0.635', '0.41']);
+            obar._settings.set_strv('vw-color', ['0.651', '0.576', '0.412']);
+            obar._settings.set_strv('warning-color', ['0.96', '0.83', '0.17']);
+            obar._settings.set_strv('winbcolor', ['0.651', '0.576', '0.412']);
+
+            // Sync with specific dark keys
+            obar._settings.set_strv('dark-accent-color', ['0.651', '0.576', '0.412']);
+            obar._settings.set_strv('dark-bgcolor', ['1.000', '1.000', '1.000']);
+            obar._settings.set_strv('dark-boxcolor', ['0.482', '0.435', '0.337']);
+            obar._settings.set_strv('dark-fgcolor', ['0.651', '0.576', '0.412']);
+            obar._settings.set_strv('dark-hcolor', ['0.604', '0.600', '0.588']);
+        } else {
+            // --- LIGHT MODE COLOR ARRAYS ---
+            obar._settings.set_strv('light-accent-color', ['0', '0.75', '0.75']);
+            obar._settings.set_strv('light-bcolor', ['1.0', '1.0', '1.0']);
+            obar._settings.set_strv('light-bgcolor', ['0.125', '0.125', '0.125']);
+            obar._settings.set_strv('light-bgcolor-wmax', ['0.125', '0.125', '0.125']);
+            obar._settings.set_strv('light-bgcolor2', ['0', '0.7', '0.75']);
+            obar._settings.set_strv('light-boxcolor', ['0.125', '0.125', '0.125']);
+            obar._settings.set_strv('light-dbgcolor', ['0.125', '0.125', '0.125']);
+            obar._settings.set_strv('light-fgcolor', ['1.0', '1.0', '1.0']);
+            obar._settings.set_strv('light-hcolor', ['0', '0.7', '0.9']);
+            obar._settings.set_strv('light-hscd-color', ['0', '0.7', '0.75']);
+            obar._settings.set_strv('light-iscolor', ['0.125', '0.125', '0.125']);
+            obar._settings.set_strv('light-mbcolor', ['1.0', '1.0', '1.0']);
+            obar._settings.set_strv('light-mbgcolor', ['0.125', '0.125', '0.125']);
+            obar._settings.set_strv('light-mfgcolor', ['1.0', '1.0', '1.0']);
+            obar._settings.set_strv('light-mhcolor', ['0', '0.7', '0.9']);
+            obar._settings.set_strv('light-mscolor', ['0', '0.7', '0.75']);
+            obar._settings.set_strv('light-mshcolor', ['1.0', '1.0', '1.0']);
+            obar._settings.set_strv('light-shcolor', ['0', '0', '0']);
+            obar._settings.set_strv('light-smbgcolor', ['0.125', '0.125', '0.125']);
+            obar._settings.set_strv('light-vw-color', ['0', '0.7', '0.75']);
+            obar._settings.set_strv('light-winbcolor', ['0', '0.7', '0.75']);
+        }
+
+        // --- CANDY COLORS ---
+        obar._settings.set_strv('candy1',  ['0',    '0.61', '0.74']);
+        obar._settings.set_strv('candy2',  ['1',    '0.41', '0.41']);
+        obar._settings.set_strv('candy3',  ['0.63', '0.16', '0.8']);
+        obar._settings.set_strv('candy4',  ['0.94', '0.60', '0.23']);
+        obar._settings.set_strv('candy5',  ['0.03', '0.41', '0.62']);
+        obar._settings.set_strv('candy6',  ['0.56', '0.18', '0.43']);
+        obar._settings.set_strv('candy7',  ['0.95', '0.12', '0.67']);
+        obar._settings.set_strv('candy8',  ['0.18', '0.76', '0.49']);
+        obar._settings.set_strv('candy9',  ['0.93', '0.20', '0.23']);
+        obar._settings.set_strv('candy10', ['0.09', '0.19', '0.72']);
+        obar._settings.set_strv('candy11', ['0.75', '0.49', '0.44']);
+        obar._settings.set_strv('candy12', ['1',    '0.92', '0.12']);
+        obar._settings.set_strv('candy13', ['0.38', '0.63', '0.92']);
+        obar._settings.set_strv('candy14', ['0.37', '0.36', '0.39']);
+        obar._settings.set_strv('candy15', ['0.40', '0.23', '0.72']);
+        obar._settings.set_strv('candy16', ['1',    '0.32', '0.32']);
+
+        // --- DARK CANDY COLORS ---
+        obar._settings.set_strv('dark-candy1',  ['0',    '0.61', '0.74']);
+        obar._settings.set_strv('dark-candy2',  ['1',    '0.41', '0.41']);
+        obar._settings.set_strv('dark-candy3',  ['0.63', '0.16', '0.8']);
+        obar._settings.set_strv('dark-candy4',  ['0.94', '0.60', '0.23']);
+        obar._settings.set_strv('dark-candy5',  ['0.03', '0.41', '0.62']);
+        obar._settings.set_strv('dark-candy6',  ['0.56', '0.18', '0.43']);
+        obar._settings.set_strv('dark-candy7',  ['0.95', '0.12', '0.67']);
+        obar._settings.set_strv('dark-candy8',  ['0.18', '0.76', '0.49']);
+        obar._settings.set_strv('dark-candy9',  ['0.93', '0.20', '0.23']);
+        obar._settings.set_strv('dark-candy10', ['0.09', '0.19', '0.72']);
+        obar._settings.set_strv('dark-candy11', ['0.75', '0.49', '0.44']);
+        obar._settings.set_strv('dark-candy12', ['1',    '0.92', '0.12']);
+        obar._settings.set_strv('dark-candy13', ['0.38', '0.63', '0.92']);
+        obar._settings.set_strv('dark-candy14', ['0.37', '0.36', '0.39']);
+        obar._settings.set_strv('dark-candy15', ['0.40', '0.23', '0.72']);
+        obar._settings.set_strv('dark-candy16', ['1',    '0.32', '0.32']);
+
+        // --- LIGHT CANDY COLORS ---
+        obar._settings.set_strv('light-candy1',  ['0',    '0.61', '0.74']);
+        obar._settings.set_strv('light-candy2',  ['1',    '0.41', '0.41']);
+        obar._settings.set_strv('light-candy3',  ['0.63', '0.16', '0.8']);
+        obar._settings.set_strv('light-candy4',  ['0.94', '0.60', '0.23']);
+        obar._settings.set_strv('light-candy5',  ['0.03', '0.41', '0.62']);
+        obar._settings.set_strv('light-candy6',  ['0.56', '0.18', '0.43']);
+        obar._settings.set_strv('light-candy7',  ['0.95', '0.12', '0.67']);
+        obar._settings.set_strv('light-candy8',  ['0.18', '0.76', '0.49']);
+        obar._settings.set_strv('light-candy9',  ['0.93', '0.20', '0.23']);
+        obar._settings.set_strv('light-candy10', ['0.09', '0.19', '0.72']);
+        obar._settings.set_strv('light-candy11', ['0.75', '0.49', '0.44']);
+        obar._settings.set_strv('light-candy12', ['1',    '0.92', '0.12']);
+        obar._settings.set_strv('light-candy13', ['0.38', '0.63', '0.92']);
+        obar._settings.set_strv('light-candy14', ['0.37', '0.36', '0.39']);
+        obar._settings.set_strv('light-candy15', ['0.40', '0.23', '0.72']);
+        obar._settings.set_strv('light-candy16', ['1',    '0.32', '0.32']);
+
+        // --- PALETTE (wallpaper-extracted colors) ---
+        obar._settings.set_strv('palette1',  ['35',  '34',  '35']);
+        obar._settings.set_strv('palette2',  ['210', '87',  '50']);
+        obar._settings.set_strv('palette3',  ['139', '69',  '53']);
+        obar._settings.set_strv('palette4',  ['95',  '54',  '47']);
+        obar._settings.set_strv('palette5',  ['207', '152', '93']);
+        obar._settings.set_strv('palette6',  ['233', '208', '153']);
+        obar._settings.set_strv('palette7',  ['70',  '71',  '47']);
+        obar._settings.set_strv('palette8',  ['104', '102', '61']);
+        obar._settings.set_strv('palette9',  ['83',  '89',  '94']);
+        obar._settings.set_strv('palette10', ['160', '160', '119']);
+        obar._settings.set_strv('palette11', ['204', '169', '158']);
+        obar._settings.set_strv('palette12', ['144', '144', '148']);
+
+        // --- DARK PALETTE ---
+        obar._settings.set_strv('dark-palette1',  ['35',  '34',  '35']);
+        obar._settings.set_strv('dark-palette2',  ['210', '87',  '50']);
+        obar._settings.set_strv('dark-palette3',  ['139', '69',  '53']);
+        obar._settings.set_strv('dark-palette4',  ['95',  '54',  '47']);
+        obar._settings.set_strv('dark-palette5',  ['207', '152', '93']);
+        obar._settings.set_strv('dark-palette6',  ['233', '208', '153']);
+        obar._settings.set_strv('dark-palette7',  ['70',  '71',  '47']);
+        obar._settings.set_strv('dark-palette8',  ['104', '102', '61']);
+        obar._settings.set_strv('dark-palette9',  ['83',  '89',  '94']);
+        obar._settings.set_strv('dark-palette10', ['160', '160', '119']);
+        obar._settings.set_strv('dark-palette11', ['204', '169', '158']);
+        obar._settings.set_strv('dark-palette12', ['144', '144', '148']);
+
+        // --- LIGHT PALETTE ---
+        obar._settings.set_strv('light-palette1',  ['35',  '34',  '35']);
+        obar._settings.set_strv('light-palette2',  ['210', '87',  '50']);
+        obar._settings.set_strv('light-palette3',  ['139', '69',  '53']);
+        obar._settings.set_strv('light-palette4',  ['95',  '54',  '47']);
+        obar._settings.set_strv('light-palette5',  ['207', '152', '93']);
+        obar._settings.set_strv('light-palette6',  ['233', '208', '153']);
+        obar._settings.set_strv('light-palette7',  ['70',  '71',  '47']);
+        obar._settings.set_strv('light-palette8',  ['104', '102', '61']);
+        obar._settings.set_strv('light-palette9',  ['83',  '89',  '94']);
+        obar._settings.set_strv('light-palette10', ['160', '160', '119']);
+        obar._settings.set_strv('light-palette11', ['204', '169', '158']);
+        obar._settings.set_strv('light-palette12', ['144', '144', '148']);
+
+        // --- PROMINENT COLORS ---
+        obar._settings.set_strv('prominent1', ['100', '100', '100']);
+        obar._settings.set_strv('prominent2', ['100', '100', '100']);
+        obar._settings.set_strv('prominent3', ['100', '100', '100']);
+        obar._settings.set_strv('prominent4', ['100', '100', '100']);
+        obar._settings.set_strv('prominent5', ['100', '100', '100']);
+        obar._settings.set_strv('prominent6', ['100', '100', '100']);
+
+        // --- WALLPAPER / BACKGROUND URI ---
+        obar._settings.set_string('bguri',       'file:///home/mrvanguardia/.local/share/backgrounds/2026-04-08-22-21-17-astronaut-sunset-3840x2160-22922.jpg');
+        obar._settings.set_string('dark-bguri',  'file:///home/mrvanguardia/.local/share/backgrounds/2026-04-08-22-21-17-astronaut-sunset-3840x2160-22922.jpg');
+        obar._settings.set_string('light-bguri', 'file:///home/mrvanguardia/.local/share/backgrounds/2026-04-08-22-21-17-astronaut-sunset-3840x2160-22922.jpg');
+
+        // --- ALPHAS & TRANSPARENCIES ---
+        obar._settings.set_double('balpha',        0.0);
+        obar._settings.set_double('bgalpha',       0.0);
+        obar._settings.set_double('bgalpha-wmax',  1.0);
+        obar._settings.set_double('bgalpha2',      0.0);
+        obar._settings.set_double('boxalpha',      0.0);
+        obar._settings.set_double('candyalpha',    0.98999999999999999);
+        obar._settings.set_double('dbgalpha',      0.84999999999999998);
+        obar._settings.set_double('fgalpha',       1.0);
+        obar._settings.set_double('gtk-transparency', 1.0);
+        obar._settings.set_double('halpha',        0.34000000000000002);
+        obar._settings.set_double('isalpha',       0.28999999999999998);
+        obar._settings.set_double('mbalpha',       0.0);
+        obar._settings.set_double('mbgalpha',      0.63);
+        obar._settings.set_double('mfgalpha',      1.0);
+        obar._settings.set_double('mhalpha',       0.29999999999999999);
+        obar._settings.set_double('msalpha',       0.84999999999999998);
+        obar._settings.set_double('mshalpha',      0.16);
+        obar._settings.set_double('shalpha',       0.20000000000000001);
+        obar._settings.set_double('smbgalpha',     0.94999999999999996);
+        obar._settings.set_double('winbalpha',     0.75);
+
+        // --- GEOMETRY & SPACING ---
+        obar._settings.set_double('bottom-margin',  6.5);
+        obar._settings.set_double('bradius',        30.0);
+        obar._settings.set_double('bwidth',         0.0);
+        obar._settings.set_double('dbradius',       100.0);
+        obar._settings.set_double('disize',         48.0);
+        obar._settings.set_double('handle-border',  0.0);
+        obar._settings.set_double('height',         31.0);
+        obar._settings.set_double('hpad',           2.2999999999999998);
+        obar._settings.set_double('margin',         2.6000000000000001);
+        obar._settings.set_double('margin-wmax',    2.2000000000000002);
+        obar._settings.set_double('menu-radius',    21.0);
+        obar._settings.set_double('notif-radius',   10.0);
+        obar._settings.set_double('qtoggle-radius', 50.0);
+        obar._settings.set_double('slider-height',  4.0);
+        obar._settings.set_double('vpad',           0.0);
+        obar._settings.set_double('winbradius',     15.0);
+        obar._settings.set_double('winbwidth',      0.0);
+
+        // --- INTEGER SETTINGS ---
+        obar._settings.set_int('card-hint',      10);
+        obar._settings.set_int('count1',         262077);
+        obar._settings.set_int('count2',         113308);
+        obar._settings.set_int('count3',         92352);
+        obar._settings.set_int('count4',         65629);
+        obar._settings.set_int('count5',         15154);
+        obar._settings.set_int('count6',         8446);
+        obar._settings.set_int('count7',         3842);
+        obar._settings.set_int('count8',         942);
+        obar._settings.set_int('count9',         69);
+        obar._settings.set_int('count10',        58);
+        obar._settings.set_int('count11',        19);
+        obar._settings.set_int('count12',        2);
+        obar._settings.set_int('headerbar-hint', 0);
+        obar._settings.set_int('monitor-height', 1080);
+        obar._settings.set_int('monitor-width',  1920);
+        obar._settings.set_int('sidebar-hint',   10);
+        obar._settings.set_int('view-hint',      0);
+        obar._settings.set_int('window-hint',    0);
+
+        // --- STRING SETTINGS ---
+        obar._settings.set_string('autotheme-dark',        'Select Theme');
+        obar._settings.set_string('autotheme-light',       'Select Theme');
+        obar._settings.set_string('bartype',               'Islands');
+        obar._settings.set_string('bordertype',            'solid');
+        obar._settings.set_string('color-scheme',          'prefer-dark');
+        obar._settings.set_string('dashdock-style',        'Default');
+        obar._settings.set_string('default-font',          'Sans 12');
+        obar._settings.set_string('font',                  'Sans Bold 11');
+        obar._settings.set_string('gradient-direction',    'vertical');
+        obar._settings.set_string('gtk-shadow',            'Default');
+        obar._settings.set_string('monitors',              'all');
+        obar._settings.set_string('position',              'Top');
+        obar._settings.set_string('sbar-gradient',         'none');
+
+        // --- BOOLEAN FLAGS ---
+        obar._settings.set_boolean('accent-override',       false);
+        obar._settings.set_boolean('apply-accent-shell',    false);
+        obar._settings.set_boolean('apply-all-shell',       false);
+        obar._settings.set_boolean('apply-flatpak',         false);
+        obar._settings.set_boolean('apply-gtk',             false);
+        obar._settings.set_boolean('apply-menu-notif',      false);
+        obar._settings.set_boolean('apply-menu-shell',      false);
+        obar._settings.set_boolean('auto-bgalpha',          true);
+        obar._settings.set_boolean('autofg-bar',            false);
+        obar._settings.set_boolean('autofg-menu',           true);
+        obar._settings.set_boolean('autohg-bar',            true);
+        obar._settings.set_boolean('autohg-menu',           true);
+        obar._settings.set_boolean('autotheme-font',        false);
+        obar._settings.set_boolean('autotheme-refresh',     false);
+        obar._settings.set_boolean('b-gradient',            false);
+        obar._settings.set_boolean('bg-change',             false);
+        obar._settings.set_boolean('bg-gradient',           false);
+        obar._settings.set_boolean('bgpalette',             true);
+        obar._settings.set_boolean('border-wmax',           true);
+        obar._settings.set_boolean('buttonbg-wmax',         true);
+        obar._settings.set_boolean('candybar',              false);
+        obar._settings.set_boolean('corner-radius',         false);
+        obar._settings.set_boolean('cust-margin-wmax',      true);
+        obar._settings.set_boolean('dborder',               true);
+        obar._settings.set_boolean('dshadow',               true);
+        obar._settings.set_boolean('fitts-widgets',         true);
+        obar._settings.set_boolean('gradient',              false);
+        obar._settings.set_boolean('gtk-popover',           false);
+        obar._settings.set_boolean('hbar-gtk3only',         false);
+        obar._settings.set_boolean('heffect',               false);
+        obar._settings.set_boolean('import-export',         true);
+        obar._settings.set_boolean('mbg-gradient',          false);
+        obar._settings.set_boolean('menustyle',             true);
+        obar._settings.set_boolean('neon',                  false);
+        obar._settings.set_boolean('neon-wmax',             true);
+        obar._settings.set_boolean('pause-reload',          false);
+        obar._settings.set_boolean('radius-bottomleft',     true);
+        obar._settings.set_boolean('radius-bottomright',    true);
+        obar._settings.set_boolean('radius-topleft',        true);
+        obar._settings.set_boolean('radius-topright',       true);
+        obar._settings.set_boolean('reloadstyle',           false);
+        obar._settings.set_boolean('removestyle',           false);
+        obar._settings.set_boolean('set-bottom-margin',     true);
+        obar._settings.set_boolean('set-fullscreen',        true);
+        obar._settings.set_boolean('set-notif-position',    true);
+        obar._settings.set_boolean('set-notifications',     false);
+        obar._settings.set_boolean('set-overview',          true);
+        obar._settings.set_boolean('set-yarutheme',         false);
+        obar._settings.set_boolean('shadow',                false);
+        obar._settings.set_boolean('smbgoverride',          false);
+        obar._settings.set_boolean('traffic-light',         false);
+        obar._settings.set_boolean('trigger-autotheme',     false);
+        obar._settings.set_boolean('trigger-reload',        true);
+        obar._settings.set_boolean('width-bottom',          true);
+        obar._settings.set_boolean('width-left',            true);
+        obar._settings.set_boolean('width-right',           true);
+        obar._settings.set_boolean('width-top',             true);
+        obar._settings.set_boolean('wmax-hbarhint',         true);
+        obar._settings.set_boolean('wmaxbar',               true);
+
+
+        // =====================================================================
+        // SECTION [enhanced] — ENHANCED SETTINGS
+        // =====================================================================
+
+        obar._settingsEnh.set_boolean('bg-change',      true);
+        obar._settingsEnh.set_boolean('import-export',  false);
+        obar._settingsEnh.set_boolean('pause-reload',   false);
+        obar._settingsEnh.set_boolean('reloadstyle',    true);
+
+        obar._settingsEnh.set_string('bguri',       'file:///home/mrvanguardia/.local/share/backgrounds/2026-04-08-22-21-17-astronaut-sunset-3840x2160-22922.jpg');
+        obar._settingsEnh.set_string('dark-bguri',  'file:///home/mrvanguardia/.local/share/backgrounds/2026-04-08-22-21-17-astronaut-sunset-3840x2160-22922.jpg');
+        obar._settingsEnh.set_string('light-bguri', 'file:///home/mrvanguardia/.local/share/backgrounds/2026-04-08-22-21-17-astronaut-sunset-3840x2160-22922.jpg');
+        obar._settingsEnh.set_string('default-font', 'Sans 12');
+
+        obar._settingsEnh.set_int('monitor-height', 1080);
+        obar._settingsEnh.set_int('monitor-width',  1920);
+        obar._settingsEnh.set_int('count1',  262077);
+        obar._settingsEnh.set_int('count2',  113308);
+        obar._settingsEnh.set_int('count3',  92352);
+        obar._settingsEnh.set_int('count4',  65629);
+        obar._settingsEnh.set_int('count5',  15154);
+        obar._settingsEnh.set_int('count6',  8446);
+        obar._settingsEnh.set_int('count7',  3842);
+        obar._settingsEnh.set_int('count8',  942);
+        obar._settingsEnh.set_int('count9',  69);
+        obar._settingsEnh.set_int('count10', 58);
+        obar._settingsEnh.set_int('count11', 19);
+        obar._settingsEnh.set_int('count12', 2);
+
+        // Enhanced Palette
+        obar._settingsEnh.set_strv('palette1',  ['35',  '34',  '35']);
+        obar._settingsEnh.set_strv('palette2',  ['210', '87',  '50']);
+        obar._settingsEnh.set_strv('palette3',  ['139', '69',  '53']);
+        obar._settingsEnh.set_strv('palette4',  ['95',  '54',  '47']);
+        obar._settingsEnh.set_strv('palette5',  ['207', '152', '93']);
+        obar._settingsEnh.set_strv('palette6',  ['233', '208', '153']);
+        obar._settingsEnh.set_strv('palette7',  ['70',  '71',  '47']);
+        obar._settingsEnh.set_strv('palette8',  ['104', '102', '61']);
+        obar._settingsEnh.set_strv('palette9',  ['83',  '89',  '94']);
+        obar._settingsEnh.set_strv('palette10', ['160', '160', '119']);
+        obar._settingsEnh.set_strv('palette11', ['204', '169', '158']);
+        obar._settingsEnh.set_strv('palette12', ['144', '144', '148']);
+
+        // Enhanced Dark Palette
+        obar._settingsEnh.set_strv('dark-palette1',  ['35',  '34',  '35']);
+        obar._settingsEnh.set_strv('dark-palette2',  ['210', '87',  '50']);
+        obar._settingsEnh.set_strv('dark-palette3',  ['139', '69',  '53']);
+        obar._settingsEnh.set_strv('dark-palette4',  ['95',  '54',  '47']);
+        obar._settingsEnh.set_strv('dark-palette5',  ['207', '152', '93']);
+        obar._settingsEnh.set_strv('dark-palette6',  ['233', '208', '153']);
+        obar._settingsEnh.set_strv('dark-palette7',  ['70',  '71',  '47']);
+        obar._settingsEnh.set_strv('dark-palette8',  ['104', '102', '61']);
+        obar._settingsEnh.set_strv('dark-palette9',  ['83',  '89',  '94']);
+        obar._settingsEnh.set_strv('dark-palette10', ['160', '160', '119']);
+        obar._settingsEnh.set_strv('dark-palette11', ['204', '169', '158']);
+        obar._settingsEnh.set_strv('dark-palette12', ['144', '144', '148']);
+
+        // Enhanced Light Palette
+        obar._settingsEnh.set_strv('light-palette1',  ['35',  '34',  '35']);
+        obar._settingsEnh.set_strv('light-palette2',  ['210', '87',  '50']);
+        obar._settingsEnh.set_strv('light-palette3',  ['139', '69',  '53']);
+        obar._settingsEnh.set_strv('light-palette4',  ['95',  '54',  '47']);
+        obar._settingsEnh.set_strv('light-palette5',  ['207', '152', '93']);
+        obar._settingsEnh.set_strv('light-palette6',  ['233', '208', '153']);
+        obar._settingsEnh.set_strv('light-palette7',  ['70',  '71',  '47']);
+        obar._settingsEnh.set_strv('light-palette8',  ['104', '102', '61']);
+        obar._settingsEnh.set_strv('light-palette9',  ['83',  '89',  '94']);
+        obar._settingsEnh.set_strv('light-palette10', ['160', '160', '119']);
+        obar._settingsEnh.set_strv('light-palette11', ['204', '169', '158']);
+        obar._settingsEnh.set_strv('light-palette12', ['144', '144', '148']);
+
+        return;
+    }
+
+    // VANGUARD SILVER THEME (Atomic Master Preset)
+    if(theme == 'vanguard_silver') {
+        if (darkTheme) {
+            // --- DARK MODE COLOR ARRAYS ---
+            obar._settings.set_strv('accent-color', ['0.753', '0.753', '0.760']);
+            obar._settings.set_strv('bcolor', ['1.0', '1.0', '1.0']);
+            obar._settings.set_strv('bgcolor', ['1.000', '1.000', '1.000']);
+            obar._settings.set_strv('bgcolor-wmax', ['1.000', '1.000', '1.000']);
+            obar._settings.set_strv('bgcolor2', ['1.000', '1.000', '1.000']);
+            obar._settings.set_strv('boxcolor', ['0.450', '0.452', '0.460']);
+            obar._settings.set_strv('destruct-color', ['0.75', '0.11', '0.16']);
+            obar._settings.set_strv('fgcolor', ['0.753', '0.753', '0.760']);
+            obar._settings.set_strv('hcolor', ['0.620', '0.622', '0.630']);
+            obar._settings.set_strv('hscd-color', ['0.753', '0.753', '0.760']);
+            obar._settings.set_strv('mbcolor', ['0.620', '0.622', '0.630']);
+            obar._settings.set_strv('smbgcolor', ['0.450', '0.452', '0.460']);
+
+            // Sync specific dark keys
+            obar._settings.set_strv('dark-accent-color', ['0.753', '0.753', '0.760']);
+            obar._settings.set_strv('dark-boxcolor', ['0.450', '0.452', '0.460']);
+            obar._settings.set_strv('dark-fgcolor', ['0.753', '0.753', '0.760']);
+        } else {
+            // --- LIGHT MODE COLOR ARRAYS ---
+            obar._settings.set_strv('light-accent-color', ['0.620', '0.622', '0.630']);
+            obar._settings.set_strv('light-bcolor', ['1.0', '1.0', '1.0']);
+            obar._settings.set_strv('light-bgcolor', ['0.125', '0.125', '0.125']);
+            obar._settings.set_strv('light-bgcolor-wmax', ['0.125', '0.125', '0.125']);
+            obar._settings.set_strv('light-bgcolor2', ['0.450', '0.452', '0.460']);
+            obar._settings.set_strv('light-boxcolor', ['0.125', '0.125', '0.125']);
+            obar._settings.set_strv('light-dbgcolor', ['0.125', '0.125', '0.125']);
+            obar._settings.set_strv('light-iscolor', ['0.125', '0.125', '0.125']);
+            obar._settings.set_strv('light-mbcolor', ['1.0', '1.0', '1.0']);
+            obar._settings.set_strv('light-mbgcolor', ['0.125', '0.125', '0.125']);
+            obar._settings.set_strv('light-mfgcolor', ['1.0', '1.0', '1.0']);
+            obar._settings.set_strv('light-mhcolor', ['0.753', '0.753', '0.760']);
+            obar._settings.set_strv('light-mscolor', ['0.620', '0.622', '0.630']);
+            obar._settings.set_strv('light-mshcolor', ['1.0', '1.0', '1.0']);
+            obar._settings.set_strv('light-shcolor', ['0', '0', '0']);
+            obar._settings.set_strv('light-smbgcolor', ['0.125', '0.125', '0.125']);
+            obar._settings.set_strv('light-vw-color', ['0.753', '0.753', '0.760']);
+            obar._settings.set_strv('light-winbcolor', ['0.753', '0.753', '0.760']);
+        }
+
+        // --- CANDY COLORS ---
+        obar._settings.set_strv('candy1',  ['0',    '0.61', '0.74']);
+        obar._settings.set_strv('candy2',  ['1',    '0.41', '0.41']);
+        obar._settings.set_strv('candy3',  ['0.63', '0.16', '0.8']);
+        obar._settings.set_strv('candy4',  ['0.94', '0.60', '0.23']);
+        obar._settings.set_strv('candy5',  ['0.03', '0.41', '0.62']);
+        obar._settings.set_strv('candy6',  ['0.56', '0.18', '0.43']);
+        obar._settings.set_strv('candy7',  ['0.95', '0.12', '0.67']);
+        obar._settings.set_strv('candy8',  ['0.18', '0.76', '0.49']);
+        obar._settings.set_strv('candy9',  ['0.93', '0.20', '0.23']);
+        obar._settings.set_strv('candy10', ['0.09', '0.19', '0.72']);
+        obar._settings.set_strv('candy11', ['0.75', '0.49', '0.44']);
+        obar._settings.set_strv('candy12', ['1',    '0.92', '0.12']);
+        obar._settings.set_strv('candy13', ['0.38', '0.63', '0.92']);
+        obar._settings.set_strv('candy14', ['0.37', '0.36', '0.39']);
+        obar._settings.set_strv('candy15', ['0.40', '0.23', '0.72']);
+        obar._settings.set_strv('candy16', ['1',    '0.32', '0.32']);
+
+        // --- DARK CANDY COLORS ---
+        obar._settings.set_strv('dark-candy1',  ['0',    '0.61', '0.74']);
+        obar._settings.set_strv('dark-candy2',  ['1',    '0.41', '0.41']);
+        obar._settings.set_strv('dark-candy3',  ['0.63', '0.16', '0.8']);
+        obar._settings.set_strv('dark-candy4',  ['0.94', '0.60', '0.23']);
+        obar._settings.set_strv('dark-candy5',  ['0.03', '0.41', '0.62']);
+        obar._settings.set_strv('dark-candy6',  ['0.56', '0.18', '0.43']);
+        obar._settings.set_strv('dark-candy7',  ['0.95', '0.12', '0.67']);
+        obar._settings.set_strv('dark-candy8',  ['0.18', '0.76', '0.49']);
+        obar._settings.set_strv('dark-candy9',  ['0.93', '0.20', '0.23']);
+        obar._settings.set_strv('dark-candy10', ['0.09', '0.19', '0.72']);
+        obar._settings.set_strv('dark-candy11', ['0.75', '0.49', '0.44']);
+        obar._settings.set_strv('dark-candy12', ['1',    '0.92', '0.12']);
+        obar._settings.set_strv('dark-candy13', ['0.38', '0.63', '0.92']);
+        obar._settings.set_strv('dark-candy14', ['0.37', '0.36', '0.39']);
+        obar._settings.set_strv('dark-candy15', ['0.40', '0.23', '0.72']);
+        obar._settings.set_strv('dark-candy16', ['1',    '0.32', '0.32']);
+
+        // --- LIGHT CANDY COLORS ---
+        obar._settings.set_strv('light-candy1',  ['0',    '0.61', '0.74']);
+        obar._settings.set_strv('light-candy2',  ['1',    '0.41', '0.41']);
+        obar._settings.set_strv('light-candy3',  ['0.63', '0.16', '0.8']);
+        obar._settings.set_strv('light-candy4',  ['0.94', '0.60', '0.23']);
+        obar._settings.set_strv('light-candy5',  ['0.03', '0.41', '0.62']);
+        obar._settings.set_strv('light-candy6',  ['0.56', '0.18', '0.43']);
+        obar._settings.set_strv('light-candy7',  ['0.95', '0.12', '0.67']);
+        obar._settings.set_strv('light-candy8',  ['0.18', '0.76', '0.49']);
+        obar._settings.set_strv('light-candy9',  ['0.93', '0.20', '0.23']);
+        obar._settings.set_strv('light-candy10', ['0.09', '0.19', '0.72']);
+        obar._settings.set_strv('light-candy11', ['0.75', '0.49', '0.44']);
+        obar._settings.set_strv('light-candy12', ['1',    '0.92', '0.12']);
+        obar._settings.set_strv('light-candy13', ['0.38', '0.63', '0.92']);
+        obar._settings.set_strv('light-candy14', ['0.37', '0.36', '0.39']);
+        obar._settings.set_strv('light-candy15', ['0.40', '0.23', '0.72']);
+        obar._settings.set_strv('light-candy16', ['1',    '0.32', '0.32']);
+
+        // --- PALETTE (extraída del wallpaper) ---
+        obar._settings.set_strv('palette1',  ['35',  '34',  '35']);
+        obar._settings.set_strv('palette2',  ['210', '87',  '50']);
+        obar._settings.set_strv('palette3',  ['139', '69',  '53']);
+        obar._settings.set_strv('palette4',  ['95',  '54',  '47']);
+        obar._settings.set_strv('palette5',  ['207', '152', '93']);
+        obar._settings.set_strv('palette6',  ['233', '208', '153']);
+        obar._settings.set_strv('palette7',  ['70',  '71',  '47']);
+        obar._settings.set_strv('palette8',  ['104', '102', '61']);
+        obar._settings.set_strv('palette9',  ['83',  '89',  '94']);
+        obar._settings.set_strv('palette10', ['160', '160', '119']);
+        obar._settings.set_strv('palette11', ['204', '169', '158']);
+        obar._settings.set_strv('palette12', ['144', '144', '148']);
+
+        // --- DARK PALETTE ---
+        obar._settings.set_strv('dark-palette1',  ['35',  '34',  '35']);
+        obar._settings.set_strv('dark-palette2',  ['210', '87',  '50']);
+        obar._settings.set_strv('dark-palette3',  ['139', '69',  '53']);
+        obar._settings.set_strv('dark-palette4',  ['95',  '54',  '47']);
+        obar._settings.set_strv('dark-palette5',  ['207', '152', '93']);
+        obar._settings.set_strv('dark-palette6',  ['233', '208', '153']);
+        obar._settings.set_strv('dark-palette7',  ['70',  '71',  '47']);
+        obar._settings.set_strv('dark-palette8',  ['104', '102', '61']);
+        obar._settings.set_strv('dark-palette9',  ['83',  '89',  '94']);
+        obar._settings.set_strv('dark-palette10', ['160', '160', '119']);
+        obar._settings.set_strv('dark-palette11', ['204', '169', '158']);
+        obar._settings.set_strv('dark-palette12', ['144', '144', '148']);
+
+        // --- LIGHT PALETTE ---
+        obar._settings.set_strv('light-palette1',  ['35',  '34',  '35']);
+        obar._settings.set_strv('light-palette2',  ['210', '87',  '50']);
+        obar._settings.set_strv('light-palette3',  ['139', '69',  '53']);
+        obar._settings.set_strv('light-palette4',  ['95',  '54',  '47']);
+        obar._settings.set_strv('light-palette5',  ['207', '152', '93']);
+        obar._settings.set_strv('light-palette6',  ['233', '208', '153']);
+        obar._settings.set_strv('light-palette7',  ['70',  '71',  '47']);
+        obar._settings.set_strv('light-palette8',  ['104', '102', '61']);
+        obar._settings.set_strv('light-palette9',  ['83',  '89',  '94']);
+        obar._settings.set_strv('light-palette10', ['160', '160', '119']);
+        obar._settings.set_strv('light-palette11', ['204', '169', '158']);
+        obar._settings.set_strv('light-palette12', ['144', '144', '148']);
+
+        // --- PROMINENT COLORS ---
+        obar._settings.set_strv('prominent1', ['100', '100', '100']);
+        obar._settings.set_strv('prominent2', ['100', '100', '100']);
+        obar._settings.set_strv('prominent3', ['100', '100', '100']);
+        obar._settings.set_strv('prominent4', ['100', '100', '100']);
+        obar._settings.set_strv('prominent5', ['100', '100', '100']);
+        obar._settings.set_strv('prominent6', ['100', '100', '100']);
+
+        // --- WALLPAPER / BACKGROUND URI ---
+        obar._settings.set_string('bguri',       'file:///home/mrvanguardia/.local/share/backgrounds/2026-04-08-22-21-17-astronaut-sunset-3840x2160-22922.jpg');
+        obar._settings.set_string('dark-bguri',  'file:///home/mrvanguardia/.local/share/backgrounds/2026-04-08-22-21-17-astronaut-sunset-3840x2160-22922.jpg');
+        obar._settings.set_string('light-bguri', 'file:///home/mrvanguardia/.local/share/backgrounds/2026-04-08-22-21-17-astronaut-sunset-3840x2160-22922.jpg');
+
+        // --- ALPHAS & TRANSPARENCIAS ---
+        obar._settings.set_double('balpha',           0.0);
+        obar._settings.set_double('bgalpha',          0.0);
+        obar._settings.set_double('bgalpha-wmax',     1.0);
+        obar._settings.set_double('bgalpha2',         0.0);
+        obar._settings.set_double('boxalpha',         0.0);
+        obar._settings.set_double('candyalpha',       0.98999999999999999);
+        obar._settings.set_double('dbgalpha',         0.84999999999999998);
+        obar._settings.set_double('fgalpha',          1.0);
+        obar._settings.set_double('gtk-transparency', 1.0);
+        obar._settings.set_double('halpha',           0.34000000000000002);
+        obar._settings.set_double('isalpha',          0.28999999999999998);
+        obar._settings.set_double('mbalpha',          0.0);
+        obar._settings.set_double('mbgalpha',         0.63);
+        obar._settings.set_double('mfgalpha',         1.0);
+        obar._settings.set_double('mhalpha',          0.29999999999999999);
+        obar._settings.set_double('msalpha',          0.84999999999999998);
+        obar._settings.set_double('mshalpha',         0.16);
+        obar._settings.set_double('shalpha',          0.20000000000000001);
+        obar._settings.set_double('smbgalpha',        0.94999999999999996);
+        obar._settings.set_double('winbalpha',        0.75);
+
+        // --- GEOMETRÍA & ESPACIADO ---
+        obar._settings.set_double('bottom-margin',  6.5);
+        obar._settings.set_double('bradius',        30.0);
+        obar._settings.set_double('bwidth',         0.0);
+        obar._settings.set_double('dbradius',       100.0);
+        obar._settings.set_double('disize',         48.0);
+        obar._settings.set_double('handle-border',  0.0);
+        obar._settings.set_double('height',         31.0);
+        obar._settings.set_double('hpad',           2.2999999999999998);
+        obar._settings.set_double('margin',         2.6000000000000001);
+        obar._settings.set_double('margin-wmax',    2.2000000000000002);
+        obar._settings.set_double('menu-radius',    21.0);
+        obar._settings.set_double('notif-radius',   10.0);
+        obar._settings.set_double('qtoggle-radius', 50.0);
+        obar._settings.set_double('slider-height',  4.0);
+        obar._settings.set_double('vpad',           0.0);
+        obar._settings.set_double('winbradius',     15.0);
+        obar._settings.set_double('winbwidth',      0.0);
+
+        // --- INTEGERS ---
+        obar._settings.set_int('card-hint',      10);
+        obar._settings.set_int('count1',         262077);
+        obar._settings.set_int('count2',         113308);
+        obar._settings.set_int('count3',         92352);
+        obar._settings.set_int('count4',         65629);
+        obar._settings.set_int('count5',         15154);
+        obar._settings.set_int('count6',         8446);
+        obar._settings.set_int('count7',         3842);
+        obar._settings.set_int('count8',         942);
+        obar._settings.set_int('count9',         69);
+        obar._settings.set_int('count10',        58);
+        obar._settings.set_int('count11',        19);
+        obar._settings.set_int('count12',        2);
+        obar._settings.set_int('headerbar-hint', 0);
+        obar._settings.set_int('monitor-height', 1080);
+        obar._settings.set_int('monitor-width',  1920);
+        obar._settings.set_int('sidebar-hint',   10);
+        obar._settings.set_int('view-hint',      0);
+        obar._settings.set_int('window-hint',    0);
+
+        // --- STRINGS ---
+        obar._settings.set_string('autotheme-dark',     'Select Theme');
+        obar._settings.set_string('autotheme-light',    'Select Theme');
+        obar._settings.set_string('bartype',            'Islands');
+        obar._settings.set_string('bordertype',         'solid');
+        obar._settings.set_string('color-scheme',       'prefer-dark');
+        obar._settings.set_string('dashdock-style',     'Default');
+        obar._settings.set_string('default-font',       'Sans 12');
+        obar._settings.set_string('font',               'Sans Bold 11');
+        obar._settings.set_string('gradient-direction', 'vertical');
+        obar._settings.set_string('gtk-shadow',         'Default');
+        obar._settings.set_string('monitors',           'all');
+        obar._settings.set_string('position',           'Top');
+        obar._settings.set_string('sbar-gradient',      'none');
+
+        // --- BOOLEANOS ---
+        obar._settings.set_boolean('accent-override',       false);
+        obar._settings.set_boolean('apply-accent-shell',    false);
+        obar._settings.set_boolean('apply-all-shell',       false);
+        obar._settings.set_boolean('apply-flatpak',         false);
+        obar._settings.set_boolean('apply-gtk',             false);
+        obar._settings.set_boolean('apply-menu-notif',      false);
+        obar._settings.set_boolean('apply-menu-shell',      false);
+        obar._settings.set_boolean('auto-bgalpha',          true);
+        obar._settings.set_boolean('autofg-bar',            false);
+        obar._settings.set_boolean('autofg-menu',           true);
+        obar._settings.set_boolean('autohg-bar',            true);
+        obar._settings.set_boolean('autohg-menu',           true);
+        obar._settings.set_boolean('autotheme-font',        false);
+        obar._settings.set_boolean('autotheme-refresh',     false);
+        obar._settings.set_boolean('b-gradient',            false);
+        obar._settings.set_boolean('bg-change',             false);
+        obar._settings.set_boolean('bg-gradient',           false);
+        obar._settings.set_boolean('bgpalette',             true);
+        obar._settings.set_boolean('border-wmax',           true);
+        obar._settings.set_boolean('buttonbg-wmax',         true);
+        obar._settings.set_boolean('candybar',              false);
+        obar._settings.set_boolean('corner-radius',         false);
+        obar._settings.set_boolean('cust-margin-wmax',      true);
+        obar._settings.set_boolean('dborder',               true);
+        obar._settings.set_boolean('dshadow',               true);
+        obar._settings.set_boolean('fitts-widgets',         true);
+        obar._settings.set_boolean('gradient',              false);
+        obar._settings.set_boolean('gtk-popover',           false);
+        obar._settings.set_boolean('hbar-gtk3only',         false);
+        obar._settings.set_boolean('heffect',               false);
+        obar._settings.set_boolean('import-export',         true);
+        obar._settings.set_boolean('mbg-gradient',          false);
+        obar._settings.set_boolean('menustyle',             true);
+        obar._settings.set_boolean('neon',                  false);
+        obar._settings.set_boolean('neon-wmax',             true);
+        obar._settings.set_boolean('pause-reload',          false);
+        obar._settings.set_boolean('radius-bottomleft',     true);
+        obar._settings.set_boolean('radius-bottomright',    true);
+        obar._settings.set_boolean('radius-topleft',        true);
+        obar._settings.set_boolean('radius-topright',       true);
+        obar._settings.set_boolean('reloadstyle',           false);
+        obar._settings.set_boolean('removestyle',           false);
+        obar._settings.set_boolean('set-bottom-margin',     true);
+        obar._settings.set_boolean('set-fullscreen',        true);
+        obar._settings.set_boolean('set-notif-position',    true);
+        obar._settings.set_boolean('set-notifications',     false);
+        obar._settings.set_boolean('set-overview',          true);
+        obar._settings.set_boolean('set-yarutheme',         false);
+        obar._settings.set_boolean('shadow',                false);
+        obar._settings.set_boolean('smbgoverride',          false);
+        obar._settings.set_boolean('traffic-light',         false);
+        obar._settings.set_boolean('trigger-autotheme',     false);
+        obar._settings.set_boolean('trigger-reload',        true);
+        obar._settings.set_boolean('width-bottom',          true);
+        obar._settings.set_boolean('width-left',            true);
+        obar._settings.set_boolean('width-right',           true);
+        obar._settings.set_boolean('width-top',             true);
+        obar._settings.set_boolean('wmax-hbarhint',         true);
+        obar._settings.set_boolean('wmaxbar',               true);
+
+
+        // =====================================================================
+        // SECTION [enhanced] — ENHANCED SETTINGS
+        // =====================================================================
+
+        obar._settingsEnh.set_boolean('bg-change',      true);
+        obar._settingsEnh.set_boolean('import-export',  false);
+        obar._settingsEnh.set_boolean('pause-reload',   false);
+        obar._settingsEnh.set_boolean('reloadstyle',    true);
+
+        obar._settingsEnh.set_string('bguri',        'file:///home/mrvanguardia/.local/share/backgrounds/2026-04-08-22-21-17-astronaut-sunset-3840x2160-22922.jpg');
+        obar._settingsEnh.set_string('dark-bguri',   'file:///home/mrvanguardia/.local/share/backgrounds/2026-04-08-22-21-17-astronaut-sunset-3840x2160-22922.jpg');
+        obar._settingsEnh.set_string('light-bguri',  'file:///home/mrvanguardia/.local/share/backgrounds/2026-04-08-22-21-17-astronaut-sunset-3840x2160-22922.jpg');
+        obar._settingsEnh.set_string('default-font', 'Sans 12');
+
+        obar._settingsEnh.set_int('monitor-height', 1080);
+        obar._settingsEnh.set_int('monitor-width',  1920);
+        obar._settingsEnh.set_int('count1',         262077);
+        obar._settingsEnh.set_int('count2',         113308);
+        obar._settingsEnh.set_int('count3',         92352);
+        obar._settingsEnh.set_int('count4',         65629);
+        obar._settingsEnh.set_int('count5',         15154);
+        obar._settingsEnh.set_int('count6',         8446);
+        obar._settingsEnh.set_int('count7',         3842);
+        obar._settingsEnh.set_int('count8',         942);
+        obar._settingsEnh.set_int('count9',         69);
+        obar._settingsEnh.set_int('count10',        58);
+        obar._settingsEnh.set_int('count11',        19);
+        obar._settingsEnh.set_int('count12',        2);
+
+        // Enhanced Palette
+        obar._settingsEnh.set_strv('palette1',  ['35',  '34',  '35']);
+        obar._settingsEnh.set_strv('palette2',  ['210', '87',  '50']);
+        obar._settingsEnh.set_strv('palette3',  ['139', '69',  '53']);
+        obar._settingsEnh.set_strv('palette4',  ['95',  '54',  '47']);
+        obar._settingsEnh.set_strv('palette5',  ['207', '152', '93']);
+        obar._settingsEnh.set_strv('palette6',  ['233', '208', '153']);
+        obar._settingsEnh.set_strv('palette7',  ['70',  '71',  '47']);
+        obar._settingsEnh.set_strv('palette8',  ['104', '102', '61']);
+        obar._settingsEnh.set_strv('palette9',  ['83',  '89',  '94']);
+        obar._settingsEnh.set_strv('palette10', ['160', '160', '119']);
+        obar._settingsEnh.set_strv('palette11', ['204', '169', '158']);
+        obar._settingsEnh.set_strv('palette12', ['144', '144', '148']);
+
+        // Enhanced Dark Palette
+        obar._settingsEnh.set_strv('dark-palette1',  ['35',  '34',  '35']);
+        obar._settingsEnh.set_strv('dark-palette2',  ['210', '87',  '50']);
+        obar._settingsEnh.set_strv('dark-palette3',  ['139', '69',  '53']);
+        obar._settingsEnh.set_strv('dark-palette4',  ['95',  '54',  '47']);
+        obar._settingsEnh.set_strv('dark-palette5',  ['207', '152', '93']);
+        obar._settingsEnh.set_strv('dark-palette6',  ['233', '208', '153']);
+        obar._settingsEnh.set_strv('dark-palette7',  ['70',  '71',  '47']);
+        obar._settingsEnh.set_strv('dark-palette8',  ['104', '102', '61']);
+        obar._settingsEnh.set_strv('dark-palette9',  ['83',  '89',  '94']);
+        obar._settingsEnh.set_strv('dark-palette10', ['160', '160', '119']);
+        obar._settingsEnh.set_strv('dark-palette11', ['204', '169', '158']);
+        obar._settingsEnh.set_strv('dark-palette12', ['144', '144', '148']);
+
+        // Enhanced Light Palette
+        obar._settingsEnh.set_strv('light-palette1',  ['35',  '34',  '35']);
+        obar._settingsEnh.set_strv('light-palette2',  ['210', '87',  '50']);
+        obar._settingsEnh.set_strv('light-palette3',  ['139', '69',  '53']);
+        obar._settingsEnh.set_strv('light-palette4',  ['95',  '54',  '47']);
+        obar._settingsEnh.set_strv('light-palette5',  ['207', '152', '93']);
+        obar._settingsEnh.set_strv('light-palette6',  ['233', '208', '153']);
+        obar._settingsEnh.set_strv('light-palette7',  ['70',  '71',  '47']);
+        obar._settingsEnh.set_strv('light-palette8',  ['104', '102', '61']);
+        obar._settingsEnh.set_strv('light-palette9',  ['83',  '89',  '94']);
+        obar._settingsEnh.set_strv('light-palette10', ['160', '160', '119']);
+        obar._settingsEnh.set_strv('light-palette11', ['204', '169', '158']);
+        obar._settingsEnh.set_strv('light-palette12', ['144', '144', '148']);
+
+        return;
+    }
+
 
     let minTotal, best, closest, promLen, paletteLen;
 
