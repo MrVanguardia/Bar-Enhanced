@@ -1,0 +1,15 @@
+# GitHub Issue Template Configuration
+# Ref: https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/configuring-issue-templates-for-your-repository
+
+# Disable blank issues so that users are encouraged to use the structured Bug Report template.
+# This ensures we get system info, logs, and reproduction steps for every bug.
+blank_issues_enabled: false
+
+# Direct users to Discussions for general support, questions, and feature requests.
+contact_links:
+  - name: "💬 Discussions & Help"
+    url: "https://github.com/MrVanguardia/Bar-Enhanced/discussions"
+    about: "Ask questions, get help, or showcase your beautiful desktop setups (rices) with the community!"
+  - name: "💡 Suggest a Feature or Idea"
+    url: "https://github.com/MrVanguardia/Bar-Enhanced/discussions/categories/ideas"
+    about: "Have a brilliant idea or request a new styling option? Suggest it here!"
