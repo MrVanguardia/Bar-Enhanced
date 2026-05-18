@@ -255,13 +255,15 @@ class BarEnhancedPrefs {
         const lightOptions = [['Select Theme', T('Select Theme')], ['Color', T('True Color')], ['Pastel', T('Pastel Theme')], ['Dark', T('Dark Theme')], ['Light', T('Light Theme')], ['vanguard_silver', 'Vanguard Silver']];
         const darkRow = new Adw.ComboRow({ title: T('Dark Mode Base Theme') });
         const darkModel = new Gtk.StringList(); darkOptions.forEach(opt => darkModel.append(opt[1])); darkRow.set_model(darkModel);
-        darkRow.set_selected(darkOptions.findIndex(opt => opt[0] === this._settings.get_string('autotheme-dark')));
+        const darkIdx = darkOptions.findIndex(opt => opt[0] === this._settings.get_string('autotheme-dark'));
+        if (darkIdx !== -1) darkRow.set_selected(darkIdx);
         darkRow.connect('notify::selected', () => this._settings.set_string('autotheme-dark', darkOptions[darkRow.get_selected()][0]));
         applyGroup.add(darkRow);
 
         const lightRow = new Adw.ComboRow({ title: T('Light Mode Base Theme') });
         const lightModel = new Gtk.StringList(); darkOptions.forEach(opt => lightModel.append(opt[1])); lightRow.set_model(lightModel);
-        lightRow.set_selected(darkOptions.findIndex(opt => opt[0] === this._settings.get_string('autotheme-light')));
+        const lightIdx = darkOptions.findIndex(opt => opt[0] === this._settings.get_string('autotheme-light'));
+        if (lightIdx !== -1) lightRow.set_selected(lightIdx);
         lightRow.connect('notify::selected', () => this._settings.set_string('autotheme-light', darkOptions[lightRow.get_selected()][0]));
         applyGroup.add(lightRow);
 
@@ -560,7 +562,8 @@ class BarEnhancedPrefs {
         const icons = this.getInstalledAssets('icons');
         const iconModel = new Gtk.StringList(); icons.forEach(i => iconModel.append(i));
         iconRow.set_model(iconModel);
-        iconRow.set_selected(icons.indexOf(this._interfaceSettings.get_string('icon-theme')));
+        const iconIdx = icons.indexOf(this._interfaceSettings.get_string('icon-theme'));
+        if (iconIdx !== -1) iconRow.set_selected(iconIdx);
         iconRow.connect('notify::selected', () => {
             this._interfaceSettings.set_string('icon-theme', icons[iconRow.get_selected()]);
         });
@@ -570,7 +573,8 @@ class BarEnhancedPrefs {
         const gtkThemes = this.getInstalledAssets('themes');
         const gtkModel = new Gtk.StringList(); gtkThemes.forEach(t => gtkModel.append(t));
         gtkRow.set_model(gtkModel);
-        gtkRow.set_selected(gtkThemes.indexOf(this._interfaceSettings.get_string('gtk-theme')));
+        const gtkIdx = gtkThemes.indexOf(this._interfaceSettings.get_string('gtk-theme'));
+        if (gtkIdx !== -1) gtkRow.set_selected(gtkIdx);
         gtkRow.connect('notify::selected', () => {
             const selectedTheme = gtkThemes[gtkRow.get_selected()];
             this._interfaceSettings.set_string('gtk-theme', selectedTheme);
