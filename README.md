@@ -220,5 +220,11 @@ This program is free software: you can redistribute it and/or modify it under th
 * **Dynamic Music Pill components:** Copyright (C) Andbal23.
 * **Vitals components:** Copyright (C) corecoding.
 
+## 📄 Additional documentation
+
+- [👥 Contributors](COLABORADORES.md)
+- [📢 Third-party notice](AVISO_DE_TERCEROS.md)
+- [📋 Theme Vanguard Gold](Temas%20Vanguard%20Gold.txt)
+
 ---
 *Love the project? Give it a ⭐ on [GitHub](https://github.com/MrVanguardia/Bar-Enhanced) and share your rice!*
