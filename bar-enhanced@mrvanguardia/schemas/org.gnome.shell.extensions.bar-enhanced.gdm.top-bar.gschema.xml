@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist gettext-domain="bar-enhanced">
+  <schema id="org.gnome.shell.extensions.bar-enhanced.gdm.top-bar" path="/org/gnome/shell/extensions/bar-enhanced/gdm/top-bar/">
+    <key name="disable-arrows" type="b">
+      <default>false</default>
+      <summary>Whether to disable top bar arrows</summary>
+    </key>
+    <key name="disable-rounded-corners" type="b">
+      <default>false</default>
+      <summary>Whether to disable top bar rounded corners</summary>
+    </key>
+    <key name="change-text-color" type="b">
+      <default>false</default>
+      <summary>Whether to change top bar text color</summary>
+    </key>
+    <key name="text-color" type="s">
+      <default>"rgb(255,255,255)"</default>
+      <summary>Top bar text color</summary>
+    </key>
+    <key name="change-background-color" type="b">
+      <default>false</default>
+      <summary>Whether to change top bar background</summary>
+    </key>
+    <key name="background-color" type="s">
+      <default>"rgb(0,0,0)"</default>
+      <summary>Top bar background color</summary>
+    </key>
+    <key name="show-date" type="b">
+      <default>true</default>
+    </key>
+    <key name="show-weekday" type="b">
+      <default>false</default>
+    </key>
+    <key name="time-format" type="s">
+      <default>"24h"</default>
+      <choices>
+        <choice value="12h" />
+        <choice value="24h" />
+      </choices>
+    </key>
+    <key name="show-seconds" type="b">
+      <default>false</default>
+    </key>
+    <key name="show-battery-percentage" type="b">
+      <default>true</default>
+    </key>
+  </schema>
+</schemalist>

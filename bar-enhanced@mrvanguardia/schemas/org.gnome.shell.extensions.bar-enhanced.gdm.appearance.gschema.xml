@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist gettext-domain="bar-enhanced">
+  <schema id="org.gnome.shell.extensions.bar-enhanced.gdm.appearance" path="/org/gnome/shell/extensions/bar-enhanced/gdm/appearance/">
+    <key name="accent-color" type="s">
+      <default>"blue"</default>
+      <choices>
+        <choice value="blue" />
+        <choice value="teal" />
+        <choice value="green" />
+        <choice value="yellow" />
+        <choice value="orange" />
+        <choice value="red" />
+        <choice value="pink" />
+        <choice value="purple" />
+        <choice value="slate" />
+      </choices>
+    </key>
+    <key name="light-mode" type="b">
+      <default>false</default>
+    </key>
+    <key name="shell-theme" type="s">
+      <default>"default"</default>
+      <summary>Theme Name</summary>
+    </key>
+    <key name="icon-theme" type="s">
+      <default>"Adwaita"</default>
+    </key>
+    <key name="cursor-theme" type="s">
+      <default>"Adwaita"</default>
+    </key>
+    <key name="background-type" type="s">
+      <default>"default"</default>
+      <summary>Type of Background</summary>
+      <description>
+	     Whether GDM background should be an Image, Color or Default.
+	   </description>
+      <choices>
+        <choice value="default" />
+        <choice value="image" />
+        <choice value="color" />
+      </choices>
+    </key>
+    <key name="background-image" type="s">
+      <default>""</default>
+      <summary>Background Image</summary>
+      <description>
+	     The image file to use as GDM background
+	   </description>
+    </key>
+    <key name="bg-adjustment" type="s">
+      <default>"zoom"</default>
+      <summary>Background Image Adjustment</summary>
+      <description>
+	     Strategy for adjustment of background image.
+	   </description>
+      <choices>
+        <choice value="zoom" />
+        <choice value="repeat" />
+      </choices>
+    </key>
+    <key name="background-color" type="s">
+      <default>"rgb(40,40,40)"</default>
+      <summary>Background Color</summary>
+      <description>
+	     The Color to use as GDM background
+	   </description>
+    </key>
+    <key name="blur-background" type="b">
+      <default>false</default>
+      <summary>Blur Background Image</summary>
+      <description>Whether to blur the GDM background image.</description>
+    </key>
+    <key name="blur-background-value" type="i">
+      <default>30</default>
+      <summary>Blur Background Value</summary>
+      <description>The blur radius for the GDM background image (0 to 100).</description>
+    </key>
+  </schema>
+</schemalist>

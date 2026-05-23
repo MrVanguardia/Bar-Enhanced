@@ -289,7 +289,7 @@ export const MusicPill = GObject.registerClass(
                     }
                 } catch (e) {
                     // Without it sometimes trigger the virtal windows switching on the dash-to-dock, maybe if you scroll too fast. 
-                    console.debug(`[Dynamic Music Pill] Scroll handled with safe-skip: ${e.message}`);
+                    log(`[Dynamic Music Pill] Scroll handled with safe-skip: ${e.message}`);
                 }
 
                 return Clutter.EVENT_STOP;
@@ -1267,7 +1267,7 @@ export const MusicPill = GObject.registerClass(
                                         this._interfaceSettings.set_string('accent-color', closestAccent);
                                     }
                                 } catch (err) {
-                                    console.debug('[Dynamic Music Pill] Native accent sync failed: ', err.message);
+                                    log('[Dynamic Music Pill] Native accent sync failed: ', err.message);
                                 }
 
                                 if (this._visualizer && this._visualizer.setColor) {
@@ -1276,14 +1276,14 @@ export const MusicPill = GObject.registerClass(
                                 }
                             } catch (pixErr) {
                                 if (!pixErr.matches || !pixErr.matches(Gio.IOErrorEnum, Gio.IOErrorEnum.CANCELLED)) {
-                                    console.debug('Failed to decode art pixbuf: ' + pixErr.message);
+                                    log('Failed to decode art pixbuf: ' + pixErr.message);
                                 }
                             }
                         });
                     }
                 } catch (e) {
                     if (!e.matches(Gio.IOErrorEnum, Gio.IOErrorEnum.CANCELLED)) {
-                        console.debug('Failed to load art color: ' + e.message);
+                        log('Failed to load art color: ' + e.message);
                     }
                 }
             });

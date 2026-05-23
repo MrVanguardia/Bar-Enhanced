@@ -107,7 +107,7 @@ export class SharedVisualizerEngine {
 
             this._readStdoutBytes();
         } catch (e) {
-            console.error("[Dynamic Music Pill] Shared Cava error: " + e.message);
+            log("[Dynamic Music Pill] Shared Cava error: " + e.message);
         }
     }
 

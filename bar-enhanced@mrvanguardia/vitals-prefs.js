@@ -258,7 +258,7 @@ export function fillVitalsPreferences(parentWindow, realExtension) {
         try {
             GLib.chmod(scriptPath, 0o755);
         } catch (e) {
-            console.error('BarEnhanced Vitals: Error setting executable permissions on setup script: ' + e);
+            log('BarEnhanced Vitals: Error setting executable permissions on setup script: ' + e);
         }
 
         try {

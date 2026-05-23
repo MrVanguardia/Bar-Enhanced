@@ -75,7 +75,7 @@ export function openGdmCenter(parentWindow, extension, extensionPath, T) {
         try {
             script = generateDconfScript(extension);
         } catch(e) {
-            console.error("BarEnhanced: Error generating GDM script:", e);
+            log("BarEnhanced: Error generating GDM script:", e);
             let errToast = new Adw.Toast({ title: `❌ Script error: ${e.message || e}` });
             win.add_toast(errToast);
             return;
@@ -103,11 +103,11 @@ export function openGdmCenter(parentWindow, extension, extensionPath, T) {
                 } catch(e) {
                     let errToast = new Adw.Toast({ title: `❌ Wait error: ${e.message || e}` });
                     win.add_toast(errToast);
-                    console.error("BarEnhanced: Error waiting GDM apply process:", e);
+                    log("BarEnhanced: Error waiting GDM apply process:", e);
                 }
             });
         } catch(e) {
-            console.error("BarEnhanced: Error launching pkexec:", e);
+            log("BarEnhanced: Error launching pkexec:", e);
             let errToast = new Adw.Toast({ title: `❌ Launch error: ${e.message || e}` });
             win.add_toast(errToast);
         }
@@ -185,7 +185,7 @@ fi
                     }
                 });
             } catch(e) {
-                console.error(e);
+                log(e);
             }
         });
     }
@@ -251,7 +251,7 @@ echo "GDM restored successfully"
                     }
                 });
             } catch(e) {
-                console.error(e);
+                log(e);
             }
         });
     }

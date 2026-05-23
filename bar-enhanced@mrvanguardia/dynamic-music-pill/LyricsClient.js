@@ -88,7 +88,7 @@ export class LyricsClient {
       return best ? this._parseLRC(best.syncedLyrics) : null;
 
     } catch (e) {
-      console.debug(`[Dynamic Music Pill] Lyrics fetch error: ${e.message}`);
+      log(`[Dynamic Music Pill] Lyrics fetch error: ${e.message}`);
       throw e; // re-throw so caller can distinguish error from "no lyrics found"
     }
   }
@@ -107,7 +107,7 @@ export class LyricsClient {
         ? data.filter(item => Math.abs((item.duration || 0) - duration) < 5)
         : [];
     } catch (e) {
-      console.debug(`[Dynamic Music Pill] Lyrics search error: ${e.message}`);
+      log(`[Dynamic Music Pill] Lyrics search error: ${e.message}`);
       throw e; // re-throw so caller can distinguish error from "no results"
     }
   }

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist gettext-domain="bar-enhanced">
+  <schema id="org.gnome.shell.extensions.bar-enhanced.gdm.pointing" path="/org/gnome/shell/extensions/bar-enhanced/gdm/pointing/">
+    <key name="cursor-size" type="i">
+      <default>24</default>
+    </key>
+  </schema>
+</schemalist>

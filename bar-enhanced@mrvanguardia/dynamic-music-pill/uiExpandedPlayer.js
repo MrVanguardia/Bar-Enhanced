@@ -1878,7 +1878,7 @@ export const ExpandedPlayer = GObject.registerClass(
                     }
                 }
             } catch (e) {
-                console.debug(`[Dynamic Music Pill] _tick error: ${e.message}`);
+                log(`[Dynamic Music Pill] _tick error: ${e.message}`);
             }
         }
 
@@ -1925,7 +1925,7 @@ export const ExpandedPlayer = GObject.registerClass(
                     new GLib.Variant('(ox)', [trackId, targetPos]),
                     null, Gio.DBusCallFlags.NONE, -1, null,
                     (conn, res) => {
-                        try { conn.call_finish(res); } catch (e) { console.debug(e.message); }
+                        try { conn.call_finish(res); } catch (e) { log(e.message); }
                     }
                 );
             }

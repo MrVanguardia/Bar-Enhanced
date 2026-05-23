@@ -1114,7 +1114,7 @@ class BarEnhancedPrefs {
             try {
                 fillMusicPillPreferences(window, this._extension.getSettings('org.gnome.shell.extensions.dynamic-music-pill'));
             } catch(e) {
-                console.error('Bar Enhanced: Error opening Music Pill prefs:', e);
+                log('Bar Enhanced: Error opening Music Pill prefs:', e);
                 const d = new Adw.MessageDialog({ transient_for: window, modal: true, heading: 'Error', body: String(e) });
                 d.add_response('ok', 'OK'); d.connect('response', () => d.destroy()); d.present();
             }
@@ -1128,7 +1128,7 @@ class BarEnhancedPrefs {
             try {
                 fillVitalsPreferences(window, this._extension);
             } catch(e) {
-                console.error('Bar Enhanced: Error opening Vitals prefs:', e);
+                log('Bar Enhanced: Error opening Vitals prefs:', e);
                 const d = new Adw.MessageDialog({ transient_for: window, modal: true, heading: 'Error', body: String(e) });
                 d.add_response('ok', 'OK'); d.connect('response', () => d.destroy()); d.present();
             }
@@ -1142,7 +1142,7 @@ class BarEnhancedPrefs {
             try {
                 fillBluetoothBatteryPreferences(window, this._settings);
             } catch(e) {
-                console.error('Bar Enhanced: Error opening Bluetooth Battery prefs:', e);
+                log('Bar Enhanced: Error opening Bluetooth Battery prefs:', e);
                 const d = new Adw.MessageDialog({ transient_for: window, modal: true, heading: 'Error', body: String(e) });
                 d.add_response('ok', 'OK'); d.connect('response', () => d.destroy()); d.present();
             }
@@ -1173,7 +1173,7 @@ class BarEnhancedPrefs {
                 const module = await import(uri);
                 module.openGdmCenter(window, this._extension, this.path, T);
             } catch (e) {
-                console.error("BarEnhanced: Error launching GDM Center:", e);
+                log("BarEnhanced: Error launching GDM Center:", e);
                 try {
                     const dialog = new Adw.MessageDialog({
                         transient_for: window,
@@ -1185,7 +1185,7 @@ class BarEnhancedPrefs {
                     dialog.connect('response', () => dialog.destroy());
                     dialog.present();
                 } catch (e2) {
-                    console.error(e2);
+                    log(e2);
                 }
             }
         });
@@ -1548,7 +1548,7 @@ class BarEnhancedPrefs {
         try {
             const schemaKey = settings.get_settings_schema().get_key(key);
             const type = schemaKey.get_value_type().dup_string();
-            console.log(`Bar Enhanced: Setting ${key} (type ${type}) to ${JSON.stringify(value)}`);
+            log(`Bar Enhanced: Setting ${key} (type ${type}) to ${JSON.stringify(value)}`);
 
             if (type === 'b') settings.set_boolean(key, Boolean(value));
             else if (type === 's') settings.set_string(key, String(value));
@@ -1558,7 +1558,7 @@ class BarEnhancedPrefs {
                 settings.set_value(key, new GLib.Variant(type, value));
             }
         } catch (e) {
-            console.warn(`Bar Enhanced: Failed to set ${key}: ${e}`);
+            log(`Bar Enhanced: Failed to set ${key}: ${e}`);
         }
     }
 
@@ -1583,7 +1583,7 @@ class BarEnhancedPrefs {
                             const data = JSON.parse(rawContent);
                             const allKeys = this._settings.list_keys();
 
-                            console.log('Bar Enhanced: Starting JSON import...');
+                            log('Bar Enhanced: Starting JSON import...');
                             this._settings.set_boolean('import-export', true);
 
                             // 1. Import main settings
@@ -1609,7 +1609,7 @@ class BarEnhancedPrefs {
                                         }
                                     });
                                 } catch (e) {
-                                    console.error('Bar Enhanced: Failed to import Dash-to-dock settings:', e);
+                                    log('Bar Enhanced: Failed to import Dash-to-dock settings:', e);
                                 }
                             }
 
@@ -1625,7 +1625,7 @@ class BarEnhancedPrefs {
                                         }
                                     });
                                 } catch (e) {
-                                    console.error('Bar Enhanced: Failed to import Notification-icons settings:', e);
+                                    log('Bar Enhanced: Failed to import Notification-icons settings:', e);
                                 }
                             }
 
@@ -1641,7 +1641,7 @@ class BarEnhancedPrefs {
                                         }
                                     });
                                 } catch (e) {
-                                    console.error('Bar Enhanced: Failed to import Dynamic Music Pill settings:', e);
+                                    log('Bar Enhanced: Failed to import Dynamic Music Pill settings:', e);
                                 }
                             }
 
@@ -1656,7 +1656,7 @@ class BarEnhancedPrefs {
                                         }
                                     });
                                 } catch (e) {
-                                    console.error('Bar Enhanced: Failed to import Vitals settings:', e);
+                                    log('Bar Enhanced: Failed to import Vitals settings:', e);
                                 }
                             }
 
@@ -1673,13 +1673,13 @@ class BarEnhancedPrefs {
                                             }
                                         });
                                     } catch (e) {
-                                        console.error(`Bar Enhanced: Failed to import GDM ${sub} settings:`, e);
+                                        log(`Bar Enhanced: Failed to import GDM ${sub} settings:`, e);
                                     }
                                 });
                             }
 
                             GLib.timeout_add(GLib.PRIORITY_DEFAULT, 800, () => {
-                                console.log('Bar Enhanced: Releasing Silent Mode and reloading...');
+                                log('Bar Enhanced: Releasing Silent Mode and reloading...');
                                 this._settings.set_boolean('import-export', false);
                                 this.triggerStyleReload();
                                 return GLib.SOURCE_REMOVE;
@@ -1696,7 +1696,7 @@ class BarEnhancedPrefs {
                             d.show();
 
                         } catch (jsonErr) {
-                            console.log('Bar Enhanced: Applying TXT profile...');
+                            log('Bar Enhanced: Applying TXT profile...');
                             this._settings.set_boolean('import-export', true);
 
                             const lines = rawContent.split('\n');
@@ -1733,7 +1733,7 @@ class BarEnhancedPrefs {
                                             currentSettings.set_value(key, variant);
                                         }
                                     } catch (e) {
-                                        console.warn(`Bar Enhanced: Failed to parse TXT key ${key}: ${e}`);
+                                        log(`Bar Enhanced: Failed to parse TXT key ${key}: ${e}`);
                                     }
                                 }
                             });
@@ -1746,7 +1746,7 @@ class BarEnhancedPrefs {
                         }
                     }
                 } catch (e) {
-                    console.error('Bar Enhanced: Import failed: ' + e);
+                    log('Bar Enhanced: Import failed: ' + e);
                 }
             }
         });
@@ -1821,7 +1821,7 @@ class BarEnhancedPrefs {
                                 data['dash-to-dock'][k] = dockSettings.get_value(k).deep_unpack();
                             });
                         } catch (e) {
-                            console.warn('Bar Enhanced: Dash-to-dock settings not available for export:', e);
+                            log('Bar Enhanced: Dash-to-dock settings not available for export:', e);
                         }
 
                         // 3. Export Notification Icons settings
@@ -1831,7 +1831,7 @@ class BarEnhancedPrefs {
                                 data['notification-icons'][k] = niSettings.get_value(k).deep_unpack();
                             });
                         } catch (e) {
-                            console.warn('Bar Enhanced: Notification-icons settings not available for export:', e);
+                            log('Bar Enhanced: Notification-icons settings not available for export:', e);
                         }
 
                         // 3.5 Export Music Pill and Vitals settings
@@ -1841,7 +1841,7 @@ class BarEnhancedPrefs {
                                 data['dynamic-music-pill'][k] = musicSettings.get_value(k).deep_unpack();
                             });
                         } catch (e) {
-                            console.warn('Bar Enhanced: Dynamic Music Pill settings not available for export:', e);
+                            log('Bar Enhanced: Dynamic Music Pill settings not available for export:', e);
                         }
 
                         try {
@@ -1850,7 +1850,7 @@ class BarEnhancedPrefs {
                                 data['vitals'][k] = vitalsSettings.get_value(k).deep_unpack();
                             });
                         } catch (e) {
-                            console.warn('Bar Enhanced: Vitals settings not available for export:', e);
+                            log('Bar Enhanced: Vitals settings not available for export:', e);
                         }
 
                         // 4. Export GDM settings
@@ -1867,7 +1867,7 @@ class BarEnhancedPrefs {
                                     data.gdm[sub][k] = subSettings.get_value(k).deep_unpack();
                                 });
                             } catch (e) {
-                                console.warn(`Bar Enhanced: GDM ${sub} settings not available for export:`, e);
+                                log(`Bar Enhanced: GDM ${sub} settings not available for export:`, e);
                             }
                         });
 
@@ -1942,9 +1942,9 @@ class BarEnhancedPrefs {
                     }
 
                     GLib.file_set_contents(path, content);
-                    console.log(`Bar Enhanced: Profile successfully saved as ${isJson ? 'JSON' : 'TXT'} to ${path}`);
+                    log(`Bar Enhanced: Profile successfully saved as ${isJson ? 'JSON' : 'TXT'} to ${path}`);
                 } catch (e) {
-                    console.error('Bar Enhanced: Export failed: ' + e);
+                    log('Bar Enhanced: Export failed: ' + e);
                 }
             }
         });
@@ -1999,7 +1999,7 @@ class BarEnhancedPrefs {
     }
 
     exportToCode(window) {
-        console.log('Bar Enhanced: Generating theme code...');
+        log('Bar Enhanced: Generating theme code...');
         try {
             let data = { main: {}, enhanced: {} };
             const allKeys = this._settings.list_keys();
@@ -2055,7 +2055,7 @@ class BarEnhancedPrefs {
                         const clipboard = Gdk.Display.get_default().get_clipboard();
                         clipboard.set_content(Gdk.ContentProvider.new_for_value(code));
                     } catch (err) {
-                        console.error('Bar Enhanced: Clipboard error: ' + err);
+                        log('Bar Enhanced: Clipboard error: ' + err);
                     }
                 }
                 d.destroy();
@@ -2063,12 +2063,12 @@ class BarEnhancedPrefs {
 
             d.show();
         } catch (e) {
-            console.error('Bar Enhanced: Export to Code failed: ' + e);
+            log('Bar Enhanced: Export to Code failed: ' + e);
         }
     }
 
     importFromCode(window) {
-        console.log('Bar Enhanced: Opening theme import dialog...');
+        log('Bar Enhanced: Opening theme import dialog...');
         try {
             let d = new Adw.MessageDialog({
                 transient_for: window,
@@ -2094,7 +2094,7 @@ class BarEnhancedPrefs {
                         const code = entry.get_buffer().get_text().trim();
                         if (!code) return;
 
-                        console.log('Bar Enhanced: Decoding theme code...');
+                        log('Bar Enhanced: Decoding theme code...');
                         const decodedBytes = GLib.base64_decode(code);
                         const json = new TextDecoder().decode(decodedBytes);
                         const data = JSON.parse(json);
@@ -2120,15 +2120,15 @@ class BarEnhancedPrefs {
                         });
 
                         GLib.timeout_add(GLib.PRIORITY_DEFAULT, 800, () => {
-                            console.log('Bar Enhanced: Releasing Silent Mode and reloading...');
+                            log('Bar Enhanced: Releasing Silent Mode and reloading...');
                             this._settings.set_boolean('import-export', false);
                             this.triggerStyleReload();
                             return GLib.SOURCE_REMOVE;
                         });
 
-                        console.log('Bar Enhanced: Theme code applied successfully');
+                        log('Bar Enhanced: Theme code applied successfully');
                     } catch (e) {
-                        console.error('Bar Enhanced: Import from Code failed: ' + e);
+                        log('Bar Enhanced: Import from Code failed: ' + e);
                     }
                 }
                 d.destroy();
@@ -2136,7 +2136,7 @@ class BarEnhancedPrefs {
 
             d.show();
         } catch (e) {
-            console.error('Bar Enhanced: Import from Code dialog failed: ' + e);
+            log('Bar Enhanced: Import from Code dialog failed: ' + e);
         }
     }
 
@@ -2204,7 +2204,7 @@ class BarEnhancedPrefs {
                 p.wait_finish(res);
                 this.installAsset(tempPath, type, callback);
             } catch (e) {
-                console.error('Download failed:', e);
+                log('Download failed:', e);
             }
         });
     }
@@ -2226,7 +2226,7 @@ class BarEnhancedPrefs {
                 p.wait_finish(res);
                 if (callback) callback();
             } catch (e) {
-                console.error('Extraction failed:', e);
+                log('Extraction failed:', e);
             }
         });
     }
@@ -2321,7 +2321,7 @@ rm -rf "${configDir}/gtk-4.0/assets"
                 });
             }
         } catch (e) {
-            console.error('Error applying GTK4 theme:', e);
+            log('Error applying GTK4 theme:', e);
         }
     }
 
@@ -2440,7 +2440,7 @@ rm -rf "${configDir}/gtk-4.0/assets"
                 const data = rawData ? (Array.isArray(rawData) ? rawData : [rawData]) : [];
                 this.renderThemeList(container, loadingLabel, iconRow, data);
             } catch (e) {
-                console.error('searchOnlineThemes exception:', e);
+                log('searchOnlineThemes exception:', e);
                 if (loadingLabel.get_parent()) loadingLabel.set_label(T('No results or API error.'));
             }
         });
@@ -2479,7 +2479,7 @@ rm -rf "${configDir}/gtk-4.0/assets"
                         allThemes = [...allThemes, ...items];
                     }
                 } catch (e) {
-                    console.error('fetchOnlineThemes exception:', e);
+                    log('fetchOnlineThemes exception:', e);
                 }
 
                 completed++;
@@ -2617,7 +2617,7 @@ rm -rf "${configDir}/gtk-4.0/assets"
                         const paintable = Gdk.Texture.new_for_pixbuf(pixbuf);
                         picture.set_from_paintable(paintable);
                     } catch (e) {
-                        console.error('IMAGE FETCH/CONVERSION ERROR for ' + name + ' (URL: ' + preview + '): ' + e);
+                        log('IMAGE FETCH/CONVERSION ERROR for ' + name + ' (URL: ' + preview + '): ' + e);
                     }
                 });
             }
@@ -2858,7 +2858,7 @@ rm -rf "${configDir}/gtk-4.0/assets"
                 return GLib.SOURCE_REMOVE;
             });
         } catch (e) {
-            console.error('Error applying extracted palette:', e);
+            log('Error applying extracted palette:', e);
         }
     }
     resetToGnomeDefaults(window, btn) {
@@ -2915,7 +2915,7 @@ rm -rf "${configDir}/gtk-4.0/assets"
                 return GLib.SOURCE_REMOVE;
             });
         } catch (e) {
-            console.error('Error restoring GNOME defaults:', e);
+            log('Error restoring GNOME defaults:', e);
         }
     }
 
@@ -2925,7 +2925,7 @@ rm -rf "${configDir}/gtk-4.0/assets"
             const module = await import(uri);
             module.openGdmCenter(parentWindow, this._extension, this.path, T);
         } catch (e) {
-            console.error("BarEnhanced: Error launching GDM Center:", e);
+            log("BarEnhanced: Error launching GDM Center:", e);
             try {
                 const dialog = new Adw.MessageDialog({
                     transient_for: parentWindow,
@@ -2937,7 +2937,7 @@ rm -rf "${configDir}/gtk-4.0/assets"
                 dialog.connect('response', () => dialog.destroy());
                 dialog.present();
             } catch (e2) {
-                console.error(e2);
+                log(e2);
             }
         }
         return;
@@ -3019,7 +3019,7 @@ rm -rf "${configDir}/gtk-4.0/assets"
                         wpRow.set_subtitle(selectedWallpaperPath);
                     }
                 } catch (e) {
-                    console.error('Error selecting file:', e);
+                    log('Error selecting file:', e);
                 }
             });
         });
@@ -3050,7 +3050,7 @@ rm -rf "${configDir}/gtk-4.0/assets"
                     wpRow.set_subtitle(T('Unsupported image type or empty'));
                 }
             } catch (e) {
-                console.error('Error getting desktop wallpaper:', e);
+                log('Error getting desktop wallpaper:', e);
             }
         });
         useDesktopRow.add_suffix(useDesktopBtn);
@@ -3189,7 +3189,7 @@ rm -rf "${configDir}/gtk-4.0/assets"
                         logoRow.set_subtitle(selectedLogoPath);
                     }
                 } catch (e) {
-                    console.error('Error selecting file:', e);
+                    log('Error selecting file:', e);
                 }
             });
         });
@@ -3224,7 +3224,7 @@ rm -rf "${configDir}/gtk-4.0/assets"
                 const module = await import(uri);
                 module.openGdmCenter(window, this._settings, this.path, T);
             } catch (e) {
-                console.error("BarEnhanced: Error launching Advanced GDM Center:", e);
+                log("BarEnhanced: Error launching Advanced GDM Center:", e);
             }
         });
         actionBox.append(advBtn);
@@ -3311,7 +3311,7 @@ rm -rf "${configDir}/gtk-4.0/assets"
                     logoRow.set_subtitle(selectedLogoPath);
                 }
             } catch (e) {
-                console.error('BarEnhanced: Error loading GDM configuration file:', e);
+                log('BarEnhanced: Error loading GDM configuration file:', e);
             }
         }
 
@@ -3341,7 +3341,7 @@ rm -rf "${configDir}/gtk-4.0/assets"
                     opacityScale.set_value(Math.round(a * 100.0));
                 }
             } catch (e) {
-                console.error('BarEnhanced: Error loading GDM CSS custom styles:', e);
+                log('BarEnhanced: Error loading GDM CSS custom styles:', e);
             }
         }
 
@@ -3389,7 +3389,7 @@ rm -rf "${configDir}/gtk-4.0/assets"
                     customStyleContent = new TextDecoder().decode(contents);
                 }
             } catch (e) {
-                console.error('BarEnhanced: Error reading local stylesheet for GDM theme:', e);
+                log('BarEnhanced: Error reading local stylesheet for GDM theme:', e);
             }
 
             let authBoxCss = '';
@@ -3498,7 +3498,7 @@ dconf update
                     resetBtn.set_sensitive(true);
                 });
             } catch (e) {
-                console.error(e);
+                log(e);
                 statusLabel.set_label(`<span color="red">❌ ${T('Execution failed.')}</span>`);
                 applyBtn.set_sensitive(true);
                 resetBtn.set_sensitive(true);
@@ -3545,7 +3545,7 @@ dconf update
                     resetBtn.set_sensitive(true);
                 });
             } catch (e) {
-                console.error(e);
+                log(e);
                 statusLabel.set_label(`<span color="red">❌ ${T('Execution failed.')}</span>`);
                 applyBtn.set_sensitive(true);
                 resetBtn.set_sensitive(true);

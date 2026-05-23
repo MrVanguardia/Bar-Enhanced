@@ -16,6 +16,8 @@ cd "$EXT_NAME" || exit
 zip -rq "../$ZIP_NAME" . \
     -x "*.po" \
     -x "*.pot" \
+    -x "*/po/*" \
+    -x "*POTFILES.in" \
     -x "*.md" \
     -x "LICENSE" \
     -x "*.sh" \

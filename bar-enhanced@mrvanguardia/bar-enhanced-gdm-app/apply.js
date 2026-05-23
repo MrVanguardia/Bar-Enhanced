@@ -204,7 +204,7 @@ function getCss(appearance, topBar, misc, extensionPath, extension) {
                 }
             }
         } catch (e) {
-            console.log("Error reading user session top bar stylesheet: " + e);
+            log("Error reading user session top bar stylesheet: " + e);
         }
     }
 

@@ -537,7 +537,7 @@ export default class BarEnhanced extends Extension {
                 }
             }
         }
-        // console.log('pixelCount, pixelarray len ', pixelCount, pixelArray.length);
+        // log('pixelCount, pixelarray len ', pixelCount, pixelArray.length);
 
         // Generate color palette of 12 colors using Quantize to possibly get all colors for color-button
         const cmap12 = Quantize.quantize(pixelArray, 12);
@@ -547,7 +547,7 @@ export default class BarEnhanced extends Extension {
         // Sort palette12 and count12 arrays by count descending
         palette12?.sort((a, b) => count12[palette12.indexOf(b)] - count12[palette12.indexOf(a)]);
         count12?.sort((a, b) => b - a);
-        // console.log('palette12 sorted ', palette12, 'count12 sorted ', count12);
+        // log('palette12 sorted ', palette12, 'count12 sorted ', count12);
 
         return [palette12, count12];
     }
@@ -610,7 +610,7 @@ export default class BarEnhanced extends Extension {
             else
                 theme = this._settings.get_string('autotheme-light');
             if (autoRefresh && theme != 'Select Theme') {
-                // console.log('Auto theme refresh for ', darklight);
+                // log('Auto theme refresh for ', darklight);
                 AutoThemes.autoApplyBGPalette(this, darklight);
             }
         }
@@ -643,7 +643,7 @@ export default class BarEnhanced extends Extension {
             theme.unload_stylesheet(stylesheet);
         }
         catch (e) {
-            console.log('BarEnhanced: Error unloading stylesheet: ', e);
+            log('BarEnhanced: Error unloading stylesheet: ', e);
         }
     }
 
@@ -654,7 +654,7 @@ export default class BarEnhanced extends Extension {
             theme.load_stylesheet(stylesheet);
         }
         catch (e) {
-            console.log('BarEnhanced: Error loading stylesheet: ', e);
+            log('BarEnhanced: Error loading stylesheet: ', e);
         }
     }
 
@@ -665,7 +665,7 @@ export default class BarEnhanced extends Extension {
             theme.load_stylesheet(stylesheet);
         }
         catch (e) {
-            console.log('BarEnhanced: Error loading dash-to-dock stylesheet: ', e);
+            log('BarEnhanced: Error loading dash-to-dock stylesheet: ', e);
         }
     }
 
@@ -676,7 +676,7 @@ export default class BarEnhanced extends Extension {
             theme.unload_stylesheet(stylesheet);
         }
         catch (e) {
-            console.log('BarEnhanced: Error unloading dash-to-dock stylesheet: ', e);
+            log('BarEnhanced: Error unloading dash-to-dock stylesheet: ', e);
         }
     }
 
@@ -801,7 +801,7 @@ export default class BarEnhanced extends Extension {
                         const sectionList = msgScroll.child;
                         if (add) {
                             this._connections.connect(sectionList, this.addedSignal, (container, actor) => {
-                                // console.log('section added: ', actor.constructor.name);
+                                // log('section added: ', actor.constructor.name);
                                 this.applySectionStyles(sectionList, add);
                             });
                         }
@@ -859,7 +859,7 @@ export default class BarEnhanced extends Extension {
 
     // Add BarEnhanced style classes to Panel and Panel-Buttons
     setPanelStyle(obj, key, sig_param, callbk_param) {
-        // console.log('setPanelStyle: ', String(obj), key, String(sig_param), callbk_param);
+        // log('setPanelStyle: ', String(obj), key, String(sig_param), callbk_param);
         const panel = Main.panel;
         const bartype = this._settings.get_string('bartype');
         const buttonBgWMax = this._settings.get_boolean('buttonbg-wmax');
@@ -890,7 +890,7 @@ export default class BarEnhanced extends Extension {
                             isFirst = false;
                         }
                         lastIdx = idx;
-                        // console.log('Visible Child: ', String(btn.child));
+                        // log('Visible Child: ', String(btn.child));
                         btn.add_style_class_name('button-container');
 
                         // Add candybar classes if enabled else remove them
@@ -936,7 +936,7 @@ export default class BarEnhanced extends Extension {
 
     // Update panel style when Settings change
     updatePanelStyle(obj, key, sig_param, callbk_param) {
-        // console.log('update called with ', key, sig_param, callbk_param);
+        // log('update called with ', key, sig_param, callbk_param);
         let panel = Main.panel;
 
         if (!this._settings)
@@ -1052,7 +1052,7 @@ export default class BarEnhanced extends Extension {
         let gtkKeys = ['apply-gtk', 'headerbar-hint', 'hbar-gtk3only', 'sidebar-hint', 'sbar-gradient', 'card-hint', 'view-hint', 'window-hint', 'winbradius', 'corner-radius',
             'winbcolor', 'winbalpha', 'winbwidth', 'traffic-light', 'menu-radius', 'gtk-transparency', 'gtk-popover', 'mscolor', 'msalpha', 'hscd-color', 'vw-color', 'gtk-shadow', 'enable-gtk-window-custom'];
         if (gtkKeys.includes(key)) {
-            // console.log('Call saveGtkCss from extension for key: ', key);
+            // log('Call saveGtkCss from extension for key: ', key);
             this.gtkCSS = true;
             // For mscolor/msalpha, stylesheet will be generated/reloaded and also saveGtkCss will be called (in styleSheets.js)
             // For other keys, call saveGtkCss from here
@@ -1304,7 +1304,7 @@ export default class BarEnhanced extends Extension {
             !window.fullscreen
         );
         // for(const window of windows)
-        //     console.log('window:', window.get_gtk_application_id());
+        //     log('window:', window.get_gtk_application_id());
 
         const btnBgWMax = this._settings.get_boolean('buttonbg-wmax');
         const candybar = this._settings.get_boolean('candybar');
@@ -1380,7 +1380,7 @@ export default class BarEnhanced extends Extension {
         if (this._windowSignals) {
             for (const [windowActor, ids] of this._windowSignals) {
                 for (const id of ids) {
-                    // console.log('disconnectWindowSignals - id: ', id);
+                    // log('disconnectWindowSignals - id: ', id);
                     if (windowActor && id > 0)
                         windowActor.disconnect(id);
                 }
@@ -1423,10 +1423,10 @@ export default class BarEnhanced extends Extension {
     }
 
     updateBguri(obj, signal) {
-        // console.log('update bguri called for signal ', signal);
+        // log('update bguri called for signal ', signal);
         // If the function is triggered multiple times in succession, ignore till timeout
         if (this.updatingBguri) {
-            // console.log('update bguri already in progress');
+            // log('update bguri already in progress');
             return;
         }
         this.updatingBguri = true;
@@ -1434,7 +1434,7 @@ export default class BarEnhanced extends Extension {
             this.updatingBguri = false;
             this.updatingBguriId = null;
         }, 5000);
-        // console.log('==== Going ahead with bguri ====');
+        // log('==== Going ahead with bguri ====');
         let colorScheme = this._intSettings.get_string('color-scheme');
         if (colorScheme != this.colorScheme) {
             this.colorScheme = colorScheme;
@@ -1458,7 +1458,7 @@ export default class BarEnhanced extends Extension {
             // Gnome45+: if bgnd changed with right click on image file,
             // filepath (bguri) remains same, so manually call updatePanelStyle
             if (bguriOld == bguriNew) {
-                // console.log('bguriOld == bguriNew - calling updatePanelStyle for bguri');
+                // log('bguriOld == bguriNew - calling updatePanelStyle for bguri');
                 this.updatePanelStyle(this._settings, 'bguri');
             }
             this.updateBguriId = null;
@@ -1642,7 +1642,7 @@ export default class BarEnhanced extends Extension {
     destroyFittsCornerWidgets() {
         let panel = Main.panel;
         if (panel.leftFittsWidget) {
-            // console.log('Destroy Left Corner', String(panel.leftFittsWidget));
+            // log('Destroy Left Corner', String(panel.leftFittsWidget));
             Main.layoutManager.removeChrome(panel.leftFittsWidget);
             panel.leftFittsWidget.destroy();
             panel.leftFittsWidget = null;
@@ -1651,7 +1651,7 @@ export default class BarEnhanced extends Extension {
             delete panel.leftCornerButton;
         }
         if (panel.rightFittsWidget) {
-            // console.log('Destroy Right Corner', String(panel.rightFittsWidget));
+            // log('Destroy Right Corner', String(panel.rightFittsWidget));
             Main.layoutManager.removeChrome(panel.rightFittsWidget);
             panel.rightFittsWidget.destroy();
             panel.rightFittsWidget = null;
@@ -1922,7 +1922,7 @@ export default class BarEnhanced extends Extension {
                 this.obarAssetsDir.make_directory_with_parents(null);
             }
             catch (e) {
-                console.error('Error creating BarEnhanced runtime/assets directory: ' + e);
+                log('Error creating BarEnhanced runtime/assets directory: ' + e);
             }
         }
         // Copy static assets (SVGs) to runtime dir
@@ -1958,7 +1958,7 @@ export default class BarEnhanced extends Extension {
                 this._syncWithPywal();
             }
         } catch (e) {
-            console.log('BarEnhanced: Failed to initialize Pywal file monitor: ', e);
+            log('BarEnhanced: Failed to initialize Pywal file monitor: ', e);
         }
         // Cause stylesheet to save and reload on Enable (also creates gtk css)
         StyleSheets.reloadStyle(this, this);
@@ -2165,7 +2165,7 @@ export default class BarEnhanced extends Extension {
             try {
                 this.dockManager = new DockManager(this);
             } catch (e) {
-                console.log('BarEnhanced: Error instantiating DockManager: ', e);
+                log('BarEnhanced: Error instantiating DockManager: ', e);
             }
         }
     }
@@ -2175,7 +2175,7 @@ export default class BarEnhanced extends Extension {
             try {
                 this.dockManager.destroy();
             } catch (e) {
-                console.log('BarEnhanced: Error destroying DockManager: ', e);
+                log('BarEnhanced: Error destroying DockManager: ', e);
             }
             this.dockManager = null;
         }
@@ -2187,7 +2187,7 @@ export default class BarEnhanced extends Extension {
                 this.musicController = new MusicController(this);
                 this.musicController.enable();
             } catch (e) {
-                console.log('BarEnhanced: Error instantiating MusicController: ', e);
+                log('BarEnhanced: Error instantiating MusicController: ', e);
             }
         }
     }
@@ -2197,7 +2197,7 @@ export default class BarEnhanced extends Extension {
             try {
                 this.musicController.disable();
             } catch (e) {
-                console.log('BarEnhanced: Error destroying MusicController: ', e);
+                log('BarEnhanced: Error destroying MusicController: ', e);
             }
             this.musicController = null;
         }
@@ -2210,7 +2210,7 @@ export default class BarEnhanced extends Extension {
                 let position = this.vitalsMenu._positionInPanel();
                 Main.panel.addToStatusArea('vitalsMenu', this.vitalsMenu, position[1], position[0]);
             } catch (e) {
-                console.log('BarEnhanced: Error instantiating Vitals: ', e);
+                log('BarEnhanced: Error instantiating Vitals: ', e);
             }
         }
     }
@@ -2220,7 +2220,7 @@ export default class BarEnhanced extends Extension {
             try {
                 this.vitalsMenu.destroy();
             } catch (e) {
-                console.log('BarEnhanced: Error destroying Vitals: ', e);
+                log('BarEnhanced: Error destroying Vitals: ', e);
             }
             this.vitalsMenu = null;
         }
@@ -2232,7 +2232,7 @@ export default class BarEnhanced extends Extension {
                 this.btBatteryMenu = new BluetoothBatteryButton(this);
                 Main.panel.addToStatusArea('bluetoothBatteryMenu', this.btBatteryMenu, 0, 'right');
             } catch (e) {
-                console.log('BarEnhanced: Error instantiating Bluetooth Battery: ', e);
+                log('BarEnhanced: Error instantiating Bluetooth Battery: ', e);
             }
         }
     }
@@ -2242,7 +2242,7 @@ export default class BarEnhanced extends Extension {
             try {
                 this.btBatteryMenu.destroy();
             } catch (e) {
-                console.log('BarEnhanced: Error destroying Bluetooth Battery: ', e);
+                log('BarEnhanced: Error destroying Bluetooth Battery: ', e);
             }
             this.btBatteryMenu = null;
         }
@@ -2256,7 +2256,7 @@ export default class BarEnhanced extends Extension {
                 Main.layoutManager.uiGroup.remove_style_class_name(className);
             }
         } catch(e) {
-            console.error('BarEnhanced: Error updating uiGroup class: ', e);
+            log('BarEnhanced: Error updating uiGroup class: ', e);
         }
     }
 
@@ -2398,7 +2398,7 @@ export default class BarEnhanced extends Extension {
 
         for (let i = 0; i < this.msgLists.length; i++) {
             if (this.msgListIds[i]) {
-                // console.log('Disable - msgListIds: ', this.msgListIds[i]);
+                // log('Disable - msgListIds: ', this.msgListIds[i]);
                 if (this.msgLists[i] && this.msgListIds[i] > 0)
                     this.msgLists[i].disconnect(this.msgListIds[i]);
                 this.msgListIds[i] = null;
@@ -2568,120 +2568,122 @@ export default class BarEnhanced extends Extension {
             return;
         }
 
-        try {
-            let [ok, contents] = GLib.file_get_contents(walPath);
-            if (!ok) return;
+        walFile.load_contents_async(null, (file, res) => {
+            try {
+                let [success, contents] = file.load_contents_finish(res);
+                if (!success) return;
 
-            let decodedContents = new TextDecoder('utf-8').decode(contents);
-            let hexColors = decodedContents.trim().split('\n')
-                .map(c => c.trim())
-                .filter(c => c.startsWith('#') && c.length === 7);
+                let decodedContents = new TextDecoder('utf-8').decode(contents);
+                let hexColors = decodedContents.trim().split('\n')
+                    .map(c => c.trim())
+                    .filter(c => c.startsWith('#') && c.length === 7);
 
-            if (hexColors.length < 8) return;
+                if (hexColors.length < 8) return;
 
-            // Helper to compute contrast color (white or dark) based on background RGB
-            const getContrastColor = (rVal, gVal, bVal) => {
-                const Y = 0.299 * rVal + 0.587 * gVal + 0.114 * bVal;
-                return Y > 130 ? ['0.100', '0.100', '0.100'] : ['1.000', '1.000', '1.000'];
-            };
+                // Helper to compute contrast color (white or dark) based on background RGB
+                const getContrastColor = (rVal, gVal, bVal) => {
+                    const Y = 0.299 * rVal + 0.587 * gVal + 0.114 * bVal;
+                    return Y > 130 ? ['0.100', '0.100', '0.100'] : ['1.000', '1.000', '1.000'];
+                };
 
-            // Pause stylesheet reload during multi-setting changes
-            this._settings.set_boolean('pause-reload', true);
+                // Pause stylesheet reload during multi-setting changes
+                this._settings.set_boolean('pause-reload', true);
 
-            // Map Pywal colors to candy colors
-            for (let i = 0; i < Math.min(hexColors.length, 16); i++) {
-                let hex = hexColors[i];
-                let r = (parseInt(hex.substring(1, 3), 16) / 255.0).toFixed(3);
-                let g = (parseInt(hex.substring(3, 5), 16) / 255.0).toFixed(3);
-                let b = (parseInt(hex.substring(5, 7), 16) / 255.0).toFixed(3);
+                // Map Pywal colors to candy colors
+                for (let i = 0; i < Math.min(hexColors.length, 16); i++) {
+                    let hex = hexColors[i];
+                    let r = (parseInt(hex.substring(1, 3), 16) / 255.0).toFixed(3);
+                    let g = (parseInt(hex.substring(3, 5), 16) / 255.0).toFixed(3);
+                    let b = (parseInt(hex.substring(5, 7), 16) / 255.0).toFixed(3);
 
-                this._settings.set_strv(`candy${i + 1}`, [r, g, b]);
-                this._settings.set_strv(`dark-candy${i + 1}`, [r, g, b]);
-                this._settings.set_strv(`light-candy${i + 1}`, [r, g, b]);
+                    this._settings.set_strv(`candy${i + 1}`, [r, g, b]);
+                    this._settings.set_strv(`dark-candy${i + 1}`, [r, g, b]);
+                    this._settings.set_strv(`light-candy${i + 1}`, [r, g, b]);
+                }
+
+                // Map primary color (color 0) to panel background and compute contrast
+                let bgHex = hexColors[0];
+                let bgR = (parseInt(bgHex.substring(1, 3), 16) / 255.0).toFixed(3);
+                let bgG = (parseInt(bgHex.substring(3, 5), 16) / 255.0).toFixed(3);
+                let bgB = (parseInt(bgHex.substring(5, 7), 16) / 255.0).toFixed(3);
+
+                this._settings.set_strv('bgcolor', [bgR, bgG, bgB]);
+                this._settings.set_strv('iscolor', [bgR, bgG, bgB]);
+                this._settings.set_strv('dark-bgcolor', [bgR, bgG, bgB]);
+                this._settings.set_strv('dark-iscolor', [bgR, bgG, bgB]);
+                this._settings.set_strv('light-bgcolor', [bgR, bgG, bgB]);
+                this._settings.set_strv('light-iscolor', [bgR, bgG, bgB]);
+
+                // Calculate and apply bar foreground (text) contrast
+                const fg = getContrastColor(parseInt(bgHex.substring(1, 3), 16), parseInt(bgHex.substring(3, 5), 16), parseInt(bgHex.substring(5, 7), 16));
+                this._settings.set_strv('fgcolor', fg);
+                this._settings.set_strv('dark-fgcolor', fg);
+                this._settings.set_strv('light-fgcolor', fg);
+
+                // Apply primary color to popups / menu background
+                this._settings.set_strv('mbgcolor', [bgR, bgG, bgB]);
+                this._settings.set_strv('dark-mbgcolor', [bgR, bgG, bgB]);
+                this._settings.set_strv('light-mbgcolor', [bgR, bgG, bgB]);
+
+                // Calculate popups / menu foreground (text) contrast
+                this._settings.set_strv('mfgcolor', fg);
+                this._settings.set_strv('dark-mfgcolor', fg);
+                this._settings.set_strv('light-mfgcolor', fg);
+
+                // Apply secondary color (color 1 or 2) to menu tiles / secondary surfaces background
+                let smbgHex = hexColors[2] || hexColors[1];
+                let smbgR = (parseInt(smbgHex.substring(1, 3), 16) / 255.0).toFixed(3);
+                let smbgG = (parseInt(smbgHex.substring(3, 5), 16) / 255.0).toFixed(3);
+                let smbgB = (parseInt(smbgHex.substring(5, 7), 16) / 255.0).toFixed(3);
+
+                this._settings.set_strv('smbgcolor', [smbgR, smbgG, smbgB]);
+                this._settings.set_strv('dark-smbgcolor', [smbgR, smbgG, smbgB]);
+                this._settings.set_strv('light-smbgcolor', [smbgR, smbgG, smbgB]);
+
+                // Set border color and menu outline to secondary color
+                this._settings.set_strv('bcolor', [smbgR, smbgG, smbgB]);
+                this._settings.set_strv('dark-bcolor', [smbgR, smbgG, smbgB]);
+                this._settings.set_strv('light-bcolor', [smbgR, smbgG, smbgB]);
+                this._settings.set_strv('mbcolor', [smbgR, smbgG, smbgB]);
+                this._settings.set_strv('dark-mbcolor', [smbgR, smbgG, smbgB]);
+                this._settings.set_strv('light-mbcolor', [smbgR, smbgG, smbgB]);
+
+                // Enable manual accent override and set custom accent color to secondary color
+                this._settings.set_boolean('accent-override', true);
+                this._settings.set_strv('accent-color', [smbgR, smbgG, smbgB]);
+                this._settings.set_strv('dark-accent-color', [smbgR, smbgG, smbgB]);
+                this._settings.set_strv('light-accent-color', [smbgR, smbgG, smbgB]);
+
+                // Set menu active toggles color (mscolor) and hover color (mhcolor)
+                this._settings.set_strv('mscolor', [smbgR, smbgG, smbgB]);
+                this._settings.set_strv('dark-mscolor', [smbgR, smbgG, smbgB]);
+                this._settings.set_strv('light-mscolor', [smbgR, smbgG, smbgB]);
+                this._settings.set_strv('mhcolor', [smbgR, smbgG, smbgB]);
+                this._settings.set_strv('dark-mhcolor', [smbgR, smbgG, smbgB]);
+                this._settings.set_strv('light-mhcolor', [smbgR, smbgG, smbgB]);
+
+                // Set system GTK headerbar and sidebars custom colors to primary palette color
+                this._settings.set_strv('hscd-color', [bgR, bgG, bgB]);
+                this._settings.set_strv('dark-hscd-color', [bgR, bgG, bgB]);
+                this._settings.set_strv('light-hscd-color', [bgR, bgG, bgB]);
+
+                this._settings.set_strv('vw-color', [bgR, bgG, bgB]);
+                this._settings.set_strv('dark-vw-color', [bgR, bgG, bgB]);
+                this._settings.set_strv('light-vw-color', [bgR, bgG, bgB]);
+
+                // Automatically enable system-wide GTK3 / GTK4 theme injection!
+                this._settings.set_boolean('apply-gtk', true);
+
+                // Wait 150ms and trigger a full CSS compilation and reload!
+                GLib.timeout_add(GLib.PRIORITY_DEFAULT, 150, () => {
+                    this._settings.set_boolean('pause-reload', false);
+                    this._settings.set_boolean('trigger-reload', !this._settings.get_boolean('trigger-reload'));
+                    return GLib.SOURCE_REMOVE;
+                });
+            } catch (e) {
+                log('BarEnhanced: Error syncing with Pywal: ', e);
             }
-
-            // Map primary color (color 0) to panel background and compute contrast
-            let bgHex = hexColors[0];
-            let bgR = (parseInt(bgHex.substring(1, 3), 16) / 255.0).toFixed(3);
-            let bgG = (parseInt(bgHex.substring(3, 5), 16) / 255.0).toFixed(3);
-            let bgB = (parseInt(bgHex.substring(5, 7), 16) / 255.0).toFixed(3);
-
-            this._settings.set_strv('bgcolor', [bgR, bgG, bgB]);
-            this._settings.set_strv('iscolor', [bgR, bgG, bgB]);
-            this._settings.set_strv('dark-bgcolor', [bgR, bgG, bgB]);
-            this._settings.set_strv('dark-iscolor', [bgR, bgG, bgB]);
-            this._settings.set_strv('light-bgcolor', [bgR, bgG, bgB]);
-            this._settings.set_strv('light-iscolor', [bgR, bgG, bgB]);
-
-            // Calculate and apply bar foreground (text) contrast
-            const fg = getContrastColor(parseInt(bgHex.substring(1, 3), 16), parseInt(bgHex.substring(3, 5), 16), parseInt(bgHex.substring(5, 7), 16));
-            this._settings.set_strv('fgcolor', fg);
-            this._settings.set_strv('dark-fgcolor', fg);
-            this._settings.set_strv('light-fgcolor', fg);
-
-            // Apply primary color to popups / menu background
-            this._settings.set_strv('mbgcolor', [bgR, bgG, bgB]);
-            this._settings.set_strv('dark-mbgcolor', [bgR, bgG, bgB]);
-            this._settings.set_strv('light-mbgcolor', [bgR, bgG, bgB]);
-
-            // Calculate popups / menu foreground (text) contrast
-            this._settings.set_strv('mfgcolor', fg);
-            this._settings.set_strv('dark-mfgcolor', fg);
-            this._settings.set_strv('light-mfgcolor', fg);
-
-            // Apply secondary color (color 1 or 2) to menu tiles / secondary surfaces background
-            let smbgHex = hexColors[2] || hexColors[1];
-            let smbgR = (parseInt(smbgHex.substring(1, 3), 16) / 255.0).toFixed(3);
-            let smbgG = (parseInt(smbgHex.substring(3, 5), 16) / 255.0).toFixed(3);
-            let smbgB = (parseInt(smbgHex.substring(5, 7), 16) / 255.0).toFixed(3);
-
-            this._settings.set_strv('smbgcolor', [smbgR, smbgG, smbgB]);
-            this._settings.set_strv('dark-smbgcolor', [smbgR, smbgG, smbgB]);
-            this._settings.set_strv('light-smbgcolor', [smbgR, smbgG, smbgB]);
-
-            // Set border color and menu outline to secondary color
-            this._settings.set_strv('bcolor', [smbgR, smbgG, smbgB]);
-            this._settings.set_strv('dark-bcolor', [smbgR, smbgG, smbgB]);
-            this._settings.set_strv('light-bcolor', [smbgR, smbgG, smbgB]);
-            this._settings.set_strv('mbcolor', [smbgR, smbgG, smbgB]);
-            this._settings.set_strv('dark-mbcolor', [smbgR, smbgG, smbgB]);
-            this._settings.set_strv('light-mbcolor', [smbgR, smbgG, smbgB]);
-
-            // Enable manual accent override and set custom accent color to secondary color
-            this._settings.set_boolean('accent-override', true);
-            this._settings.set_strv('accent-color', [smbgR, smbgG, smbgB]);
-            this._settings.set_strv('dark-accent-color', [smbgR, smbgG, smbgB]);
-            this._settings.set_strv('light-accent-color', [smbgR, smbgG, smbgB]);
-
-            // Set menu active toggles color (mscolor) and hover color (mhcolor)
-            this._settings.set_strv('mscolor', [smbgR, smbgG, smbgB]);
-            this._settings.set_strv('dark-mscolor', [smbgR, smbgG, smbgB]);
-            this._settings.set_strv('light-mscolor', [smbgR, smbgG, smbgB]);
-            this._settings.set_strv('mhcolor', [smbgR, smbgG, smbgB]);
-            this._settings.set_strv('dark-mhcolor', [smbgR, smbgG, smbgB]);
-            this._settings.set_strv('light-mhcolor', [smbgR, smbgG, smbgB]);
-
-            // Set system GTK headerbar and sidebars custom colors to primary palette color
-            this._settings.set_strv('hscd-color', [bgR, bgG, bgB]);
-            this._settings.set_strv('dark-hscd-color', [bgR, bgG, bgB]);
-            this._settings.set_strv('light-hscd-color', [bgR, bgG, bgB]);
-
-            this._settings.set_strv('vw-color', [bgR, bgG, bgB]);
-            this._settings.set_strv('dark-vw-color', [bgR, bgG, bgB]);
-            this._settings.set_strv('light-vw-color', [bgR, bgG, bgB]);
-
-            // Automatically enable system-wide GTK3 / GTK4 theme injection!
-            this._settings.set_boolean('apply-gtk', true);
-
-            // Wait 150ms and trigger a full CSS compilation and reload!
-            GLib.timeout_add(GLib.PRIORITY_DEFAULT, 150, () => {
-                this._settings.set_boolean('pause-reload', false);
-                this._settings.set_boolean('trigger-reload', !this._settings.get_boolean('trigger-reload'));
-                return GLib.SOURCE_REMOVE;
-            });
-        } catch (e) {
-            console.log('BarEnhanced: Error syncing with Pywal: ', e);
-        }
+        });
     }
 
     _syncWithSystemAccent() {
@@ -2692,7 +2694,7 @@ export default class BarEnhanced extends Extension {
             // the user's manual colors if false. Extremely clean and non-destructive!
             this._settings.set_boolean('trigger-reload', !this._settings.get_boolean('trigger-reload'));
         } catch (e) {
-            console.log('BarEnhanced: Error syncing with System Accent: ', e);
+            log('BarEnhanced: Error syncing with System Accent: ', e);
         }
     }
 
@@ -2736,7 +2738,7 @@ export default class BarEnhanced extends Extension {
                         newEffect.set_mode(Shell.BlurMode.BACKGROUND);
                         actor.add_effect_with_name('bar-enhanced-blur', newEffect);
                     } catch (e) {
-                        console.error('Bar Enhanced: Error adding blur effect to window actor', e);
+                        log('Bar Enhanced: Error adding blur effect to window actor', e);
                     }
                 }
             } else {

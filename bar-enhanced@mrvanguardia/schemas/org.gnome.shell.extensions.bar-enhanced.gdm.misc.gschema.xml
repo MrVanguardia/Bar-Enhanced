@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist gettext-domain="bar-enhanced">
+  <schema id="org.gnome.shell.extensions.bar-enhanced.gdm.misc" path="/org/gnome/shell/extensions/bar-enhanced/gdm/misc/">
+    <key name="enable-welcome-message" type="b">
+      <default>false</default>
+    </key>
+    <key name="welcome-message" type="s">
+      <default>"Welcome!"</default>
+    </key>
+    <key name="enlarge-welcome-message" type="b">
+      <default>true</default>
+    </key>
+    <key name="enable-logo" type="b">
+      <default>false</default>
+    </key>
+    <key name="logo" type="s">
+      <default>""</default>
+    </key>
+    <key name="disable-restart-buttons" type="b">
+      <default>false</default>
+    </key>
+    <key name="disable-user-list" type="b">
+      <default>false</default>
+    </key>
+    <key name="enable-fingerprint-authentication" type="b">
+      <default>true</default>
+    </key>
+    <key name="enable-custom-auth-box" type="b">
+      <default>false</default>
+    </key>
+    <key name="auth-box-color" type="s">
+      <default>"rgba(0,0,0,0.5)"</default>
+    </key>
+    <key name="auth-box-opacity" type="d">
+      <default>50.0</default>
+    </key>
+    <key name="auth-box-blur" type="b">
+      <default>true</default>
+    </key>
+  </schema>
+</schemalist>

@@ -783,7 +783,7 @@ export const Sensors = GObject.registerClass({
     }
 
     _discoverHardwareMonitors(callback) {
-        console.log("Bar Enhanced Vitals: Iniciando descubrimiento de sensores...");
+        log("Bar Enhanced Vitals: Iniciando descubrimiento de sensores...");
         this._tempVoltFanSensors = { 'temperature': {}, 'voltage': {}, 'fan': {} };
 
         let hwbase = '/sys/class/hwmon/';
@@ -800,15 +800,15 @@ export const Sensors = GObject.registerClass({
         if (this._settings.get_boolean('show-fan'))
             sensor_types['fan'] = 'fan';
 
-        console.log("Bar Enhanced Vitals: Tipos de sensores a monitorizar: " + JSON.stringify(sensor_types));
+        log("Bar Enhanced Vitals: Tipos de sensores a monitorizar: " + JSON.stringify(sensor_types));
 
         // a little informal, but this code has zero I/O block
         new FileModule.File(hwbase).list().then(files => {
-            console.log("Bar Enhanced Vitals: Directorios en hwmon encontrados: " + JSON.stringify(files));
+            log("Bar Enhanced Vitals: Directorios en hwmon encontrados: " + JSON.stringify(files));
             for (let file of files) {
                 // grab name of sensor
                 new FileModule.File(hwbase + file + '/name').read().then(name => {
-                    console.log("Bar Enhanced Vitals: Sensor detectado '" + name + "' en " + file);
+                    log("Bar Enhanced Vitals: Sensor detectado '" + name + "' en " + file);
                     // are we dealing with a CPU?
                     if (name == 'coretemp') {
                         // determine which processor (socket) we are dealing with
@@ -824,16 +824,16 @@ export const Sensors = GObject.registerClass({
                         this._processTempVoltFan(callback, sensor_types, name, hwbase + file, file);
                     }
                 }).catch(err => {
-                    console.log("Bar Enhanced Vitals: Falló lectura directa de nombre en " + file + ", probando ruta alternativa...");
+                    log("Bar Enhanced Vitals: Falló lectura directa de nombre en " + file + ", probando ruta alternativa...");
                     new FileModule.File(hwbase + file + '/device/name').read().then(name => {
                         this._processTempVoltFan(callback, sensor_types, name, hwbase + file + '/device', file);
                     }).catch(err => {
-                        console.warn("Bar Enhanced Vitals: No se pudo obtener nombre para " + file + ": " + err);
+                        log("Bar Enhanced Vitals: No se pudo obtener nombre para " + file + ": " + err);
                     });
                 });
             }
         }).catch(err => {
-            console.warn("Bar Enhanced Vitals: Falló listar " + hwbase + ": " + err);
+            log("Bar Enhanced Vitals: Falló listar " + hwbase + ": " + err);
         });
 
         // does this system support cpu scaling? if so we will use it to grab Frequency and Boost below
@@ -971,7 +971,7 @@ export const Sensors = GObject.registerClass({
 
     _processTempVoltFan(callback, sensor_types, name, path, file) {
         let sensor_files = [ 'input', 'label' ];
-        console.log("Bar Enhanced Vitals: Procesando temp/volt/fan para " + name + " en " + path);
+        log("Bar Enhanced Vitals: Procesando temp/volt/fan para " + name + " en " + path);
 
         // grab files from directory
         new FileModule.File(path).list().then(files2 => {
@@ -1000,18 +1000,18 @@ export const Sensors = GObject.registerClass({
                 }
             }
 
-            console.log("Bar Enhanced Vitals: Trisensors descubiertos para " + name + ": " + JSON.stringify(trisensors));
+            log("Bar Enhanced Vitals: Trisensors descubiertos para " + name + ": " + JSON.stringify(trisensors));
 
             for (let obj of Object.values(trisensors)) {
                 if (!('input' in obj)) {
-                    console.log("Bar Enhanced Vitals: Omitiendo sensor sin archivo de entrada: " + JSON.stringify(obj));
+                    log("Bar Enhanced Vitals: Omitiendo sensor sin archivo de entrada: " + JSON.stringify(obj));
                     continue;
                 }
 
                 new FileModule.File(obj['input']).read().then(value => {
                     let extra = (obj['label'].indexOf('_label')==-1) ? ' ' + obj['input'].substr(obj['input'].lastIndexOf('/')+1).split('_')[0] : '';
 
-                    console.log("Bar Enhanced Vitals: Valor leído para " + obj['input'] + " = " + value);
+                    log("Bar Enhanced Vitals: Valor leído para " + obj['input'] + " = " + value);
 
                     if (value > 0 || !this._settings.get_boolean('hide-zeros') || obj['type'] == 'fan') {
                         new FileModule.File(obj['label']).read().then(label => {
@@ -1021,18 +1021,18 @@ export const Sensors = GObject.registerClass({
                             new FileModule.File(tmpFile).read().then(label => {
                                 this._addTempVoltFan(callback, obj, name, label, extra, value);
                             }).catch(err => {
-                                console.warn("Bar Enhanced Vitals: Error leyendo etiqueta/nombre alternativo para " + obj['label'] + ": " + err);
+                                log("Bar Enhanced Vitals: Error leyendo etiqueta/nombre alternativo para " + obj['label'] + ": " + err);
                             });
                         });
                     } else {
-                        console.log("Bar Enhanced Vitals: Sensor " + obj['input'] + " filtrado por valor <= 0 (hide-zeros está activo)");
+                        log("Bar Enhanced Vitals: Sensor " + obj['input'] + " filtrado por valor <= 0 (hide-zeros está activo)");
                     }
                 }).catch(err => {
-                    console.warn("Bar Enhanced Vitals: Error leyendo archivo de sensor " + obj['input'] + ": " + err);
+                    log("Bar Enhanced Vitals: Error leyendo archivo de sensor " + obj['input'] + ": " + err);
                 });
             }
         }).catch(err => {
-            console.warn("Bar Enhanced Vitals: Error listando archivos en " + path + ": " + err);
+            log("Bar Enhanced Vitals: Error listando archivos en " + path + ": " + err);
         });
     }
 
@@ -1070,7 +1070,7 @@ export const Sensors = GObject.registerClass({
             }
         }
 
-        console.log("Bar Enhanced Vitals: Registrando sensor exitosamente: " + label + " (" + obj['type'] + ") con valor " + value);
+        log("Bar Enhanced Vitals: Registrando sensor exitosamente: " + label + " (" + obj['type'] + ") con valor " + value);
 
         // update screen on initial build to prevent delay on update
         this._returnValue(callback, label, value, obj['type'], obj['format']);

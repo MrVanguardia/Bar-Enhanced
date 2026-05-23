@@ -385,7 +385,7 @@ export class MusicController {
                     }
                     Gio.Subprocess.new(['pkill', '-f', killTarget], Gio.SubprocessFlags.NONE);
                 } catch (e) {
-                    console.debug("[Dynamic Music Pill] Failed to hard kill: " + killTarget);
+                    log("[Dynamic Music Pill] Failed to hard kill: " + killTarget);
                 }
                 return GLib.SOURCE_REMOVE;
             });
@@ -660,7 +660,7 @@ export class MusicController {
             c => c !== this._pill && c instanceof MusicPill
         );
         for (let p of pills) {
-            console.debug('[Dynamic Music Pill] Removing duplicate pill from container');
+            log('[Dynamic Music Pill] Removing duplicate pill from container');
             container.remove_child(p);
             p.destroy();
         }
@@ -887,7 +887,7 @@ export class MusicController {
                                                     this._triggerUpdate();
                                                 }
                                             }
-                                        } catch (e) { console.debug(e.message); }
+                                        } catch (e) { log(e.message); }
                                     }
                                 );
                             }
@@ -924,7 +924,7 @@ export class MusicController {
                                     p._gicon = this._resolvePlayerIcon(p);
                                     this._triggerUpdate();
                                 }
-                            } catch (e) { console.debug(e.message); }
+                            } catch (e) { log(e.message); }
                         }
 
                     );
@@ -951,13 +951,13 @@ export class MusicController {
                                         }
                                     }
                                 }
-                            } catch (e) { console.debug(e.message); }
+                            } catch (e) { log(e.message); }
                             this._triggerUpdate();
                         }
                     );
 
                 } catch (e) {
-                    console.error(`Proxy not available.`);
+                    log(`Proxy not available.`);
                 }
             }
         );
@@ -1064,7 +1064,7 @@ export class MusicController {
                 let deApp = tryLookup(p._desktopEntry);
                 if (deApp) { let icon = deApp.get_icon(); if (icon) return icon; }
             }
-        } catch (e) { console.debug('[Dynamic Music Pill] _resolvePlayerIcon: ' + e.message); }
+        } catch (e) { log('[Dynamic Music Pill] _resolvePlayerIcon: ' + e.message); }
 
 
         return getPlayerIcon(p, p._busName);
@@ -1126,7 +1126,7 @@ export class MusicController {
                     if (this._pill) this._pill.setLyric(lrc);
                 }
             } catch (e) {
-                console.debug(`[DynamicMusicPill] Lyric error: ${e}`);
+                log(`[DynamicMusicPill] Lyric error: ${e}`);
             }
             invocation.return_value(null);
         }
@@ -1169,7 +1169,7 @@ export class MusicController {
                 this._startLyricsTimer();
             }
         } catch (e) {
-            console.debug(`[DynamicMusicPill] Network lyrics fetch error: ${e}`);
+            log(`[DynamicMusicPill] Network lyrics fetch error: ${e}`);
             this._fetchedLyricsData = null;
         }
     }
@@ -1213,7 +1213,7 @@ export class MusicController {
                             }
                         }
                     }
-                } catch (e) { console.debug(`[Dynamic Music Pill] Position sync error: ${e.message}`); }
+                } catch (e) { log(`[Dynamic Music Pill] Position sync error: ${e.message}`); }
             }
         );
     }
@@ -1328,7 +1328,7 @@ export class MusicController {
                 }
             });
         } catch (e) {
-            console.debug('[Dynamic Music Pill] Failed to setup art monitor: ' + e);
+            log('[Dynamic Music Pill] Failed to setup art monitor: ' + e);
         }
     }
 
@@ -1348,7 +1348,7 @@ export class MusicController {
                     c => c !== this._pill && c instanceof MusicPill
                 );
                 for (let p of duplicates) {
-                    console.debug('[Dynamic Music Pill] Removing duplicate pill from _updateUI');
+                    log('[Dynamic Music Pill] Removing duplicate pill from _updateUI');
                     container.remove_child(p);
                     p.destroy();
                 }
@@ -1509,20 +1509,11 @@ export class MusicController {
                         let isValidCachedFile = false;
                         if (httpCachedFile.query_exists(null)) {
                             try {
-                                let [ok, bytes] = httpCachedFile.load_contents(null);
-                                if (ok && bytes && bytes.get_size() >= 4) {
-                                    let data = bytes.toArray();
-                                    if ((data[0] === 0x89 && data[1] === 0x50 && data[2] === 0x4E && data[3] === 0x47) || // PNG
-                                        (data[0] === 0xFF && data[1] === 0xD8 && data[2] === 0xFF) || // JPEG
-                                        (data[0] === 0x47 && data[1] === 0x49 && data[2] === 0x46) || // GIF
-                                        (data[0] === 0x52 && data[1] === 0x49 && data[2] === 0x46 && data[3] === 0x46) || // WEBP/RIFF
-                                        (data[0] === 0x42 && data[1] === 0x4D)) { // BMP
-                                        isValidCachedFile = true;
-                                    }
+                                let info = httpCachedFile.query_info(Gio.FILE_ATTRIBUTE_STANDARD_SIZE, Gio.FileQueryInfoFlags.NONE, null);
+                                if (info && info.get_size() > 0) {
+                                    isValidCachedFile = true;
                                 }
-                            } catch (e) {
-                                console.debug('[Dynamic Music Pill] Failed to check image signature: ' + e.message);
-                            }
+                            } catch (e) { }
 
                             if (isValidCachedFile) {
                                 artUrl = httpCachedFile.get_uri();
@@ -1591,22 +1582,22 @@ export class MusicController {
                                                             }
                                                         }
                                                     } catch (e) {
-                                                        console.debug('[Dynamic Music Pill] Soup write art failed: ' + e.message);
+                                                        log('[Dynamic Music Pill] Soup write art failed: ' + e.message);
                                                         this._artCacheSet(cacheKey, 'failed');
                                                     }
                                                 }
                                             );
                                         } else {
-                                            console.debug('[Dynamic Music Pill] Soup download invalid or not an image. Status: ' + statusCode + ', Content-Type: ' + contentType);
+                                            log('[Dynamic Music Pill] Soup download invalid or not an image. Status: ' + statusCode + ', Content-Type: ' + contentType);
                                             this._artCacheSet(cacheKey, 'failed');
                                         }
                                     } catch (e) {
-                                        console.debug('[Dynamic Music Pill] Soup art download failed: ' + e.message);
+                                        log('[Dynamic Music Pill] Soup art download failed: ' + e.message);
                                         this._artCacheSet(cacheKey, 'failed');
                                     }
                                 });
                             } catch (e) {
-                                console.debug('[Dynamic Music Pill] Soup session error: ' + e.message);
+                                log('[Dynamic Music Pill] Soup session error: ' + e.message);
                                 this._artCacheSet(cacheKey, 'failed');
                             }
                         } else if (!isValidCachedFile) {
@@ -1740,7 +1731,7 @@ export class MusicController {
                 this._pill.updateDisplay(null, null, null, 'Stopped', null, false);
             }
         } catch (e) {
-            console.debug(`[Dynamic Music Pill] _updateUI error: ${e.message}`);
+            log(`[Dynamic Music Pill] _updateUI error: ${e.message}`);
         }
     }
 
@@ -1833,7 +1824,7 @@ export class MusicController {
             }
             return winner;
         } catch (e) {
-            console.debug(`[Dynamic Music Pill] _getActivePlayer error: ${e.message}`);
+            log(`[Dynamic Music Pill] _getActivePlayer error: ${e.message}`);
             return null;
         }
     }
@@ -1959,7 +1950,7 @@ export class MusicController {
                 if (!streamDesc) try { streamDesc = input.get_description() || ''; } catch(e) {}
                 if (!streamAppName) try { streamAppName = input.get_application_id() || ''; } catch(e) {}
 
-                console.debug(`[Dynamic Music Pill] Found Stream: name="${streamName}", desc="${streamDesc}", app="${streamAppName}", looking for bus="${busName}", id="${identity}", desktop="${desktopEntry}"`);
+                log(`[Dynamic Music Pill] Found Stream: name="${streamName}", desc="${streamDesc}", app="${streamAppName}", looking for bus="${busName}", id="${identity}", desktop="${desktopEntry}"`);
 
                 streamName = streamName.toLowerCase();
                 streamDesc = streamDesc.toLowerCase();
@@ -1968,7 +1959,7 @@ export class MusicController {
                 if ((busName && (streamName.includes(busName) || streamDesc.includes(busName) || streamAppName.includes(busName))) ||
                     (identity && (streamName.includes(identity) || streamDesc.includes(identity))) ||
                     (desktopEntry && (streamName.includes(desktopEntry) || streamDesc.includes(desktopEntry)))) {
-                    console.debug('[Dynamic Music Pill] -> Matched app stream!');
+                    log('[Dynamic Music Pill] -> Matched app stream!');
                     return { stream: input, mixer };
                 }
             }

@@ -116,7 +116,7 @@ export function initDTDModule() {
             _applyDisable();
         }
     }).catch((e) => {
-        console.debug('[Dynamic Music Pill] DTD/Ubuntu Dock import error: ' + e.message);
+        log('[Dynamic Music Pill] DTD/Ubuntu Dock import error: ' + e.message);
         _dtdImportPromise = null;
     });
     
@@ -138,7 +138,7 @@ function _applyDisable() {
             dock._show();
         }
     } catch (e) {
-        console.debug('[Dynamic Music Pill] DTD _applyDisable error: ' + e.message);
+        log('[Dynamic Music Pill] DTD _applyDisable error: ' + e.message);
     }
 }
 
@@ -153,7 +153,7 @@ export function disableDashToDockAutohide() {
             }
         }
     } catch (e) {
-        console.debug('[Dynamic Music Pill] DTD/Ubuntu Dock disable error: ' + e.message);
+        log('[Dynamic Music Pill] DTD/Ubuntu Dock disable error: ' + e.message);
     }
 }
 
@@ -166,7 +166,7 @@ function _applyRestore() {
             dock._updateDashVisibility();
         }
     } catch (e) {
-        console.debug('[Dynamic Music Pill] DTD _applyRestore error: ' + e.message);
+        log('[Dynamic Music Pill] DTD _applyRestore error: ' + e.message);
     }
 }
 
@@ -181,7 +181,7 @@ export function restoreDashToDockAutohide() {
             }
         }
     } catch (e) {
-        console.debug('[Dynamic Music Pill] DTD/Ubuntu Dock restore error: ' + e.message);
+        log('[Dynamic Music Pill] DTD/Ubuntu Dock restore error: ' + e.message);
     }
 }
 

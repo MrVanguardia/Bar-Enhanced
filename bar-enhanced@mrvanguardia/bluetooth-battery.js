@@ -89,7 +89,7 @@ export var BluetoothBatteryButton = GObject.registerClass({
                 });
             }
         } catch (e) {
-            console.log('BarEnhanced: Error instantiating GnomeBluetooth Client - ' + e);
+            log('BarEnhanced: Error instantiating GnomeBluetooth Client - ' + e);
         }
 
         // Backup timer to ensure updates are periodically checked (10 seconds)
@@ -115,7 +115,7 @@ export var BluetoothBatteryButton = GObject.registerClass({
         this._deviceSignals = [];
 
         if (!this._devicesModel) {
-            console.log('BarEnhanced Bluetooth: _devicesModel is not initialized.');
+            log('BarEnhanced Bluetooth: _devicesModel is not initialized.');
             return;
         }
 
@@ -173,7 +173,7 @@ export var BluetoothBatteryButton = GObject.registerClass({
             this.panelBatteryBarBg.visible = false;
         }
 
-        console.log(`Bar Enhanced Bluetooth: Found ${connectedDevices.length} connected devices.`);
+        log(`Bar Enhanced Bluetooth: Found ${connectedDevices.length} connected devices.`);
 
         this.devicesBox.destroy_all_children();
 
@@ -196,7 +196,7 @@ export var BluetoothBatteryButton = GObject.registerClass({
             let name = dev.alias || dev.name || _('Unknown Device');
             let iconName = dev.icon || 'bluetooth-active-symbolic';
             let battery = dev.battery_percentage !== undefined ? dev.battery_percentage : dev['battery-percentage'];
-            console.log(`Bar Enhanced Bluetooth Device: ${name}, connected: ${dev.connected}, battery: ${battery}`);
+            log(`Bar Enhanced Bluetooth Device: ${name}, connected: ${dev.connected}, battery: ${battery}`);
 
             let itemBox = new St.BoxLayout({
                 vertical: false,

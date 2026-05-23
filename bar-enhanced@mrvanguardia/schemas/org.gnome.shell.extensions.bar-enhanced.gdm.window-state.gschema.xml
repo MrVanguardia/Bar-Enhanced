@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist gettext-domain="bar-enhanced">
+  <schema id="org.gnome.shell.extensions.bar-enhanced.gdm.window-state" path="/org/gnome/shell/extensions/bar-enhanced/gdm/window-state/">
+    <key name="width" type="u">
+      <default>1080</default>
+    </key>
+    <key name="height" type="u">
+      <default>580</default>
+    </key>
+    <key name="last-visited-page" type="s">
+      <default>"appearance"</default>
+      <choices>
+        <choice value="appearance" />
+        <choice value="fonts" />
+        <choice value="display" />
+        <choice value="sound" />
+        <choice value="top_bar" />
+        <choice value="pointing" />
+        <choice value="misc" />
+        <choice value="power" />
+        <choice value="tools" />
+      </choices>
+    </key>
+  </schema>
+</schemalist>

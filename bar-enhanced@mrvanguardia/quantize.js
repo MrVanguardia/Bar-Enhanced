@@ -185,7 +185,7 @@ var MMCQ = (function() {
                 if (ntot) {
                     vbox._avg = [~~(rsum / ntot), ~~ (gsum / ntot), ~~ (bsum / ntot)];
                 } else {
-                    //console.log('empty box');
+                    //log('empty box');
                     vbox._avg = [~~(mult * (vbox.r1 + vbox.r2 + 1) / 2), ~~ (mult * (vbox.g1 + vbox.g2 + 1) / 2), ~~ (mult * (vbox.b1 + vbox.b2 + 1) / 2)];
                 }
             }
@@ -395,7 +395,7 @@ var MMCQ = (function() {
                     // set dimensions
                     vbox1[dim2] = d2;
                     vbox2[dim1] = vbox1[dim2] + 1;
-                    // console.log('vbox counts:', vbox.count(), vbox1.count(), vbox2.count());
+                    // log('vbox counts:', vbox.count(), vbox1.count(), vbox2.count());
                     return [vbox1, vbox2];
                 }
             }
@@ -410,7 +410,7 @@ var MMCQ = (function() {
     function quantize(pixels, maxcolors) {
         // short-circuit
         if (!pixels.length || maxcolors < 2 || maxcolors > 256) {
-            // console.log('wrong number of maxcolors');
+            // log('wrong number of maxcolors');
             return false;
         }
 
@@ -444,7 +444,7 @@ var MMCQ = (function() {
             while (niters < maxIterations) {
                 if (ncolors >= target) return;
                 if (niters++ > maxIterations) {
-                    // console.log("infinite loop; perhaps too few pixels!");
+                    // log("infinite loop; perhaps too few pixels!");
                     return;
                 }
                 vbox = lh.pop();
@@ -459,7 +459,7 @@ var MMCQ = (function() {
                     vbox2 = vboxes[1];
 
                 if (!vbox1) {
-                    // console.log("vbox1 not defined; shouldn't happen!");
+                    // log("vbox1 not defined; shouldn't happen!");
                     return;
                 }
                 lh.push(vbox1, vbox1.count());
@@ -472,7 +472,7 @@ var MMCQ = (function() {
 
         // first set of colors, sorted by population
         iter(pq, fractByPopulations * maxcolors);
-        // console.log(pq.size(), pq.debug().length, pq.debug().slice());
+        // log(pq.size(), pq.debug().length, pq.debug().slice());
 
         // Re-sort by the product of pixel occupancy times the size in color space.
         var pq2 = new PQueue(function(a, b) {

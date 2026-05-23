@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist gettext-domain="bar-enhanced">
+  <schema id="org.gnome.shell.extensions.bar-enhanced.gdm.tools" path="/org/gnome/shell/extensions/bar-enhanced/gdm/tools/">
+    <key name="top-bar-tweaks" type="b">
+      <default>true</default>
+      <summary>
+         Whether to apply top bar tweaks to extracted theme
+      </summary>
+    </key>
+  </schema>
+</schemalist>

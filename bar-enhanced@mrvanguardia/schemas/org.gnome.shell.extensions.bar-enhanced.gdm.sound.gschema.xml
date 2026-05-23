@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist gettext-domain="bar-enhanced">
+  <schema id="org.gnome.shell.extensions.bar-enhanced.gdm.sound" path="/org/gnome/shell/extensions/bar-enhanced/gdm/sound/">
+    <key name="theme" type="s">
+      <default>"freedesktop"</default>
+    </key>
+    <key name="over-amplification" type="b">
+      <default>false</default>
+    </key>
+    <key name="event-sounds" type="b">
+      <default>true</default>
+    </key>
+    <key name="feedback-sounds" type="b">
+      <default>false</default>
+    </key>
+  </schema>
+</schemalist>

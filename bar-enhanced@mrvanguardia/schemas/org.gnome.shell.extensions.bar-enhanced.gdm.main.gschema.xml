@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist gettext-domain="bar-enhanced">
+  <schema id="org.gnome.shell.extensions.bar-enhanced.gdm.main" path="/org/gnome/shell/extensions/bar-enhanced/gdm/main/">
+    <key name="donation-dialog-shown" type="b">
+      <default>false</default>
+    </key>
+    <key name="initial-warning" type="b">
+      <default>true</default>
+    </key>
+    <key name="never-applied" type="b">
+      <default>true</default>
+    </key>
+  </schema>
+</schemalist>

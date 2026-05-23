@@ -36,7 +36,7 @@ const DEBUG = false;
 
 function dlog(...args) {
     if(DEBUG) {
-        console.log(...args);
+        log(...args);
     }
 }
 

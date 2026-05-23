@@ -68,7 +68,7 @@ function saveCalEventSVG(obar, Me) {
         });
     }
     catch (e) {
-        if (DEBUG) console.log("Failed to write calendar-today.svg file: " + svgpath, e);
+        if (DEBUG) log("Failed to write calendar-today.svg file: " + svgpath, e);
     }
 
 }
@@ -107,7 +107,7 @@ function saveToggleSVG(type, obar, Me) {
         });
     }
     catch (e) {
-        if (DEBUG) console.log("Failed to write toggle-on.svg file: " + svgpath, e);
+        if (DEBUG) log("Failed to write toggle-on.svg file: " + svgpath, e);
     }
 
 }
@@ -167,7 +167,7 @@ function saveCheckboxSVG(type, obar, Me) {
         });
     }
     catch (e) {
-        if (DEBUG) console.log("Failed to write checkbox-on/off.svg file: " + svgpath, e);
+        if (DEBUG) log("Failed to write checkbox-on/off.svg file: " + svgpath, e);
     }
 
 }
@@ -985,7 +985,7 @@ async function runSaveGtkCss(obar, caller) {
     const gtk3Dir = Gio.File.new_for_path(`${configDir}/gtk-3.0`);
     const gtk4Dir = Gio.File.new_for_path(`${configDir}/gtk-4.0`);
     [gtk3Dir, gtk4Dir].forEach(async (dir, idx) => {
-        // if (DEBUG) console.log(dir.get_path() +'\n' + gtkstring);
+        // if (DEBUG) log(dir.get_path() +'\n' + gtkstring);
 
         // Create dir if missing
         if (!dir.query_exists(null)) {
@@ -993,7 +993,7 @@ async function runSaveGtkCss(obar, caller) {
                 const file = Gio.File.new_for_path(dir.get_path());
                 file.make_directory_with_parents(null);
             } catch (e) {
-                if (DEBUG) console.error('Error creating gtk config directory: ' + e);
+                if (DEBUG) log('Error creating gtk config directory: ' + e);
             }
         }
 
@@ -1014,7 +1014,7 @@ async function runSaveGtkCss(obar, caller) {
                 }
             }
             catch (e) {
-                if (DEBUG) console.error('Error reading gtk.css: ' + e);
+                if (DEBUG) log('Error reading gtk.css: ' + e);
             }
         }
 
@@ -1025,7 +1025,7 @@ async function runSaveGtkCss(obar, caller) {
                     backup.move_async(file, Gio.FileCopyFlags.OVERWRITE, null, null, null, null);
                 }
                 catch (e) {
-                    if (DEBUG) console.error('Error restoring gtk.css from backup: ' + e);
+                    if (DEBUG) log('Error restoring gtk.css from backup: ' + e);
                 }
             }
             else if (isGtkBarEnhanced) {
@@ -1033,7 +1033,7 @@ async function runSaveGtkCss(obar, caller) {
                     file.delete_async(null, null, null);
                 }
                 catch (e) {
-                    if (DEBUG) console.error('Error deleting BarEnhanced gtk.css: ' + e);
+                    if (DEBUG) log('Error deleting BarEnhanced gtk.css: ' + e);
                 }
             }
         }
@@ -1044,7 +1044,7 @@ async function runSaveGtkCss(obar, caller) {
                     await file.move_async(backup, Gio.FileCopyFlags.OVERWRITE, null, null, null, null);
                 }
                 catch (e) {
-                    if (DEBUG) console.error('Error backing up gtk.css: ' + e);
+                    if (DEBUG) log('Error backing up gtk.css: ' + e);
                 }
             }
 
@@ -1068,14 +1068,14 @@ async function runSaveGtkCss(obar, caller) {
                                     return GLib.SOURCE_REMOVE;
                                 });
                             } catch (e) {
-                                if (DEBUG) console.error('BarEnhanced: Error triggering GTK CSS theme reload:', e);
+                                if (DEBUG) log('BarEnhanced: Error triggering GTK CSS theme reload:', e);
                             }
                         }
                     });
                 });
             }
             catch (e) {
-                if (DEBUG) console.log("Failed to write gtk.css file: " + dir.get_path() + e);
+                if (DEBUG) log("Failed to write gtk.css file: " + dir.get_path() + e);
             }
         }
     });
@@ -1092,7 +1092,7 @@ export function saveFlatpakOverrides(obar, caller) {
             const file = Gio.File.new_for_path(overrideDir.get_path());
             file.make_directory_with_parents(null);
         } catch (e) {
-            if (DEBUG) console.error('Error creating flatpak override directory: ' + e);
+            if (DEBUG) log('Error creating flatpak override directory: ' + e);
         }
     }
 
@@ -1105,7 +1105,7 @@ export function saveFlatpakOverrides(obar, caller) {
             keyfile.save_to_file(globalFile.get_path());
         }
         catch (e) {
-            if (DEBUG) console.error('Error creating flatpak override global file: ' + e);
+            if (DEBUG) log('Error creating flatpak override global file: ' + e);
         }
     }
 
@@ -1113,7 +1113,7 @@ export function saveFlatpakOverrides(obar, caller) {
         keyfile.load_from_file(globalFile.get_path(), GLib.KeyFileFlags.NONE);
     }
     catch (e) {
-        if (DEBUG) console.error('Error loading flatpak override global file: ' + e);
+        if (DEBUG) log('Error loading flatpak override global file: ' + e);
     }
 
     try {
@@ -1134,7 +1134,7 @@ export function saveFlatpakOverrides(obar, caller) {
         }
     }
     catch (e) {
-        if (DEBUG) console.error('Error saving flatpak override global file: ' + e);
+        if (DEBUG) log('Error saving flatpak override global file: ' + e);
     }
 }
 
@@ -1383,7 +1383,7 @@ function getStylesheet(obar, Me) {
         }
         rgb = parseRGB(rgb);
         hgColor = [rgb, rgb, rgb];
-        // if (DEBUG) console.log('getAutoHgColor: hgColor, bgColor, bgHsp ', hgColor, bgColor, bgHsp);
+        // if (DEBUG) log('getAutoHgColor: hgColor, bgColor, bgHsp ', hgColor, bgColor, bgHsp);
         return hgColor;
     }
 
@@ -4512,7 +4512,7 @@ async function writeStylesheet(obar, stylesheet) {
         stream.close(null);
     }
     catch (e) {
-        if (DEBUG) console.log("Failed to write stylsheet file: " + stylepath, e);
+        if (DEBUG) log("Failed to write stylsheet file: " + stylepath, e);
     }
 }
 
@@ -4571,7 +4571,7 @@ async function runReloadStyle(obar, Me) {
         await Promise.all([writeStylesheet(obar, stylesheet), writeSVGs(obar, Me), writeGtkCss(obar)]);
     }
     catch (e) {
-        if (DEBUG) console.log("Failed to reload stylesheet: ", e);
+        if (DEBUG) log("Failed to reload stylesheet: ", e);
     }
 
     // Cause stylesheet to reload by toggling 'reloadstyle'

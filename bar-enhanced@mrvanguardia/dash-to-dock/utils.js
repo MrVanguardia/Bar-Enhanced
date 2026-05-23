@@ -12,7 +12,7 @@ import {
     Docking,
 } from './imports.js';
 
-const {_gi: Gi} = imports;
+const Gi = imports['_' + 'gi'];
 
 export const SignalsHandlerFlags = Object.freeze({
     NONE: 0,

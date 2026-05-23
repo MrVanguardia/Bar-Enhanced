@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist gettext-domain="bar-enhanced">
+  <schema id="org.gnome.shell.extensions.bar-enhanced.gdm.fonts" path="/org/gnome/shell/extensions/bar-enhanced/gdm/fonts/">
+    <key name="font" type="s">
+      <default>"Sans 11"</default>
+    </key>
+    <key name="antialiasing" type="s">
+      <default>"grayscale"</default>
+      <choices>
+        <choice value="grayscale" />
+        <choice value="rgba" />
+        <choice value="none" />
+      </choices>
+    </key>
+    <key name="hinting" type="s">
+      <default>"slight"</default>
+      <choices>
+        <choice value="full" />
+        <choice value="medium" />
+        <choice value="slight" />
+        <choice value="none" />
+      </choices>
+    </key>
+    <key name="scaling-factor" type="d">
+      <default>1.0</default>
+      <range min="0.5" max="3" />
+    </key>
+  </schema>
+</schemalist>

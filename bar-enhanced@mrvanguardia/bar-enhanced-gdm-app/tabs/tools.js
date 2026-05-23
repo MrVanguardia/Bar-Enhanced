@@ -66,7 +66,7 @@ echo "Theme extracted successfully to $DIR"
                 }
             });
         } catch(e) {
-            console.error(e);
+            log(e);
         }
     });
 

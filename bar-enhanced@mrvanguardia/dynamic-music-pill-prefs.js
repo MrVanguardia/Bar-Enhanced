@@ -362,7 +362,7 @@ export function fillMusicPillPreferences(parentWindow, settings) {
                         settings.set_string('fallback-art-path', path);
                         fallbackRow.subtitle = path;
                     }
-                } catch (e) { console.error(e); }
+                } catch (e) { log(e); }
             });
         });
 
@@ -1593,7 +1593,7 @@ export function fillMusicPillPreferences(parentWindow, settings) {
                             });
                         }
                     } catch (e) {
-                        console.error('Error fetching DBus names:', e);
+                        log('Error fetching DBus names:', e);
                     }
                 }
             );
@@ -1632,7 +1632,7 @@ export function fillMusicPillPreferences(parentWindow, settings) {
                         let bytes = new GLib.Bytes(new TextEncoder().encode(JSON.stringify(data, null, 2)));
                         file.replace_contents_bytes_async(bytes, null, false, Gio.FileCreateFlags.REPLACE_DESTINATION, null, null);
                     }
-                } catch (e) { console.error(e); }
+                } catch (e) { log(e); }
             });
         });
         exportRow.add_suffix(exportBtn);
@@ -1659,10 +1659,10 @@ export function fillMusicPillPreferences(parentWindow, settings) {
                                         }
                                     });
                                 }
-                            } catch (e) { console.error(e); }
+                            } catch (e) { log(e); }
                         });
                     }
-                } catch (e) { console.error(e); }
+                } catch (e) { log(e); }
             });
         });
         importRow.add_suffix(importBtn);
