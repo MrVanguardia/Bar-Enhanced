@@ -1005,6 +1005,43 @@ msgstr "Exportar ajustes de tema de Bar Enhanced"
 msgid "Save"
 msgstr "Guardar"
 
+#: prefs.js (integrated modules section)
+msgid "Integrated Modules"
+msgstr "Módulos Integrados"
+
+msgid "Enable or disable integrated extensions."
+msgstr "Activa o desactiva las extensiones integradas."
+
+msgid "Shows a dock on the desktop"
+msgstr "Muestra un dock en el escritorio"
+
+msgid "Dynamic Music Pill"
+msgstr "Píldora Musical Dinámica"
+
+msgid "Media controls in the top bar"
+msgstr "Controles de reproducción en la barra superior"
+
+msgid "Vitals"
+msgstr "Vitales del Sistema"
+
+msgid "System hardware monitors"
+msgstr "Monitores de hardware del sistema"
+
+msgid "Bluetooth Battery"
+msgstr "Batería Bluetooth"
+
+msgid "Show battery level of connected Bluetooth devices"
+msgstr "Muestra el nivel de batería de dispositivos Bluetooth conectados"
+
+msgid "Configure Dynamic Music Pill"
+msgstr "Configurar Píldora Musical"
+
+msgid "Configure Vitals"
+msgstr "Configurar Vitales del Sistema"
+
+msgid "Configure Bluetooth Battery"
+msgstr "Configurar Batería Bluetooth"
+
 #~ msgid "⚌ Bar Properties"
 #~ msgstr "⚌ Propiedades de la Barra"
 

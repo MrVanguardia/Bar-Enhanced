@@ -1,0 +1,1914 @@
+import { ExtensionPreferences, gettext as originalGettext } from 'resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js';
+import Adw from 'gi://Adw';
+import Gio from 'gi://Gio';
+import Gtk from 'gi://Gtk';
+import GLib from 'gi://GLib';
+import Gdk from 'gi://Gdk';
+
+const ES_MAP = {
+    '💡 How to find the correct App ID?': '💡 ¿Cómo encontrar el ID de aplicación correcto?',
+    'About': 'Acerca de',
+    'Adds a slight delay to track changes (fixes sync issues)': 'Añade un ligero retraso al cambiar de pista (soluciona problemas de sincronización)',
+    'Adjust the vinyl spin speed (Lower is slower, Default: 10)': 'Ajusta la velocidad de giro del vinilo (Menor es más lento, Predeterminado: 10)',
+    'Adjust transparency level': 'Ajustar el nivel de transparencia',
+    'Album Art Cache': 'Caché de carátula de álbum',
+    'Album Art Size': 'Tamaño de la carátula de álbum',
+    'Alignment Preset': 'Alineación preestablecida',
+    'All Controls': 'Todos los controles',
+    'Always ON': 'Siempre encendido',
+    'Animate long track titles and artist names': 'Animar títulos de pista y nombres de artistas largos',
+    'Apply to Album Art': 'Aplicar a la carátula',
+    'Apply to Text': 'Aplicar al texto',
+    'Apply to Visualizer': 'Aplicar al visualizador',
+    'Art Cache': 'Caché de carátulas',
+    'Audio Output Switcher': 'Selector de salida de audio',
+    'Auto': 'Automático',
+    'Auto-adjust pill width (slider acts as max width)': 'Ajustar ancho de la píldora automáticamente (el control deslizante es el ancho máximo)',
+    'Automatically hide the pop-up when you move the cursor away': 'Ocultar automáticamente la ventana emergente al retirar el cursor',
+    'Background and Transparency': 'Fondo y transparencia',
+    'Background Color': 'Color de fondo',
+    'Background Opacity': 'Opacidad del fondo',
+    'Backup & Restore': 'Copia de seguridad y restauración',
+    'Beat (Jumpy)': 'Ritmo (Saltos)',
+    'Blacklist (Exclude listed)': 'Lista negra (Excluir listados)',
+    'Buy Me a Coffee': 'Invítame a un café',
+    'Buy me a coffee on Ko-fi': 'Invítame a un café en Ko-fi',
+    'Center': 'Centro',
+    'Change Track': 'Cambiar pista',
+    'Change Tracks, Volume or Media Player using scroll wheel or touchpad': 'Cambia de pista, volumen o reproductor usando la rueda de desplazamiento o el panel táctil',
+    'Change Volume': 'Cambiar volumen',
+    'Choose how to filter media players (e.g. browsers)': 'Elige cómo filtrar los reproductores de medios (ej. navegadores)',
+    'Choose what scrolling on the pill should do': 'Elige qué hacer al desplazarse sobre la píldora',
+    'Clear': 'Limpiar',
+    'Click an active player to add it to the filter list': 'Haz clic en un reproductor activo para agregarlo a la lista de filtros',
+    'Click here for a quick guide and examples': 'Haz clic aquí para ver una guía rápida y ejemplos',
+    'Click on a detected player to automatically fill the mapping.': 'Haz clic en un reproductor detectado para autocompletar el mapeo.',
+    'Click to scan for active players again': 'Haz clic para buscar reproductores activos de nuevo',
+    'Close on Mouse Leave': 'Cerrar al salir el ratón',
+    'Close Player App': 'Cerrar app reproductora',
+    'Compact Mode (Hide Text)': 'Modo compacto (Ocultar texto)',
+    'Container Target': 'Contenedor de destino',
+    'Corner Radius': 'Radio de esquina',
+    'covers cached': 'carátulas almacenadas',
+    'Custom Button 1': 'Botón personalizado 1',
+    'Custom Button 2': 'Botón personalizado 2',
+    'Custom Colors': 'Colores personalizados',
+    'Custom Control Buttons': 'Botones de control personalizados',
+    'Custom Width Value': 'Valor de ancho personalizado',
+    'Danger Zone': 'Zona de peligro',
+    'Delete Mapping': 'Eliminar mapeo',
+    'Detected Players': 'Reproductores detectados',
+    'Dimensions (Dock Mode)': 'Dimensiones (Modo Dock)',
+    'Dimensions (Panel Mode)': 'Dimensiones (Modo Panel)',
+    'Direction of the jump effect (Natural vs Traditional)': 'Dirección del efecto de salto (Natural vs Tradicional)',
+    'Disable animations when a fullscreen app is active': 'Desactivar animaciones cuando hay una app en pantalla completa',
+    'Disable dynamic sizing for the pop-up': 'Desactivar tamaño dinámico para la ventana emergente',
+    'Display a subtle border around the main pill': 'Mostrar un borde sutil alrededor de la píldora principal',
+    'Display active player icons at the top of the pop-up': 'Mostrar iconos de reproductores activos arriba en la ventana emergente',
+    'Display album name next to the artist (Artist • Album)': 'Mostrar nombre del álbum junto al artista (Artista • Álbum)',
+    'Display extra controls in the pop-up': 'Mostrar controles adicionales en la ventana emergente',
+    'Display hours in the time labels when media is longer than 60 minutes': 'Mostrar horas en las etiquetas de tiempo si el medio dura más de 60 minutos',
+    'Display the album art in the pop-up': 'Mostrar la carátula del álbum en la ventana emergente',
+    'Display the cover art of the currently playing song': 'Mostrar la carátula de la canción en reproducción',
+    'Distance between the text and the wave animation': 'Distancia entre el texto y la animación de onda',
+    'Dock': 'Dock',
+    'Double Click': 'Doble clic',
+    'Dynamic Width': 'Ancho dinámico',
+    'Dynamically change the GNOME Shell accent color to match the album art': 'Cambiar dinámicamente el color de acento del Shell para combinar con la carátula',
+    'Edit the target App ID for manually mapped players, or remove them.': 'Edita el ID de app destino para reproductores asignados manualmente, o elimínalos.',
+    'Enable Custom Buttons': 'Activar botones personalizados',
+    'Enable Scroll Controls': 'Activar controles de desplazamiento',
+    'Enable Shadow': 'Activar sombra',
+    'Enable Transparency': 'Activar transparencia',
+    'Export': 'Exportar',
+    'Export Settings': 'Exportar configuración',
+    'Factory Reset': 'Restablecimiento de fábrica',
+    'Fade Duration (ms)': 'Duración del desvanecimiento (ms)',
+    'Fallback Album Art': 'Carátula de respaldo',
+    'Filtered Players (comma separated)': 'Reproductores filtrados (separados por comas)',
+    'First (Start)': 'Primero (Inicio)',
+    'Follow Border Radius': 'Seguir radio de borde',
+    'Follow Custom Background Color': 'Seguir color de fondo personalizado',
+    'Follow Custom Text Color': 'Seguir color de texto personalizado',
+    'Follow Transparency': 'Seguir transparencia',
+    'Game Mode': 'Modo juego',
+    'General Settings': 'Configuración general',
+    'Hide Default GNOME Player': 'Ocultar reproductor GNOME por defecto',
+    'Hide Pill Visualizer': 'Ocultar visualizador de píldora',
+    'Hide title and artist': 'Ocultar título y artista',
+    'Horizontal Offset (X)': 'Desplazamiento horizontal (X)',
+    'Hover Action': 'Acción al pasar el cursor',
+    'Hover Delay (ms)': 'Retraso al pasar el cursor (ms)',
+    'How the widget aligns relative to other items': 'Cómo se alinea el widget respecto a otros elementos',
+    'If both buttons are set to Seek, they act directly (Button 1 = −10s, Button 2 = +10s). Otherwise Seek opens a sub-page.': 'Si ambos botones están en Buscar, actúan directamente (Botón 1 = −10s, Botón 2 = +10s). Si no, Buscar abre una subpágina.',
+    'Import': 'Importar',
+    'Import Settings': 'Importar configuración',
+    'Inherit corner roundness from the main pill': 'Heredar redondez de esquinas de la píldora principal',
+    'Inherit opacity settings from the main pill': 'Heredar opacidad de la píldora principal',
+    'Inline Artist': 'Artista en línea',
+    'Invert Scroll Animation': 'Invertir animación de desplazamiento',
+    'Invert Scroll Direction': 'Invertir dirección de desplazamiento',
+    'Last (End)': 'Último (Fin)',
+    'Left Click': 'Clic izquierdo',
+    'Lyrics Display': 'Mostrar letras',
+    'Lyrics Fade-in Effect': 'Efecto de desvanecimiento de letras',
+    'Lyrics language preference': 'Preferencia de idioma de letras',
+    'Main Pill': 'Píldora principal',
+    'Main Pill Shadow': 'Sombra de píldora principal',
+    'Manual Index': 'Índice manual',
+    'Manual Index Position': 'Posición del índice manual',
+    'Maximum height of the visualizer (auto-clamped to pill height)': 'Altura máxima del visualizador (limitada automáticamente al alto de la píldora)',
+    'Middle Click': 'Clic medio',
+    'Mouse Actions': 'Acciones del ratón',
+    'Next Track': 'Pista siguiente',
+    'No active players detected. Open a music app first!': 'No se detectan reproductores activos. ¡Abre una app de música primero!',
+    'No image selected': 'Ninguna imagen seleccionada',
+    'No manual mappings saved.': 'No hay asignaciones manuales guardadas.',
+    'No players found': 'No se encontraron reproductores',
+    'None': 'Ninguno',
+    'Number of bars displayed in the animation': 'Número de barras en la animación',
+    'Off': 'Apagado',
+    'Off (Allow All)': 'Apagado (Permitir todos)',
+    'Off (Disabled)': 'Apagado (Desactivado)',
+    'Open': 'Abrir',
+    'Open Menu': 'Abrir menú',
+    'Open Player App': 'Abrir app reproductora',
+    'Open Settings': 'Abrir ajustes',
+    'Open Settings Backup': 'Abrir copia de seguridad de ajustes',
+    'Order in the list (0 is first). Only for Manual mode.': 'Orden en la lista (0 es el primero). Solo para modo manual.',
+    'Outer Edge Margin': 'Margen del borde exterior',
+    'Override dynamic colors': 'Sobrescribir colores dinámicos',
+    'Panel: Center Box': 'Panel: Caja central',
+    'Panel: Left Box': 'Panel: Caja izquierda',
+    'Panel: Right Box': 'Panel: Caja derecha',
+    'Placed left of Shuffle.': 'Colocado a la izquierda de Aleatorio.',
+    'Placed right of Loop.': 'Colocado a la derecha de Repetir.',
+    'Play / Pause': 'Reproducir / Pausar',
+    'Playback Speed': 'Velocidad de reproducción',
+    'Player Filter Mode': 'Modo de filtro del reproductor',
+    'Play/Pause Only': 'Solo reproducir/pausar',
+    'Pop-up Appearance': 'Apariencia de la ventana emergente',
+    'Pop-up Menu': 'Ventana emergente',
+    'Popup Visualizer Bar Count': 'Cantidad de barras del visualizador emergente',
+    'Popup Visualizer Bar Width': 'Grosor de barras del visualizador emergente',
+    'Popup Visualizer Height': 'Altura del visualizador emergente',
+    'Positioning': 'Posicionamiento',
+    'Prefer Latin': 'Preferir caracteres latinos',
+    'Prefer original script': 'Preferir escritura original',
+    'Previous Track': 'Pista anterior',
+    'Real-Time (Cava needed)': 'Tiempo real (Requiere Cava)',
+    'Refresh List': 'Refrescar lista',
+    'Remove the duplicate built-in media controls': 'Eliminar los controles de medios integrados duplicados',
+    'Report bugs or view source on GitHub': 'Informar de fallos o ver código en GitHub',
+    'Reset All': 'Restablecer todo',
+    'Retain last known track and keep pill visible after closing the player': 'Retener última pista conocida y mantener píldora visible tras cerrar el reproductor',
+    'Right Click': 'Clic derecho',
+    'Rotate Vinyl': 'Girar vinilo',
+    'Rotation Speed': 'Velocidad de rotación',
+    'Roundness of the widget edges (0 = Square, 25 = Pill)': 'Redondez de esquinas del widget (0 = Cuadrado, 25 = Píldora)',
+    'Running Players Detection': 'Detección de reproductores en ejecución',
+    'Save App ID': 'Guardar ID de aplicación',
+    'Save Settings': 'Guardar configuración',
+    'Saved App Mappings': 'Asignaciones de app guardadas',
+    'Scroll Action': 'Acción al desplazarse',
+    'Scroll Only on Hover': 'Desplazar solo al pasar el cursor',
+    'Scrolling Text': 'Texto en movimiento',
+    'Seek ±10 Seconds': 'Buscar ±10 segundos',
+    'Seek ±10s': 'Buscar ±10s',
+    'Select a player to help the extension identify it:': 'Selecciona un reproductor para ayudar a la extensión a identificarlo:',
+    'Select Fallback Image': 'Seleccionar imagen de respaldo',
+    'Select Player': 'Seleccionar reproductor',
+    'Select the style of the audio reaction bars': 'Selecciona el estilo de las barras de reacción de audio',
+    'Select which UI element should host the music pill': 'Selecciona qué elemento de la UI debe alojar la píldora musical',
+    'Shadow Blur': 'Desenfoque de sombra',
+    'Shadow Intensity': 'Intensidad de sombra',
+    'Shift Left (-) or Right (+)': 'Desplazar Izquierda (-) o Derecha (+)',
+    'Shift Up (-) or Down (+)': 'Desplazar Arriba (-) o Abajo (+)',
+    'Show additional action buttons next to Shuffle and Loop': 'Mostrar botones de acción adicionales junto a Aleatorio y Repetir',
+    'Show Album Art': 'Mostrar carátula de álbum',
+    'Show Album Title': 'Mostrar título del álbum',
+    'Show drop shadow behind the pop-up menu': 'Mostrar sombra detrás de la ventana emergente',
+    'Show HH:MM:SS': 'Mostrar HH:MM:SS',
+    'Show media buttons directly on the pill': 'Mostrar botones de medios en la píldora',
+    'Show Pill Outline': 'Mostrar contorno de la píldora',
+    'Show Player Selector': 'Mostrar selector de reproductor',
+    'Show real-time synchronized lyrics for current track.': 'Mostrar letras sincronizadas en tiempo real de la pista actual.',
+    'Show Shuffle and Loop': 'Mostrar aleatorio y repetir',
+    'Show Vinyl': 'Mostrar vinilo',
+    'Show Visualizer in Pop-up': 'Mostrar visualizador en la ventana emergente',
+    'Skip Only': 'Solo omitir',
+    'Sleep Timer': 'Temporizador de apagado',
+    'Slow Player Workaround': 'Alternativa para reproductores lentos',
+    'Smoothly fade in new lyric lines': 'Desvanecer suavemente nuevas líneas de letras',
+    'Source Code': 'Código fuente',
+    'Spacing before the album art and after the visualizer': 'Espaciado antes de la carátula y después del visualizador',
+    'Spin the album art when playing': 'Girar la carátula del álbum durante la reproducción',
+    'Square Vinyl Image': 'Imagen de vinilo cuadrada',
+    'Style & Layout': 'Estilo y diseño',
+    'Support on Ko-fi': 'Apoyar en Ko-fi',
+    'Support the Project': 'Apoyar el proyecto',
+    'Support via BuyMeACoffee': 'Apoyar vía BuyMeACoffee',
+    'Swap up/down scrolling for track and volume actions': 'Intercambiar desplazamiento arriba/abajo para acciones de pista y volumen',
+    'Switch between a solid theme background and a custom transparent look': 'Alternar entre fondo sólido del tema y un aspecto transparente personalizado',
+    'Switch Player': 'Cambiar reproductor',
+    'Sync GNOME Accent Color': 'Sincronizar color de acento de GNOME',
+    'System & Reset': 'Sistema y restablecimiento',
+    'Tablet Mode Controls': 'Controles de modo tableta',
+    'Text Color': 'Color de texto',
+    'Text stays still until you hover the pill': 'El texto se queda fijo hasta pasar el cursor sobre la píldora',
+    'Thickness of individual bars (pixels)': 'Grosor de barras individuales (píxeles)',
+    'Track History': 'Historial de pistas',
+    'Type the correct App ID, then hit Enter or click the Save icon!': '¡Escribe el ID de aplicación correcto, luego presiona Enter o haz clic en el icono Guardar!',
+    'Use a square album art (disables rotation)': 'Usar carátula cuadrada (desactiva rotación)',
+    'Use Custom Colors': 'Usar colores personalizados',
+    'Use Custom Width': 'Usar ancho personalizado',
+    'Use the custom background color for the pop-up (if active)': 'Usar el color de fondo personalizado en la ventana emergente (si está activo)',
+    'Use the custom text color for the pop-up (if active)': 'Usar el color de texto personalizado en la ventana emergente (si está activo)',
+    'Use This': 'Usar este',
+    'Vertical Offset (Y)': 'Desplazamiento vertical (Y)',
+    'Visualizer and Shape': 'Visualizador y forma',
+    'Visualizer Animation': 'Animación del visualizador',
+    'Visualizer Bar Count': 'Cantidad de barras del visualizador',
+    'Visualizer Bar Width': 'Grosor de barras del visualizador',
+    'Visualizer Height': 'Altura del visualizador',
+    'Visualizer Margin': 'Margen del visualizador',
+    'Volume Control': 'Control de volumen',
+    'Wave (Smooth)': 'Onda (Suave)',
+    'When multiple versions exist': 'Cuando existen múltiples versiones',
+    'Whitelist (Only allow listed)': 'Lista blanca (Solo permitir listados)',
+    'Widget Height': 'Altura del widget',
+    'Widget Width': 'Ancho del widget'
+};
+
+const locale = GLib.get_language_names()[0];
+const _ = (text) => {
+    if (locale.startsWith('es')) {
+        return ES_MAP[text] || originalGettext(text);
+    }
+    return originalGettext(text);
+};
+
+export function fillMusicPillPreferences(parentWindow, settings) {
+    const window = new Adw.PreferencesWindow({
+        title: 'Píldora Musical Dinámica',
+        transient_for: parentWindow,
+        modal: true,
+        default_width: 920,
+        default_height: 720,
+        search_enabled: true
+    });
+
+    // Inject Bar Enhanced style tokens
+    const cssProvider = new Gtk.CssProvider();
+    cssProvider.load_from_string(`
+        window { background-color: @window_bg_color; }
+        headerbar { background-color: @headerbar_bg_color; }
+    `);
+    window.get_style_context().add_provider(cssProvider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION);
+        const PREFS_KEYS = [
+            'scroll-text', 'scroll-on-hover-only', 'show-album-art', 'enable-shadow', 'hide-default-player',
+            'shadow-blur', 'shadow-opacity', 'pill-width', 'panel-pill-width',
+            'pill-height', 'panel-pill-height', 'vertical-offset', 'horizontal-offset', 
+            'position-mode', 'dock-position', 'target-container', 'enable-gamemode', 
+            'visualizer-style', 'border-radius', 'enable-transparency', 'transparency-strength', 
+            'transparency-art', 'transparency-text', 'transparency-vis', 'invert-scroll-animation', 
+            'enable-scroll-controls', 'action-left-click', 'action-middle-click', 
+            'action-right-click', 'action-double-click', 'dock-art-size', 'panel-art-size',          
+            'popup-enable-shadow', 'popup-follow-transparency', 'popup-follow-radius', 
+            'popup-vinyl-rotate', 'visualizer-padding', 'scroll-action', 'popup-vinyl-square', 
+            'popup-show-vinyl', 'show-shuffle-loop', 'use-custom-colors', 'custom-bg-color', 
+            'custom-text-color', 'tablet-mode', 'inline-artist', 'pill-dynamic-width', 
+            'popup-use-custom-width', 'popup-custom-width', 'player-filter-mode', 'player-filter-list','hide-text',
+            'fallback-art-path','popup-show-visualizer', 'popup-hide-pill-visualizer','compatibility-delay',
+            'popup-follow-custom-bg', 'popup-follow-custom-text','action-hover', 'hover-delay', 'selected-player-bus',
+            'popup-show-player-selector','show-pill-border','invert-scroll-direction','always-show-pill','popup-hide-on-leave',
+            'visualizer-bars','enable-lyrics','app-name-mapping', 'lyric-fade-enable', 'lyric-fade-duration','visualizer-bar-width', 'visualizer-height',
+            'popup-visualizer-bars', 'popup-visualizer-bar-width', 'popup-visualizer-height','edge-margin','popup-vinyl-speed','sync-accent-color',
+            'enable-custom-buttons', 'custom-button-1', 'custom-button-2', 'playback-history',
+            'show-hours-format', 'popup-show-album-title'
+        ];
+
+        // =========================================
+        // 1. MAIN PILL PAGE (General & Controls)
+        // =========================================
+        const mainPage = new Adw.PreferencesPage({
+            title: _('Main Pill'),
+            icon_name: 'preferences-system-symbolic'
+        });
+
+        // Track GLib sources for cleanup (EGO016 compliance)
+        const _pendingSources = [];
+        const _trackSource = (id) => { if (id) _pendingSources.push(id); return id; };
+        const _cleanupSources = () => {
+            _pendingSources.forEach(id => { try { GLib.Source.remove(id); } catch(e) {} });
+            _pendingSources.length = 0;
+        };
+        window.connect('close-request', () => { _cleanupSources(); });
+
+        const genGroup = new Adw.PreferencesGroup({ title: _('General Settings') });
+        
+        const alwaysShowRow = new Adw.ActionRow({
+            title: _('Always ON'),
+            subtitle: _('Retain last known track and keep pill visible after closing the player')
+        });
+        const alwaysShowToggle = new Gtk.Switch({
+            active: settings.get_boolean('always-show-pill'),
+            valign: Gtk.Align.CENTER
+        });
+        settings.bind('always-show-pill', alwaysShowToggle, 'active', Gio.SettingsBindFlags.DEFAULT);
+        alwaysShowRow.add_suffix(alwaysShowToggle);
+        genGroup.add(alwaysShowRow);
+        
+        // Album Art
+        const artRow = new Adw.ActionRow({
+            title: _('Show Album Art'),
+            subtitle: _('Display the cover art of the currently playing song')
+        });
+        const artToggle = new Gtk.Switch({
+            active: settings.get_boolean('show-album-art'),
+            valign: Gtk.Align.CENTER
+        });
+        settings.bind('show-album-art', artToggle, 'active', Gio.SettingsBindFlags.DEFAULT);
+        artRow.add_suffix(artToggle);
+        genGroup.add(artRow);
+        
+        const fallbackRow = new Adw.ActionRow({
+            title: _('Fallback Album Art'),
+            subtitle: settings.get_string('fallback-art-path') || _('No image selected')
+        });
+
+        const fallbackBtn = new Gtk.Button({
+            icon_name: 'document-open-symbolic',
+            valign: Gtk.Align.CENTER,
+            css_classes: ['flat']
+        });
+
+        fallbackBtn.connect('clicked', () => {
+            let dialog = new Gtk.FileDialog({ title: _('Select Fallback Image') });
+            
+            let filter = new Gtk.FileFilter();
+            filter.set_name("Images");
+            filter.add_mime_type("image/png");
+            filter.add_mime_type("image/jpeg");
+            let filterList = new Gio.ListStore({ item_type: Gtk.FileFilter });
+            filterList.append(filter);
+            dialog.set_filters(filterList);
+
+            dialog.open(null, null, (dlg, res) => {
+                try {
+                    let file = dlg.open_finish(res);
+                    if (file) {
+                        let path = file.get_path();
+                        settings.set_string('fallback-art-path', path);
+                        fallbackRow.subtitle = path;
+                    }
+                } catch (e) { console.error(e); }
+            });
+        });
+
+        const clearFallbackBtn = new Gtk.Button({
+            icon_name: 'edit-clear-symbolic',
+            valign: Gtk.Align.CENTER,
+            css_classes: ['flat', 'error']
+        });
+        
+        clearFallbackBtn.connect('clicked', () => {
+            settings.set_string('fallback-art-path', '');
+            fallbackRow.subtitle = _('No image selected');
+        });
+
+        let btnBox = new Gtk.Box({ spacing: 6, valign: Gtk.Align.CENTER });
+        btnBox.append(fallbackBtn);
+        btnBox.append(clearFallbackBtn);
+        fallbackRow.add_suffix(btnBox);
+        
+        settings.bind('show-album-art', fallbackRow, 'sensitive', Gio.SettingsBindFlags.DEFAULT);
+
+        genGroup.add(fallbackRow);
+
+        // Scroll Controls
+        const scrollCtrlRow = new Adw.ActionRow({
+            title: _('Enable Scroll Controls'),
+            subtitle: _('Change Tracks, Volume or Media Player using scroll wheel or touchpad')
+        });
+        const scrollCtrlToggle = new Gtk.Switch({
+            active: settings.get_boolean('enable-scroll-controls'),
+            valign: Gtk.Align.CENTER
+        });
+        settings.bind('enable-scroll-controls', scrollCtrlToggle, 'active', Gio.SettingsBindFlags.DEFAULT);
+        scrollCtrlRow.add_suffix(scrollCtrlToggle);
+        genGroup.add(scrollCtrlRow);
+
+        const scrollActionModel = new Gtk.StringList();
+        scrollActionModel.append(_("Change Track"));
+        scrollActionModel.append(_("Change Volume"));
+        scrollActionModel.append(_("Switch Player"));
+        scrollActionModel.append(_("Seek ±10s")); 
+
+        let currentAction = settings.get_string('scroll-action');
+        let selectedIdx = 0;
+        if (currentAction === 'volume') selectedIdx = 1;
+        else if (currentAction === 'player') selectedIdx = 2;
+        else if (currentAction === 'seek') selectedIdx = 3;
+
+        const scrollActionRow = new Adw.ComboRow({
+            title: _('Scroll Action'),
+            subtitle: _('Choose what scrolling on the pill should do'),
+            model: scrollActionModel,
+            selected: selectedIdx
+        });
+
+        settings.connect('changed::scroll-action', () => {
+            const action = settings.get_string('scroll-action');
+            if (action === 'volume') scrollActionRow.selected = 1;
+            else if (action === 'player') scrollActionRow.selected = 2;
+            else if (action === 'seek') scrollActionRow.selected = 3;
+            else scrollActionRow.selected = 0;
+        });
+
+        scrollActionRow.connect('notify::selected', () => {
+            let val = 'track';
+            if (scrollActionRow.selected === 1) val = 'volume';
+            else if (scrollActionRow.selected === 2) val = 'player';
+            else if (scrollActionRow.selected === 3) val = 'seek';
+            settings.set_string('scroll-action', val);
+        });
+
+        settings.bind('enable-scroll-controls', scrollActionRow, 'sensitive', Gio.SettingsBindFlags.DEFAULT);
+        genGroup.add(scrollActionRow);
+
+        // Invert Scroll
+        const invertRow = new Adw.ActionRow({
+            title: _('Invert Scroll Animation'),
+            subtitle: _('Direction of the jump effect (Natural vs Traditional)')
+        });
+        const invertToggle = new Gtk.Switch({
+            active: settings.get_boolean('invert-scroll-animation'),
+            valign: Gtk.Align.CENTER
+        });
+        settings.bind('invert-scroll-animation', invertToggle, 'active', Gio.SettingsBindFlags.DEFAULT);
+        invertRow.add_suffix(invertToggle);
+        genGroup.add(invertRow);
+        
+        const invertDirRow = new Adw.ActionRow({
+            title: _('Invert Scroll Direction'),
+            subtitle: _('Swap up/down scrolling for track and volume actions')
+        });
+        const invertDirToggle = new Gtk.Switch({
+            active: settings.get_boolean('invert-scroll-direction'),
+            valign: Gtk.Align.CENTER
+        });
+        settings.bind('invert-scroll-direction', invertDirToggle, 'active', Gio.SettingsBindFlags.DEFAULT);
+        invertDirRow.add_suffix(invertDirToggle);
+        genGroup.add(invertDirRow);
+
+        // Text Scrolling
+        const scrollTextRow = new Adw.ActionRow({
+            title: _('Scrolling Text'),
+            subtitle: _('Animate long track titles and artist names')
+        });
+        const scrollTextToggle = new Gtk.Switch({
+            active: settings.get_boolean('scroll-text'),
+            valign: Gtk.Align.CENTER
+        });
+        settings.bind('scroll-text', scrollTextToggle, 'active', Gio.SettingsBindFlags.DEFAULT);
+        scrollTextRow.add_suffix(scrollTextToggle);
+        genGroup.add(scrollTextRow);
+
+        const scrollHoverRow = new Adw.ActionRow({
+            title: _('Scroll Only on Hover'),
+            subtitle: _('Text stays still until you hover the pill')
+        });
+        const scrollHoverToggle = new Gtk.Switch({
+            active: settings.get_boolean('scroll-on-hover-only'),
+            valign: Gtk.Align.CENTER
+        });
+        settings.bind('scroll-on-hover-only', scrollHoverToggle, 'active', Gio.SettingsBindFlags.DEFAULT);
+        settings.bind('scroll-text', scrollHoverRow, 'sensitive', Gio.SettingsBindFlags.DEFAULT);
+        scrollHoverRow.add_suffix(scrollHoverToggle);
+        genGroup.add(scrollHoverRow);
+
+		// Lyrics Display
+        const lyricsRow = new Adw.ActionRow({
+            title: _('Lyrics Display'),
+            subtitle: _('Show real-time synchronized lyrics for current track.')
+        });
+        const lyricsToggle = new Gtk.Switch({
+            active: settings.get_boolean('enable-lyrics'),
+            valign: Gtk.Align.CENTER
+        });
+        settings.bind('enable-lyrics', lyricsToggle, 'active', Gio.SettingsBindFlags.DEFAULT);
+        lyricsRow.add_suffix(lyricsToggle);
+        genGroup.add(lyricsRow);
+        
+        const langPrefRow = new Adw.ComboRow({
+	    title: _('Lyrics language preference'),
+	    subtitle: _('When multiple versions exist'),
+	    model: Gtk.StringList.new([
+		_('Auto'),
+		_('Prefer original script'),
+		_('Prefer Latin'),
+	    ]),
+	});
+	langPrefRow.set_selected(settings.get_int('lyrics-language-preference'));
+	langPrefRow.connect('notify::selected', () =>
+	    settings.set_int('lyrics-language-preference', langPrefRow.get_selected()));
+	genGroup.add(langPrefRow);
+        
+        const lyricFadeRow = new Adw.ActionRow({
+            title: _('Lyrics Fade-in Effect'),
+            subtitle: _('Smoothly fade in new lyric lines')
+        });
+        const lyricFadeToggle = new Gtk.Switch({
+            active: settings.get_boolean('lyric-fade-enable'),
+            valign: Gtk.Align.CENTER
+        });
+        settings.bind('lyric-fade-enable', lyricFadeToggle, 'active', Gio.SettingsBindFlags.DEFAULT);
+        settings.bind('enable-lyrics', lyricFadeRow, 'sensitive', Gio.SettingsBindFlags.DEFAULT);
+        lyricFadeRow.add_suffix(lyricFadeToggle);
+        genGroup.add(lyricFadeRow);
+
+        const lyricFadeDurationRow = new Adw.SpinRow({
+            title: _('Fade Duration (ms)'),
+            adjustment: new Gtk.Adjustment({ lower: 50, upper: 2000, step_increment: 50 })
+        });
+        settings.bind('lyric-fade-duration', lyricFadeDurationRow, 'value', Gio.SettingsBindFlags.DEFAULT);
+        
+        settings.bind('lyric-fade-enable', lyricFadeDurationRow, 'sensitive', Gio.SettingsBindFlags.DEFAULT);
+        genGroup.add(lyricFadeDurationRow);
+        
+        const tabletModeRow = new Adw.ComboRow({
+	    title: _('Tablet Mode Controls'),
+	    subtitle: _('Show media buttons directly on the pill'),
+	    model: new Gtk.StringList({
+		strings: [_('Off'), _('Skip Only'), _('Play/Pause Only'), _('All Controls')]
+	    }),
+	    selected: settings.get_int('tablet-mode'),
+	});
+
+	settings.bind('tablet-mode', tabletModeRow, 'selected', Gio.SettingsBindFlags.DEFAULT);
+	genGroup.add(tabletModeRow);
+
+	const inlineArtistRow = new Adw.ActionRow({ title: _('Inline Artist'), subtitle: _('Show "Title • Artist" when the widget is squeezed') });
+	const inlineArtistToggle = new Gtk.Switch({ active: settings.get_boolean('inline-artist'), valign: Gtk.Align.CENTER });
+	settings.bind('inline-artist', inlineArtistToggle, 'active', Gio.SettingsBindFlags.DEFAULT);
+	inlineArtistRow.add_suffix(inlineArtistToggle);
+	genGroup.add(inlineArtistRow);
+	
+	const hideTextRow = new Adw.ActionRow({ 
+            title: _('Compact Mode (Hide Text)'), 
+            subtitle: _('Hide title and artist') 
+        });
+        const hideTextToggle = new Gtk.Switch({ 
+            active: settings.get_boolean('hide-text'), 
+            valign: Gtk.Align.CENTER 
+        });
+        settings.bind('hide-text', hideTextToggle, 'active', Gio.SettingsBindFlags.DEFAULT);
+        hideTextRow.add_suffix(hideTextToggle);
+        genGroup.add(hideTextRow);
+
+        mainPage.add(genGroup);
+
+        // Mouse Actions Group
+        const actionGroup = new Adw.PreferencesGroup({ title: _('Mouse Actions') });
+        const actionModel = new Gtk.StringList();
+        const actionNames = [
+	    _("None"), _("Play / Pause"), _("Next Track"), _("Previous Track"), 
+	    _("Open Player App"), _("Open Menu"), _("Select Player"), _("Open Settings"), _("Close Player App")
+	];
+        const actionValues = ['none', 'play_pause', 'next', 'previous', 'open_app', 'toggle_menu', 'open_player_menu', 'open_settings', 'close_app'];
+        
+        actionNames.forEach(name => actionModel.append(name));
+
+        const leftRow = new Adw.ComboRow({
+            title: _('Left Click'),
+            model: actionModel,
+            selected: actionValues.indexOf(settings.get_string('action-left-click'))
+        });
+        leftRow.connect('notify::selected', () => { settings.set_string('action-left-click', actionValues[leftRow.selected]); });
+        actionGroup.add(leftRow);
+        
+        const doubleRow = new Adw.ComboRow({
+            title: _('Double Click'),
+            model: actionModel,
+            selected: actionValues.indexOf(settings.get_string('action-double-click'))
+        });
+        doubleRow.connect('notify::selected', () => { settings.set_string('action-double-click', actionValues[doubleRow.selected]); });
+        actionGroup.add(doubleRow);
+
+        const midRow = new Adw.ComboRow({
+            title: _('Middle Click'),
+            model: actionModel,
+            selected: actionValues.indexOf(settings.get_string('action-middle-click'))
+        });
+        midRow.connect('notify::selected', () => { settings.set_string('action-middle-click', actionValues[midRow.selected]); });
+        actionGroup.add(midRow);
+
+        const rightRow = new Adw.ComboRow({
+            title: _('Right Click'),
+            model: actionModel,
+            selected: actionValues.indexOf(settings.get_string('action-right-click'))
+        });
+        rightRow.connect('notify::selected', () => { settings.set_string('action-right-click', actionValues[rightRow.selected]); });
+        actionGroup.add(rightRow);
+        
+        const hoverRow = new Adw.ComboRow({
+            title: _('Hover Action'),
+            model: actionModel,
+            selected: actionValues.indexOf(settings.get_string('action-hover'))
+        });
+        hoverRow.connect('notify::selected', () => { settings.set_string('action-hover', actionValues[hoverRow.selected]); });
+        settings.connect('changed::action-hover', () => {
+            hoverRow.selected = actionValues.indexOf(settings.get_string('action-hover'));
+        });
+        actionGroup.add(hoverRow);
+
+        const hoverDelayRow = new Adw.SpinRow({
+            title: _('Hover Delay (ms)'),
+            adjustment: new Gtk.Adjustment({ lower: 0, upper: 3000, step_increment: 100 })
+        });
+        settings.bind('hover-delay', hoverDelayRow, 'value', Gio.SettingsBindFlags.DEFAULT);
+        actionGroup.add(hoverDelayRow);
+
+        mainPage.add(actionGroup);
+        window.add(mainPage);
+
+
+        // =========================================
+        // 2. POP-UP MENU PAGE
+        // =========================================
+        const popupPage = new Adw.PreferencesPage({
+            title: _('Pop-up Menu'),
+            icon_name: 'view-more-symbolic'
+        });
+
+        const popupGroup = new Adw.PreferencesGroup({ title: _('Pop-up Appearance') });
+        const popRotateRow = new Adw.ActionRow({
+            title: _('Rotate Vinyl'),
+            subtitle: _('Spin the album art when playing')
+        });
+        const popRotateToggle = new Gtk.Switch({
+            active: settings.get_boolean('popup-vinyl-rotate'),
+            valign: Gtk.Align.CENTER
+        });
+        settings.bind('popup-vinyl-rotate', popRotateToggle, 'active', Gio.SettingsBindFlags.DEFAULT);
+        popRotateRow.add_suffix(popRotateToggle);
+        popupGroup.add(popRotateRow);
+        
+        const popRotateSpeedRow = new Adw.SpinRow({
+            title: _('Rotation Speed'),
+            subtitle: _('Adjust the vinyl spin speed (Lower is slower, Default: 10)'),
+            adjustment: new Gtk.Adjustment({ lower: 1, upper: 50, step_increment: 1 })
+        });
+        settings.bind('popup-vinyl-speed', popRotateSpeedRow, 'value', Gio.SettingsBindFlags.DEFAULT);
+        settings.bind('popup-vinyl-rotate', popRotateSpeedRow, 'sensitive', Gio.SettingsBindFlags.DEFAULT);
+        popupGroup.add(popRotateSpeedRow);
+
+        const popShadowRow = new Adw.ActionRow({
+            title: _('Enable Shadow'),
+            subtitle: _('Show drop shadow behind the pop-up menu')
+        });
+        const popShadowToggle = new Gtk.Switch({
+            active: settings.get_boolean('popup-enable-shadow'),
+            valign: Gtk.Align.CENTER
+        });
+        settings.bind('popup-enable-shadow', popShadowToggle, 'active', Gio.SettingsBindFlags.DEFAULT);
+        popShadowRow.add_suffix(popShadowToggle);
+        popupGroup.add(popShadowRow);
+        
+        const hideOnLeaveRow = new Adw.ActionRow({
+            title: _('Close on Mouse Leave'),
+            subtitle: _('Automatically hide the pop-up when you move the cursor away')
+        });
+        const hideOnLeaveToggle = new Gtk.Switch({
+            active: settings.get_boolean('popup-hide-on-leave'),
+            valign: Gtk.Align.CENTER
+        });
+        settings.bind('popup-hide-on-leave', hideOnLeaveToggle, 'active', Gio.SettingsBindFlags.DEFAULT);
+        hideOnLeaveRow.add_suffix(hideOnLeaveToggle);
+        popupGroup.add(hideOnLeaveRow);
+        
+        const popCustomBgRow = new Adw.ActionRow({
+            title: _('Follow Custom Background Color'),
+            subtitle: _('Use the custom background color for the pop-up (if active)')
+        });
+        const popCustomBgToggle = new Gtk.Switch({ active: settings.get_boolean('popup-follow-custom-bg'), valign: Gtk.Align.CENTER });
+        settings.bind('popup-follow-custom-bg', popCustomBgToggle, 'active', Gio.SettingsBindFlags.DEFAULT);
+        settings.bind('use-custom-colors', popCustomBgRow, 'sensitive', Gio.SettingsBindFlags.DEFAULT);
+        popCustomBgRow.add_suffix(popCustomBgToggle);
+        popupGroup.add(popCustomBgRow);
+
+        const popCustomTextRow = new Adw.ActionRow({
+            title: _('Follow Custom Text Color'),
+            subtitle: _('Use the custom text color for the pop-up (if active)')
+        });
+        const popCustomTextToggle = new Gtk.Switch({ active: settings.get_boolean('popup-follow-custom-text'), valign: Gtk.Align.CENTER });
+        settings.bind('popup-follow-custom-text', popCustomTextToggle, 'active', Gio.SettingsBindFlags.DEFAULT);
+        settings.bind('use-custom-colors', popCustomTextRow, 'sensitive', Gio.SettingsBindFlags.DEFAULT);
+        popCustomTextRow.add_suffix(popCustomTextToggle);
+        popupGroup.add(popCustomTextRow);
+
+        const popTransRow = new Adw.ActionRow({
+            title: _('Follow Transparency'),
+            subtitle: _('Inherit opacity settings from the main pill')
+        });
+        const popTransToggle = new Gtk.Switch({
+            active: settings.get_boolean('popup-follow-transparency'),
+            valign: Gtk.Align.CENTER
+        });
+        settings.bind('popup-follow-transparency', popTransToggle, 'active', Gio.SettingsBindFlags.DEFAULT);
+        popTransRow.add_suffix(popTransToggle);
+        popupGroup.add(popTransRow);
+
+        const popRadRow = new Adw.ActionRow({
+            title: _('Follow Border Radius'),
+            subtitle: _('Inherit corner roundness from the main pill')
+        });
+        const popRadToggle = new Gtk.Switch({
+            active: settings.get_boolean('popup-follow-radius'),
+            valign: Gtk.Align.CENTER
+        });
+        settings.bind('popup-follow-radius', popRadToggle, 'active', Gio.SettingsBindFlags.DEFAULT);
+        popRadRow.add_suffix(popRadToggle);
+        popupGroup.add(popRadRow);
+        const popShowRow = new Adw.ActionRow({ title: _('Show Vinyl'), subtitle: _('Display the album art in the pop-up') });
+	const popShowToggle = new Gtk.Switch({ active: settings.get_boolean('popup-show-vinyl'), valign: Gtk.Align.CENTER });
+	settings.bind('popup-show-vinyl', popShowToggle, 'active', Gio.SettingsBindFlags.DEFAULT);
+	popShowRow.add_suffix(popShowToggle);
+	popupGroup.add(popShowRow);
+
+	const popSquareRow = new Adw.ActionRow({ title: _('Square Vinyl Image'), subtitle: _('Use a square album art (disables rotation)') });
+	const popSquareToggle = new Gtk.Switch({ active: settings.get_boolean('popup-vinyl-square'), valign: Gtk.Align.CENTER });
+	settings.bind('popup-vinyl-square', popSquareToggle, 'active', Gio.SettingsBindFlags.DEFAULT);
+	popSquareRow.add_suffix(popSquareToggle);
+	popupGroup.add(popSquareRow);
+
+	const showShuffleRow = new Adw.ActionRow({ title: _('Show Shuffle and Loop'), subtitle: _('Display extra controls in the pop-up') });
+	const showShuffleToggle = new Gtk.Switch({ active: settings.get_boolean('show-shuffle-loop'), valign: Gtk.Align.CENTER });
+	settings.bind('show-shuffle-loop', showShuffleToggle, 'active', Gio.SettingsBindFlags.DEFAULT);
+	showShuffleRow.add_suffix(showShuffleToggle);
+	popupGroup.add(showShuffleRow);
+	
+	const popUseCustomRow = new Adw.ActionRow({ title: _('Use Custom Width'), subtitle: _('Disable dynamic sizing for the pop-up') });
+        const popUseCustomToggle = new Gtk.Switch({ active: settings.get_boolean('popup-use-custom-width'), valign: Gtk.Align.CENTER });
+        settings.bind('popup-use-custom-width', popUseCustomToggle, 'active', Gio.SettingsBindFlags.DEFAULT);
+        popUseCustomRow.add_suffix(popUseCustomToggle);
+        popupGroup.add(popUseCustomRow);
+        
+        const popCustomWidthRow = new Adw.SpinRow({
+            title: _('Custom Width Value'),
+            adjustment: new Gtk.Adjustment({ lower: 260, upper: 800, step_increment: 10 })
+        });
+
+        const updateWidthBound = () => {
+            let limit = settings.get_boolean('show-shuffle-loop') ? 360 : 260;
+            popCustomWidthRow.adjustment.lower = limit;
+            
+            if (settings.get_int('popup-custom-width') < limit) {
+                settings.set_int('popup-custom-width', limit);
+            }
+        };
+        settings.connect('changed::show-shuffle-loop', updateWidthBound);
+        updateWidthBound();
+        
+        const popSelectorRow = new Adw.ActionRow({ 
+            title: _('Show Player Selector'), 
+            subtitle: _('Display active player icons at the top of the pop-up') 
+        });
+        const popSelectorToggle = new Gtk.Switch({ active: settings.get_boolean('popup-show-player-selector'), valign: Gtk.Align.CENTER });
+        settings.bind('popup-show-player-selector', popSelectorToggle, 'active', Gio.SettingsBindFlags.DEFAULT);
+        popSelectorRow.add_suffix(popSelectorToggle);
+        popupGroup.add(popSelectorRow);
+
+        const popAlbumRow = new Adw.ActionRow({
+            title: _('Show Album Title'),
+            subtitle: _('Display album name next to the artist (Artist \u2022 Album)')
+        });
+        const popAlbumToggle = new Gtk.Switch({ active: settings.get_boolean('popup-show-album-title'), valign: Gtk.Align.CENTER });
+        settings.bind('popup-show-album-title', popAlbumToggle, 'active', Gio.SettingsBindFlags.DEFAULT);
+        popAlbumRow.add_suffix(popAlbumToggle);
+        popupGroup.add(popAlbumRow);
+
+        const hoursRow = new Adw.ActionRow({
+            title: _('Show HH:MM:SS'),
+            subtitle: _('Display hours in the time labels when media is longer than 60 minutes')
+        });
+        const hoursToggle = new Gtk.Switch({ active: settings.get_boolean('show-hours-format'), valign: Gtk.Align.CENTER });
+        settings.bind('show-hours-format', hoursToggle, 'active', Gio.SettingsBindFlags.DEFAULT);
+        hoursRow.add_suffix(hoursToggle);
+        popupGroup.add(hoursRow);
+
+        settings.bind('popup-custom-width', popCustomWidthRow, 'value', Gio.SettingsBindFlags.DEFAULT);
+        settings.bind('popup-use-custom-width', popCustomWidthRow, 'sensitive', Gio.SettingsBindFlags.DEFAULT);
+        popupGroup.add(popCustomWidthRow);
+        
+        const popVisRow = new Adw.ActionRow({ title: _('Show Visualizer in Pop-up') });
+        const popVisToggle = new Gtk.Switch({ active: settings.get_boolean('popup-show-visualizer'), valign: Gtk.Align.CENTER });
+        settings.bind('popup-show-visualizer', popVisToggle, 'active', Gio.SettingsBindFlags.DEFAULT);
+        popVisRow.add_suffix(popVisToggle);
+        popupGroup.add(popVisRow);
+
+        const hidePillVisRow = new Adw.ActionRow({ 
+            title: _('Hide Pill Visualizer'), 
+            subtitle: _('Creates a "moving" effect by hiding the main pill visualizer') 
+        });
+        const hidePillVisToggle = new Gtk.Switch({ active: settings.get_boolean('popup-hide-pill-visualizer'), valign: Gtk.Align.CENTER });
+        settings.bind('popup-hide-pill-visualizer', hidePillVisToggle, 'active', Gio.SettingsBindFlags.DEFAULT);
+        hidePillVisRow.add_suffix(hidePillVisToggle);
+        settings.bind('popup-show-visualizer', hidePillVisRow, 'sensitive', Gio.SettingsBindFlags.DEFAULT);
+        popupGroup.add(hidePillVisRow);
+	
+	const popVisBarsRow = new Adw.SpinRow({
+            title: _('Popup Visualizer Bar Count'),
+            adjustment: new Gtk.Adjustment({ lower: 2, upper: 64, step_increment: 1 })
+        });
+        settings.bind('popup-visualizer-bars', popVisBarsRow, 'value', Gio.SettingsBindFlags.DEFAULT);
+        settings.bind('popup-show-visualizer', popVisBarsRow, 'sensitive', Gio.SettingsBindFlags.DEFAULT);
+        popupGroup.add(popVisBarsRow);
+
+        const popVisWidthRow = new Adw.SpinRow({
+            title: _('Popup Visualizer Bar Width'),
+            adjustment: new Gtk.Adjustment({ lower: 1, upper: 20, step_increment: 1 })
+        });
+        settings.bind('popup-visualizer-bar-width', popVisWidthRow, 'value', Gio.SettingsBindFlags.DEFAULT);
+        settings.bind('popup-show-visualizer', popVisWidthRow, 'sensitive', Gio.SettingsBindFlags.DEFAULT);
+        popupGroup.add(popVisWidthRow);
+
+        const popVisHeightRow = new Adw.SpinRow({
+            title: _('Popup Visualizer Height'),
+            adjustment: new Gtk.Adjustment({ lower: 20, upper: 200, step_increment: 5 })
+        });
+        settings.bind('popup-visualizer-height', popVisHeightRow, 'value', Gio.SettingsBindFlags.DEFAULT);
+        settings.bind('popup-show-visualizer', popVisHeightRow, 'sensitive', Gio.SettingsBindFlags.DEFAULT);
+        popupGroup.add(popVisHeightRow);
+        
+        popupPage.add(popupGroup);
+
+        const customBtnGroup = new Adw.PreferencesGroup({
+            title: _('Custom Control Buttons'),
+            description: _("Add up to two extra buttons in the expanded player's controls row.")
+        });
+
+        const enableCustomBtnsRow = new Adw.ActionRow({
+            title: _('Enable Custom Buttons'),
+            subtitle: _('Show additional action buttons next to Shuffle and Loop')
+        });
+        const enableCustomBtnsSwitch = new Gtk.Switch({
+            active: settings.get_boolean('enable-custom-buttons'),
+            valign: Gtk.Align.CENTER
+        });
+        settings.bind('enable-custom-buttons', enableCustomBtnsSwitch, 'active', Gio.SettingsBindFlags.DEFAULT);
+        enableCustomBtnsRow.add_suffix(enableCustomBtnsSwitch);
+        customBtnGroup.add(enableCustomBtnsRow);
+
+        const ACTION_LABELS = [
+            _('None'),
+            _('Volume Control'),
+            _('Seek ±10 Seconds'),
+            _('Audio Output Switcher'),
+            _('Sleep Timer'),
+            _('Playback Speed'),
+            _('Track History'),
+        ];
+        const ACTION_VALUES = ['none', 'volume', 'seek_step', 'output_switch', 'sleep_timer', 'playback_speed', 'history'];
+
+        function makeButtonActionRow(title, subtitle, settingKey) {
+            const model = new Gtk.StringList();
+            ACTION_LABELS.forEach(l => model.append(l));
+
+            let currentVal = settings.get_string(settingKey);
+            let currentIdx = Math.max(0, ACTION_VALUES.indexOf(currentVal));
+
+            const row = new Adw.ComboRow({
+                title,
+                subtitle,
+                model,
+                selected: currentIdx
+            });
+
+            settings.connect(`changed::${settingKey}`, () => {
+                let v = settings.get_string(settingKey);
+                row.selected = Math.max(0, ACTION_VALUES.indexOf(v));
+            });
+
+            row.connect('notify::selected', () => {
+                settings.set_string(settingKey, ACTION_VALUES[row.selected] || 'none');
+            });
+
+            settings.bind('enable-custom-buttons', row, 'sensitive', Gio.SettingsBindFlags.DEFAULT);
+            return row;
+        }
+
+        customBtnGroup.set_description(_('If both buttons are set to Seek, they act directly (Button 1 = −10s, Button 2 = +10s). Otherwise Seek opens a sub-page.'));
+
+	customBtnGroup.add(makeButtonActionRow(
+	    _('Custom Button 1'), _('Placed left of Shuffle.'), 'custom-button-1'
+	));
+	customBtnGroup.add(makeButtonActionRow(
+	    _('Custom Button 2'), _('Placed right of Loop.'), 'custom-button-2'
+	));
+
+        popupPage.add(customBtnGroup);
+        window.add(popupPage);
+
+
+        // =========================================
+        // 3. STYLE & LAYOUT PAGE
+        // =========================================
+        const stylePage = new Adw.PreferencesPage({
+            title: _('Style & Layout'),
+            icon_name: 'applications-graphics-symbolic'
+        });
+
+        const lookGroup = new Adw.PreferencesGroup({ title: _('Visualizer and Shape') });
+        
+        const visModel = new Gtk.StringList();
+        visModel.append(_("Off (Disabled)"));
+        visModel.append(_("Wave (Smooth)"));
+        visModel.append(_("Beat (Jumpy)"));
+        visModel.append(_("Real-Time (Cava needed)"));
+
+        const visRow = new Adw.ComboRow({
+            title: _('Visualizer Animation'),
+            subtitle: _('Select the style of the audio reaction bars'),
+            model: visModel,
+            selected: settings.get_int('visualizer-style')
+        });
+        visRow.connect('notify::selected', () => { settings.set_int('visualizer-style', visRow.selected); });
+        lookGroup.add(visRow);
+
+        const cavaNote = new Gtk.Label({
+            label: _("Note: 'Real-Time' mode requires the 'cava' package to be installed on your Linux system."),
+            wrap: true,
+            xalign: 0,
+            css_classes: ['dim-label'],
+            margin_top: 6, margin_bottom: 6, margin_start: 12, margin_end: 12
+        });
+        lookGroup.add(cavaNote);
+        
+        const visBarsRow = new Adw.SpinRow({
+            title: _('Visualizer Bar Count'),
+            subtitle: _('Number of bars displayed in the animation'),
+            adjustment: new Gtk.Adjustment({ lower: 2, upper: 32, step_increment: 1 })
+        });
+        settings.bind('visualizer-bars', visBarsRow, 'value', Gio.SettingsBindFlags.DEFAULT);
+        lookGroup.add(visBarsRow);
+        
+        const visWidthRow = new Adw.SpinRow({
+            title: _('Visualizer Bar Width'),
+            subtitle: _('Thickness of individual bars (pixels)'),
+            adjustment: new Gtk.Adjustment({ lower: 1, upper: 10, step_increment: 1 })
+        });
+        settings.bind('visualizer-bar-width', visWidthRow, 'value', Gio.SettingsBindFlags.DEFAULT);
+        lookGroup.add(visWidthRow);
+
+        const visHeightRow = new Adw.SpinRow({
+            title: _('Visualizer Height'),
+            subtitle: _('Maximum height of the visualizer (auto-clamped to pill height)'),
+            adjustment: new Gtk.Adjustment({ lower: 10, upper: 100, step_increment: 2 })
+        });
+        settings.bind('visualizer-height', visHeightRow, 'value', Gio.SettingsBindFlags.DEFAULT);
+        lookGroup.add(visHeightRow);
+
+        const visPaddingRow = new Adw.SpinRow({
+            title: _('Visualizer Margin'),
+            subtitle: _('Distance between the text and the wave animation'),
+            adjustment: new Gtk.Adjustment({ lower: 0, upper: 50, step_increment: 1 })
+        });
+        settings.bind('visualizer-padding', visPaddingRow, 'value', Gio.SettingsBindFlags.DEFAULT);
+        lookGroup.add(visPaddingRow);
+        
+        const edgeMarginRow = new Adw.SpinRow({
+            title: _('Outer Edge Margin'),
+            subtitle: _('Spacing before the album art and after the visualizer'),
+            adjustment: new Gtk.Adjustment({ lower: 0, upper: 50, step_increment: 1 })
+        });
+        settings.bind('edge-margin', edgeMarginRow, 'value', Gio.SettingsBindFlags.DEFAULT);
+        lookGroup.add(edgeMarginRow);
+        
+        const radiusRow = new Adw.SpinRow({
+            title: _('Corner Radius'),
+            subtitle: _('Roundness of the widget edges (0 = Square, 25 = Pill)'),
+            adjustment: new Gtk.Adjustment({ lower: 0, upper: 50, step_increment: 1 })
+        });
+        settings.bind('border-radius', radiusRow, 'value', Gio.SettingsBindFlags.DEFAULT);
+        lookGroup.add(radiusRow);
+        
+        const borderRow = new Adw.ActionRow({
+            title: _('Show Pill Outline'),
+            subtitle: _('Display a subtle border around the main pill')
+        });
+        const borderSwitch = new Gtk.Switch({
+            active: settings.get_boolean('show-pill-border'),
+            valign: Gtk.Align.CENTER
+        });
+        settings.bind('show-pill-border', borderSwitch, 'active', Gio.SettingsBindFlags.DEFAULT);
+        borderRow.add_suffix(borderSwitch);
+        
+        lookGroup.add(borderRow);
+        stylePage.add(lookGroup);
+        
+
+        const transGroup = new Adw.PreferencesGroup({ title: _('Background and Transparency') });
+        const transRow = new Adw.ActionRow({
+            title: _('Enable Transparency'),
+            subtitle: _('Switch between a solid theme background and a custom transparent look')
+        });
+        const transToggle = new Gtk.Switch({
+            active: settings.get_boolean('enable-transparency'),
+            valign: Gtk.Align.CENTER
+        });
+        settings.bind('enable-transparency', transToggle, 'active', Gio.SettingsBindFlags.DEFAULT);
+        transRow.add_suffix(transToggle);
+        transGroup.add(transRow);
+
+        const opacityRow = new Adw.SpinRow({
+            title: _('Background Opacity'),
+            subtitle: _('Adjust transparency level'),
+            adjustment: new Gtk.Adjustment({ lower: 0, upper: 100, step_increment: 5 })
+        });
+        settings.bind('transparency-strength', opacityRow, 'value', Gio.SettingsBindFlags.DEFAULT);
+        settings.bind('enable-transparency', opacityRow, 'sensitive', Gio.SettingsBindFlags.DEFAULT);
+        transGroup.add(opacityRow);
+
+        const transArtRow = new Adw.ActionRow({ title: _('Apply to Album Art') });
+        const transArtToggle = new Gtk.Switch({ active: settings.get_boolean('transparency-art'), valign: Gtk.Align.CENTER });
+        settings.bind('transparency-art', transArtToggle, 'active', Gio.SettingsBindFlags.DEFAULT);
+        settings.bind('enable-transparency', transArtRow, 'sensitive', Gio.SettingsBindFlags.DEFAULT);
+        transArtRow.add_suffix(transArtToggle);
+        transGroup.add(transArtRow);
+
+        const transTextRow = new Adw.ActionRow({ title: _('Apply to Text') });
+        const transTextToggle = new Gtk.Switch({ active: settings.get_boolean('transparency-text'), valign: Gtk.Align.CENTER });
+        settings.bind('transparency-text', transTextToggle, 'active', Gio.SettingsBindFlags.DEFAULT);
+        settings.bind('enable-transparency', transTextRow, 'sensitive', Gio.SettingsBindFlags.DEFAULT);
+        transTextRow.add_suffix(transTextToggle);
+        transGroup.add(transTextRow);
+
+        const transVisRow = new Adw.ActionRow({ title: _('Apply to Visualizer') });
+        const transVisToggle = new Gtk.Switch({ active: settings.get_boolean('transparency-vis'), valign: Gtk.Align.CENTER });
+        settings.bind('transparency-vis', transVisToggle, 'active', Gio.SettingsBindFlags.DEFAULT);
+        settings.bind('enable-transparency', transVisRow, 'sensitive', Gio.SettingsBindFlags.DEFAULT);
+        transVisRow.add_suffix(transVisToggle);
+        transGroup.add(transVisRow);
+        stylePage.add(transGroup);
+
+        const shadowGroup = new Adw.PreferencesGroup({ title: _('Main Pill Shadow') });
+        const shadowRow = new Adw.ActionRow({ title: _('Enable Shadow') });
+        const shadowToggle = new Gtk.Switch({ active: settings.get_boolean('enable-shadow'), valign: Gtk.Align.CENTER });
+        settings.bind('enable-shadow', shadowToggle, 'active', Gio.SettingsBindFlags.DEFAULT);
+        shadowRow.add_suffix(shadowToggle);
+        shadowGroup.add(shadowRow);
+
+        const shadowOpacityRow = new Adw.SpinRow({
+            title: _('Shadow Intensity'),
+            adjustment: new Gtk.Adjustment({ lower: 0, upper: 100, step_increment: 5 })
+        });
+        settings.bind('shadow-opacity', shadowOpacityRow, 'value', Gio.SettingsBindFlags.DEFAULT);
+        shadowGroup.add(shadowOpacityRow);
+
+        const shadowBlurRow = new Adw.SpinRow({
+            title: _('Shadow Blur'),
+            adjustment: new Gtk.Adjustment({ lower: 0, upper: 50, step_increment: 1 })
+        });
+        settings.bind('shadow-blur', shadowBlurRow, 'value', Gio.SettingsBindFlags.DEFAULT);
+        shadowGroup.add(shadowBlurRow);
+        stylePage.add(shadowGroup);
+
+        const posGroup = new Adw.PreferencesGroup({ title: _('Positioning') });
+        const targetModel = new Gtk.StringList();
+        targetModel.append(_("Dock"));
+        targetModel.append(_("Panel: Left Box"));
+        targetModel.append(_("Panel: Center Box"));
+        targetModel.append(_("Panel: Right Box"));
+
+        const targetRow = new Adw.ComboRow({
+            title: _('Container Target'),
+            subtitle: _('Select which UI element should host the music pill'),
+            model: targetModel,
+            selected: settings.get_int('target-container')
+        });
+        targetRow.connect('notify::selected', () => {
+            let val = targetRow.selected;
+            settings.set_int('target-container', val);
+            updateGroupVisibility(val);
+        });
+        posGroup.add(targetRow);
+        
+        const dynWidthRow = new Adw.ActionRow({ title: _('Dynamic Width'), subtitle: _('Auto-adjust pill width (slider acts as max width)') });
+        const dynWidthToggle = new Gtk.Switch({ active: settings.get_boolean('pill-dynamic-width'), valign: Gtk.Align.CENTER });
+        settings.bind('pill-dynamic-width', dynWidthToggle, 'active', Gio.SettingsBindFlags.DEFAULT);
+        dynWidthRow.add_suffix(dynWidthToggle);
+        posGroup.add(dynWidthRow);
+        
+        settings.connect('changed::target-container', () => {
+            let val = settings.get_int('target-container');
+            if (targetRow.selected !== val) {
+                targetRow.selected = val;
+            }
+            updateGroupVisibility(val);
+        });
+
+        const posModel = new Gtk.StringList();
+        posModel.append(_("Manual Index"));
+        posModel.append(_("First (Start)"));
+        posModel.append(_("Center"));
+        posModel.append(_("Last (End)"));
+
+        const modeRow = new Adw.ComboRow({
+            title: _('Alignment Preset'),
+            subtitle: _('How the widget aligns relative to other items'),
+            model: posModel,
+            selected: settings.get_int('position-mode')
+        });
+        modeRow.connect('notify::selected', () => { settings.set_int('position-mode', modeRow.selected); });
+        posGroup.add(modeRow);
+
+        const indexRow = new Adw.SpinRow({
+            title: _('Manual Index Position'),
+            subtitle: _('Order in the list (0 is first). Only for Manual mode.'),
+            adjustment: new Gtk.Adjustment({ lower: 0, upper: 20, step_increment: 1 })
+        });
+        settings.bind('dock-position', indexRow, 'value', Gio.SettingsBindFlags.DEFAULT);
+        posGroup.add(indexRow);
+
+        const vOffsetRow = new Adw.SpinRow({
+            title: _('Vertical Offset (Y)'),
+            subtitle: _('Shift Up (-) or Down (+)'),
+            adjustment: new Gtk.Adjustment({ lower: -30, upper: 30, step_increment: 1 })
+        });
+        settings.bind('vertical-offset', vOffsetRow, 'value', Gio.SettingsBindFlags.DEFAULT);
+        posGroup.add(vOffsetRow);
+
+        const hOffsetRow = new Adw.SpinRow({
+            title: _('Horizontal Offset (X)'),
+            subtitle: _('Shift Left (-) or Right (+)'),
+            adjustment: new Gtk.Adjustment({ lower: -50, upper: 50, step_increment: 1 })
+        });
+        settings.bind('horizontal-offset', hOffsetRow, 'value', Gio.SettingsBindFlags.DEFAULT);
+        posGroup.add(hOffsetRow);
+
+        const dockDimGroup = new Adw.PreferencesGroup({ title: _('Dimensions (Dock Mode)') });
+        const dockArtSizeRow = new Adw.SpinRow({
+            title: _('Album Art Size'),
+            adjustment: new Gtk.Adjustment({ lower: 16, upper: 48, step_increment: 1 })
+        });
+        settings.bind('dock-art-size', dockArtSizeRow, 'value', Gio.SettingsBindFlags.DEFAULT);
+        dockDimGroup.add(dockArtSizeRow);
+        const dockWidthRow = new Adw.SpinRow({
+            title: _('Widget Width'),
+            adjustment: new Gtk.Adjustment({ lower: 100, upper: 600, step_increment: 10 })
+        });
+        settings.bind('pill-width', dockWidthRow, 'value', Gio.SettingsBindFlags.DEFAULT);
+        dockDimGroup.add(dockWidthRow);
+
+        const dockHeightRow = new Adw.SpinRow({
+            title: _('Widget Height'),
+            adjustment: new Gtk.Adjustment({ lower: 32, upper: 100, step_increment: 4 })
+        });
+        settings.bind('pill-height', dockHeightRow, 'value', Gio.SettingsBindFlags.DEFAULT);
+        dockDimGroup.add(dockHeightRow);
+        posGroup.add(dockDimGroup);
+
+        const panelDimGroup = new Adw.PreferencesGroup({ title: _('Dimensions (Panel Mode)') });
+        const panelArtSizeRow = new Adw.SpinRow({
+            title: _('Album Art Size'),
+            adjustment: new Gtk.Adjustment({ lower: 14, upper: 32, step_increment: 1 })
+        });
+        settings.bind('panel-art-size', panelArtSizeRow, 'value', Gio.SettingsBindFlags.DEFAULT);
+        panelDimGroup.add(panelArtSizeRow);
+        const panelWidthRow = new Adw.SpinRow({
+            title: _('Widget Width'),
+            adjustment: new Gtk.Adjustment({ lower: 100, upper: 600, step_increment: 10 })
+        });
+        settings.bind('panel-pill-width', panelWidthRow, 'value', Gio.SettingsBindFlags.DEFAULT);
+        panelDimGroup.add(panelWidthRow);
+
+        const panelHeightRow = new Adw.SpinRow({
+            title: _('Widget Height'),
+            adjustment: new Gtk.Adjustment({ lower: 20, upper: 60, step_increment: 2 })
+        });
+        settings.bind('panel-pill-height', panelHeightRow, 'value', Gio.SettingsBindFlags.DEFAULT);
+        panelDimGroup.add(panelHeightRow);
+        posGroup.add(panelDimGroup);
+        const colorGroup = new Adw.PreferencesGroup({ title: _('Custom Colors') });
+        
+        const syncAccentRow = new Adw.ActionRow({
+            title: _('Sync GNOME Accent Color'),
+            subtitle: _('Dynamically change the GNOME Shell accent color to match the album art')
+        });
+        const syncAccentToggle = new Gtk.Switch({
+            active: settings.get_boolean('sync-accent-color'),
+            valign: Gtk.Align.CENTER
+        });
+        settings.bind('sync-accent-color', syncAccentToggle, 'active', Gio.SettingsBindFlags.DEFAULT);
+        syncAccentRow.add_suffix(syncAccentToggle);
+        colorGroup.add(syncAccentRow);
+        
+        const customColorRow = new Adw.ActionRow({ title: _('Use Custom Colors'), subtitle: _('Override dynamic colors') });
+        const customColorToggle = new Gtk.Switch({ active: settings.get_boolean('use-custom-colors'), valign: Gtk.Align.CENTER });
+        settings.bind('use-custom-colors', customColorToggle, 'active', Gio.SettingsBindFlags.DEFAULT);
+        customColorRow.add_suffix(customColorToggle);
+        colorGroup.add(customColorRow);
+
+        function createColorButtonRow(title, settingKey) {
+            const row = new Adw.ActionRow({ title: title });
+            let cStr = settings.get_string(settingKey).split(',');
+            let c = new Gdk.RGBA();
+            c.parse(`rgb(${cStr[0] || 40},${cStr[1] || 40},${cStr[2] || 40})`);
+            
+            const btn = new Gtk.ColorButton({ rgba: c, use_alpha: false, valign: Gtk.Align.CENTER });
+            btn.connect('color-set', () => {
+                let rgba = btn.get_rgba();
+                settings.set_string(settingKey, `${Math.round(rgba.red * 255)},${Math.round(rgba.green * 255)},${Math.round(rgba.blue * 255)}`);
+            });
+            settings.connect(`changed::${settingKey}`, () => {
+                let parts = settings.get_string(settingKey).split(',');
+                let newC = new Gdk.RGBA();
+                newC.parse(`rgb(${parts[0]},${parts[1]},${parts[2]})`);
+                btn.set_rgba(newC);
+            });
+            
+            settings.bind('use-custom-colors', btn, 'sensitive', Gio.SettingsBindFlags.DEFAULT);
+            row.add_suffix(btn);
+            return row;
+        }
+
+        colorGroup.add(createColorButtonRow(_('Background Color'), 'custom-bg-color'));
+        colorGroup.add(createColorButtonRow(_('Text Color'), 'custom-text-color'));
+
+        stylePage.add(colorGroup);
+
+        stylePage.add(posGroup);
+        window.add(stylePage);
+
+        // =========================================
+        // 4. SYSTEM & RESET PAGE
+        // =========================================
+        const otherPage = new Adw.PreferencesPage({
+            title: _('System & Reset'),
+            icon_name: 'utilities-terminal-symbolic'
+        });
+        
+        const compatGroup = new Adw.PreferencesGroup({ title: _('System') });
+        
+        const hidePlayerRow = new Adw.ActionRow({
+            title: _('Hide Default GNOME Player'),
+            subtitle: _('Remove the duplicate built-in media controls')
+        });
+        const hidePlayerToggle = new Gtk.Switch({
+            active: settings.get_boolean('hide-default-player'),
+            valign: Gtk.Align.CENTER
+        });
+        settings.bind('hide-default-player', hidePlayerToggle, 'active', Gio.SettingsBindFlags.DEFAULT);
+        hidePlayerRow.add_suffix(hidePlayerToggle);
+        compatGroup.add(hidePlayerRow);
+
+        const gameRow = new Adw.ActionRow({ title: _('Game Mode'), subtitle: _('Disable animations when a fullscreen app is active') });
+        const gameToggle = new Gtk.Switch({ active: settings.get_boolean('enable-gamemode'), valign: Gtk.Align.CENTER });
+        settings.bind('enable-gamemode', gameToggle, 'active', Gio.SettingsBindFlags.DEFAULT);
+        gameRow.add_suffix(gameToggle);
+        compatGroup.add(gameRow);
+        
+        const compatDelayRow = new Adw.ActionRow({ 
+            title: _('Slow Player Workaround'), 
+            subtitle: _('Adds a slight delay to track changes (fixes sync issues)') 
+        });
+        const compatDelayToggle = new Gtk.Switch({ active: settings.get_boolean('compatibility-delay'), valign: Gtk.Align.CENTER });
+        settings.bind('compatibility-delay', compatDelayToggle, 'active', Gio.SettingsBindFlags.DEFAULT);
+        compatDelayRow.add_suffix(compatDelayToggle);
+        compatGroup.add(compatDelayRow);
+        
+        const filterModel = new Gtk.StringList();
+        filterModel.append(_("Off (Allow All)"));
+        filterModel.append(_("Blacklist (Exclude listed)"));
+        filterModel.append(_("Whitelist (Only allow listed)"));
+
+        const filterModeRow = new Adw.ComboRow({
+            title: _('Player Filter Mode'),
+            subtitle: _('Choose how to filter media players (e.g. browsers)'),
+            model: filterModel,
+            selected: settings.get_int('player-filter-mode')
+        });
+        
+        filterModeRow.connect('notify::selected', () => {
+            settings.set_int('player-filter-mode', filterModeRow.selected);
+        });
+        compatGroup.add(filterModeRow);
+
+        const filterListRow = new Adw.EntryRow({
+            title: _('Filtered Players (comma separated)'),
+            text: settings.get_string('player-filter-list')
+        });
+        
+        settings.bind('player-filter-list', filterListRow, 'text', Gio.SettingsBindFlags.DEFAULT);
+
+        const updateFilterState = () => {
+            filterListRow.set_sensitive(settings.get_int('player-filter-mode') !== 0);
+        };
+        settings.connect('changed::player-filter-mode', updateFilterState);
+        updateFilterState();
+
+        compatGroup.add(filterListRow);
+        const detectedPlayersRow = new Adw.ActionRow({
+            title: _('Detected Players'),
+            subtitle: _('Click an active player to add it to the filter list')
+        });
+
+        const refreshBtn = new Gtk.Button({ 
+            icon_name: 'view-refresh-symbolic', 
+            valign: Gtk.Align.CENTER, 
+            margin_end: 10,
+            css_classes: ['flat']
+        });
+        detectedPlayersRow.add_prefix(refreshBtn);
+
+        const playerBox = new Gtk.Box({ spacing: 6, valign: Gtk.Align.CENTER });
+        detectedPlayersRow.add_suffix(playerBox);
+
+        const updateDetected = () => {
+            let child = playerBox.get_first_child();
+            while (child) {
+                let next = child.get_next_sibling();
+                playerBox.remove(child);
+                child = next;
+            }
+
+            let connection = Gio.bus_get_sync(Gio.BusType.SESSION, null);
+            connection.call(
+                'org.freedesktop.DBus', '/org/freedesktop/DBus', 'org.freedesktop.DBus', 'ListNames',
+                null, null, Gio.DBusCallFlags.NONE, -1, null,
+                (c, res) => {
+                    try {
+                        let r = c.call_finish(res);
+                        let names = r.deep_unpack()[0];
+                        let mpris = names.filter(n => n.startsWith('org.mpris.MediaPlayer2.'));
+                        
+                        let apps = [...new Set(mpris.map(n => n.replace('org.mpris.MediaPlayer2.', '').split('.')[0]))];
+                        
+                        if (apps.length === 0) {
+                            playerBox.append(new Gtk.Label({ label: _('No players found') }));
+                        } else {
+                            apps.forEach(app => {
+                                let btn = new Gtk.Button({ label: app, css_classes: ['suggested-action'] });
+                                btn.connect('clicked', () => {
+                                    let current = settings.get_string('player-filter-list');
+                                    let list = current.split(',').map(s => s.trim()).filter(s => s.length > 0);
+                                    if (!list.includes(app)) {
+                                        list.push(app);
+                                        settings.set_string('player-filter-list', list.join(', '));
+                                    }
+                                });
+                                playerBox.append(btn);
+                            });
+                        }
+                    } catch(e) {}
+                }
+            );
+        };
+
+        refreshBtn.connect('clicked', updateDetected);
+        updateDetected();
+
+        const updateDetectedState = () => {
+            detectedPlayersRow.set_sensitive(settings.get_int('player-filter-mode') !== 0);
+        };
+        settings.connect('changed::player-filter-mode', updateDetectedState);
+        updateDetectedState();
+
+        compatGroup.add(detectedPlayersRow);
+        otherPage.add(compatGroup);
+        
+        const mappingHelpGroup = new Adw.PreferencesGroup();
+        const helpExpander = new Adw.ExpanderRow({
+            title: _('💡 How to find the correct App ID?'),
+            subtitle: _('Click here for a quick guide and examples')
+        });
+
+        const helpLabel = new Gtk.Label({
+            label: _("To allow the extension to open/close your player, you need to provide its exact window name (App ID).\n\n" +
+		   "<b>Common Examples:</b>\n" +
+		   "• Spotify (Flatpak): <b>com.spotify.Client</b>\n" +
+		   "• VLC: <b>vlc</b>\n" +
+		   "• YouTube Music (Web App): <b>youtube-music</b>\n" +
+		   "• High Tide: <b>io.github.nokse22.high-tide</b>\n" +
+		   "• Browsers: <b>chromium</b>, <b>firefox</b>, <b>brave-browser</b>\n\n" +
+		   "<b>How to find it manually:</b>\n" +
+		   "1. Press <b>Alt + F2</b>, type <b>lg</b>, and press Enter.\n" +
+		   "2. Click on the <b>Windows</b> tab in the top right corner.\n" +
+		   "3. Find your music player in the list.\n" +
+		   "4. Look at the <b>wmclass:</b> or <b>app:</b> field. That is your App ID! <i>(Remove the .desktop part)</i>\n" +
+		   "5. Press Esc to close the debugger."),
+            use_markup: true,
+            justify: Gtk.Justification.LEFT,
+            xalign: 0,
+            wrap: true,
+            margin_top: 15, 
+            margin_bottom: 15, 
+            margin_start: 15, 
+            margin_end: 15
+        });
+
+        helpExpander.add_row(helpLabel);
+        mappingHelpGroup.add(helpExpander);
+        otherPage.add(mappingHelpGroup);
+
+        const appMappingGroup = new Adw.PreferencesGroup({
+            title: _('Saved App Mappings'),
+            description: _('Edit the target App ID for manually mapped players, or remove them.')
+        });
+        otherPage.add(appMappingGroup);
+
+        let _isRefreshing = false; 
+
+        const refreshAppMappings = () => {
+            if (_isRefreshing) return;
+            _isRefreshing = true;
+
+            let child = appMappingGroup.get_first_child();
+            while (child) {
+                let next = child.get_next_sibling();
+                appMappingGroup.remove(child);
+                child = next;
+            }
+
+            let mapStr = settings.get_string('app-name-mapping') || '';
+            let pairs = mapStr.split(',').filter(p => p.trim() !== '');
+
+            if (pairs.length === 0) {
+                appMappingGroup.set_description(_('No manual mappings saved.'));
+                _isRefreshing = false;
+                return;
+            }
+
+            appMappingGroup.set_description(_('Type the correct App ID, then hit Enter or click the Save icon!'));
+
+            pairs.forEach(pair => {
+                let parts = pair.split(':');
+                if (parts.length >= 2) {
+                    let mprisName = parts[0].trim();
+                    let targetId = parts.slice(1).join(':').trim();
+
+                    let row = new Adw.EntryRow({
+                        title: mprisName,
+                        text: targetId
+                    });
+
+                    let btnBox = new Gtk.Box({ spacing: 6, valign: Gtk.Align.CENTER });
+
+                    let saveBtn = new Gtk.Button({
+                        icon_name: 'document-save-symbolic',
+                        valign: Gtk.Align.CENTER,
+                        css_classes: ['flat', 'suggested-action'],
+                        tooltip_text: _('Save App ID')
+                    });
+
+                    const saveAction = () => {
+                        let newId = row.text.trim();
+                        if (newId === '') return;
+
+                        let currentStr = settings.get_string('app-name-mapping') || '';
+                        let currentPairs = currentStr.split(',').filter(p => p.trim() !== '');
+                        
+                        let newPairs = currentPairs.map(p => {
+                            if (p.startsWith(mprisName + ':')) {
+                                return `${mprisName}:${newId}`;
+                            }
+                            return p;
+                        });
+                        
+                        settings.set_string('app-name-mapping', newPairs.join(','));
+                        
+                        saveBtn.set_icon_name('object-select-symbolic');
+                        _trackSource(GLib.timeout_add(GLib.PRIORITY_DEFAULT, 1500, () => {
+                            if (saveBtn) saveBtn.set_icon_name('document-save-symbolic');
+                            return GLib.SOURCE_REMOVE;
+                        }));
+                    };
+
+                    saveBtn.connect('clicked', saveAction);
+                    row.connect('apply', saveAction);
+
+                    let deleteBtn = new Gtk.Button({
+                        icon_name: 'user-trash-symbolic',
+                        valign: Gtk.Align.CENTER,
+                        css_classes: ['flat', 'destructive-action'],
+                        tooltip_text: _('Delete Mapping')
+                    });
+
+                    deleteBtn.connect('clicked', () => {
+                        let currentStr = settings.get_string('app-name-mapping') || '';
+                        let currentPairs = currentStr.split(',').filter(p => p.trim() !== '');
+                        
+                        let newPairs = currentPairs.filter(p => !p.startsWith(mprisName + ':'));
+                        settings.set_string('app-name-mapping', newPairs.join(','));
+                        
+                        _trackSource(GLib.idle_add(GLib.PRIORITY_DEFAULT, () => {
+                            refreshAppMappings(); 
+                            if (typeof updateDetectedPlayers === 'function') updateDetectedPlayers();
+                            return GLib.SOURCE_REMOVE;
+                        }));
+                    });
+
+                    btnBox.append(saveBtn);
+                    btnBox.append(deleteBtn);
+                    row.add_suffix(btnBox);
+                    
+                    appMappingGroup.add(row);
+                }
+            });
+            _isRefreshing = false;
+        };
+
+        refreshAppMappings();
+
+        const activePlayersGroup = new Adw.PreferencesGroup({
+            	title: _('Running Players Detection'),
+    		description: _('Click on a detected player to automatically fill the mapping.')
+        });
+        otherPage.add(activePlayersGroup);
+
+        const updateDetectedPlayers = () => {
+            let child = activePlayersGroup.get_first_child();
+            while (child) {
+                let next = child.get_next_sibling();
+                activePlayersGroup.remove(child);
+                child = next;
+            }
+            
+            let connection = Gio.bus_get_sync(Gio.BusType.SESSION, null);
+            connection.call(
+                'org.freedesktop.DBus', '/org/freedesktop/DBus', 'org.freedesktop.DBus', 'ListNames',
+                null, null, Gio.DBusCallFlags.NONE, -1, null,
+                (c, res) => {
+                    try {
+                        let r = c.call_finish(res);
+                        let names = r.deep_unpack()[0];
+                        let mprisNames = names.filter(n => n.startsWith('org.mpris.MediaPlayer2.'));
+
+                        if (mprisNames.length === 0) {
+			    activePlayersGroup.set_description(_('No active players detected. Open a music app first!'));
+			} else {
+			    activePlayersGroup.set_description(_('Select a player to help the extension identify it:'));
+                            
+                            mprisNames.forEach(fullBusName => {
+                                let shortName = fullBusName.replace('org.mpris.MediaPlayer2.', '');
+                                
+                                if (shortName.includes('.instance')) {
+                                    shortName = shortName.split('.instance')[0];
+                                }
+                                
+                                let currentMapStr = settings.get_string('app-name-mapping') || '';
+                                if (currentMapStr.includes(shortName + ':')) {
+                                    return; 
+                                }
+                                
+                                let row = new Adw.ActionRow({
+                                    title: shortName,
+                                    subtitle: `Bus: ${fullBusName}`
+                                });
+
+                                let btn = new Gtk.Button({
+                                    label: _('Use This'),
+                                    css_classes: ['suggested-action'],
+                                    valign: Gtk.Align.CENTER
+                                });
+
+                                btn.connect('clicked', () => {
+                                    let currentVal = settings.get_string('app-name-mapping');
+                                    if (currentVal.includes(shortName + ':')) return;
+
+                                    let newVal = currentVal ? `${currentVal},${shortName}:ENTER_APP_ID_HERE` : `${shortName}:ENTER_APP_ID_HERE`;
+                                    settings.set_string('app-name-mapping', newVal);
+                                    
+                                    _trackSource(GLib.idle_add(GLib.PRIORITY_DEFAULT, () => {
+                                        refreshAppMappings();
+                                        updateDetectedPlayers();
+                                        return GLib.SOURCE_REMOVE;
+                                    }));
+                                });
+
+                                row.add_suffix(btn);
+                                activePlayersGroup.add(row);
+                            });
+                        }
+                    } catch (e) {
+                        console.error('Error fetching DBus names:', e);
+                    }
+                }
+            );
+        };
+
+        const refreshMappingRow = new Adw.ActionRow({
+            title: _('Refresh List'),
+            subtitle: _('Click to scan for active players again')
+        });
+
+        const refreshMappingBtn = new Gtk.Button({ 
+            icon_name: 'view-refresh-symbolic', 
+            valign: Gtk.Align.CENTER,
+            css_classes: ['flat']
+        });
+
+        refreshMappingBtn.connect('clicked', updateDetectedPlayers);
+        refreshMappingRow.add_suffix(refreshMappingBtn);
+        activePlayersGroup.add(refreshMappingRow);
+
+        updateDetectedPlayers();
+
+        const backupGroup = new Adw.PreferencesGroup({ title: _('Backup & Restore') });
+        
+        // EXPORT
+        const exportRow = new Adw.ActionRow({ title: _('Export Settings') });
+        const exportBtn = new Gtk.Button({ label: _('Export'), valign: Gtk.Align.CENTER });
+        exportBtn.connect('clicked', () => {
+            let data = {};
+            PREFS_KEYS.forEach(k => { data[k] = settings.get_value(k).deep_unpack(); });
+            let dialog = new Gtk.FileDialog({ title: _('Save Settings'), initial_name: 'music-pill-backup.json' });
+            dialog.save(null, null, (dlg, res) => {
+                try {
+                    let file = dlg.save_finish(res);
+                    if (file) {
+                        let bytes = new GLib.Bytes(new TextEncoder().encode(JSON.stringify(data, null, 2)));
+                        file.replace_contents_bytes_async(bytes, null, false, Gio.FileCreateFlags.REPLACE_DESTINATION, null, null);
+                    }
+                } catch (e) { console.error(e); }
+            });
+        });
+        exportRow.add_suffix(exportBtn);
+        backupGroup.add(exportRow);
+
+        // IMPORT
+        const importRow = new Adw.ActionRow({ title: _('Import Settings') });
+        const importBtn = new Gtk.Button({ label: _('Import'), valign: Gtk.Align.CENTER });
+        importBtn.connect('clicked', () => {
+            let dialog = new Gtk.FileDialog({ title: _('Open Settings Backup') });
+            dialog.open(null, null, (dlg, res) => {
+                try {
+                    let file = dlg.open_finish(res);
+                    if (file) {
+                        file.load_contents_async(null, (f, r) => {
+                            try {
+                                let [ok, contents] = f.load_contents_finish(r);
+                                if (ok) {
+                                    let data = JSON.parse(new TextDecoder().decode(contents));
+                                    PREFS_KEYS.forEach(k => {
+                                        if (data[k] !== undefined) {
+                                            let type = settings.get_default_value(k).get_type_string();
+                                            settings.set_value(k, new GLib.Variant(type, data[k]));
+                                        }
+                                    });
+                                }
+                            } catch (e) { console.error(e); }
+                        });
+                    }
+                } catch (e) { console.error(e); }
+            });
+        });
+        importRow.add_suffix(importBtn);
+        backupGroup.add(importRow);
+        otherPage.add(backupGroup);
+
+        const cacheGroup = new Adw.PreferencesGroup({ title: _('Art Cache') });
+
+        const ownCacheDir = GLib.build_filenamev([GLib.get_user_cache_dir(), 'dynamic-music-pill', 'art']);
+
+        const getCacheInfo = () => {
+            try {
+                let dir = Gio.File.new_for_path(ownCacheDir);
+                if (!dir.query_exists(null)) return { count: 0, size: 0 };
+                let en = dir.enumerate_children('standard::size', Gio.FileQueryInfoFlags.NONE, null);
+                let count = 0, size = 0, fi;
+                while ((fi = en.next_file(null)) !== null) { count++; size += fi.get_size(); }
+                en.close(null);
+                return { count, size };
+            } catch (e) { return { count: 0, size: 0 }; }
+        };
+
+        const formatSize = (bytes) => {
+            if (bytes < 1024) return `${bytes} B`;
+            if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+            return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+        };
+
+        const buildSubtitle = (info) => `${info.count} ${_('covers cached')}  —  ${formatSize(info.size)}`;
+
+        const cacheRow = new Adw.ActionRow({
+            title: _('Album Art Cache'),
+            subtitle: buildSubtitle(getCacheInfo())
+        });
+
+        const clearCacheBtn = new Gtk.Button({
+            label: _('Clear'),
+            valign: Gtk.Align.CENTER,
+            css_classes: ['destructive-action']
+        });
+
+        clearCacheBtn.connect('clicked', () => {
+            try {
+                let dir = Gio.File.new_for_path(ownCacheDir);
+                if (dir.query_exists(null)) {
+                    let en = dir.enumerate_children('standard::name', Gio.FileQueryInfoFlags.NONE, null);
+                    let fi;
+                    while ((fi = en.next_file(null)) !== null) dir.get_child(fi.get_name()).delete(null);
+                    en.close(null);
+                }
+            } catch (e) {}
+            cacheRow.subtitle = buildSubtitle(getCacheInfo());
+        });
+
+        cacheRow.add_suffix(clearCacheBtn);
+        cacheGroup.add(cacheRow);
+        otherPage.add(cacheGroup);
+
+        const resetGroup = new Adw.PreferencesGroup({ title: _('Danger Zone') });
+        const resetBtn = new Gtk.Button({ label: _('Reset All'), valign: Gtk.Align.CENTER, css_classes: ['destructive-action'] });
+        resetBtn.connect('clicked', () => { PREFS_KEYS.forEach(k => settings.reset(k)); });
+        const resetRow = new Adw.ActionRow({ title: _('Factory Reset') });
+        resetRow.add_suffix(resetBtn);
+        resetGroup.add(resetRow);
+        otherPage.add(resetGroup);
+
+        window.add(otherPage);
+
+        // =========================================
+        // 5. ABOUT PAGE
+        // =========================================
+        const aboutPage = new Adw.PreferencesPage({
+            title: _('About'),
+            icon_name: 'help-about-symbolic'
+        });
+        
+        const whatsNewGroup = new Adw.PreferencesGroup({ 
+            title: _("What's New") 
+        });
+
+        const changelog = [
+                    {
+                        version: "1.1.0 - Latest Update",
+                        subtitle: "Custom Buttons & Bug Fixes",
+                        expanded: true,
+                        notes: "✨ New Features:\n" +
+                               "• Add a 'Scroll Action' mode to fast-forward.\n" +
+                               "• Per-App Volume Control.\n" +
+        					   "• Resotre original GNOME accent color after player is closed.\n\n" +
+                               "• Bug Fixes:\n" +
+        					   "• Lyrics view crash fix.\n" +
+                               "• Telegram crash fix."
+                    },
+        	{
+                version: "1.0.0",
+                subtitle: "Custom Buttons & Bug Fixes",
+                expanded: false,
+                notes: "✨ New Features:\n" +
+                       "• Custom Control Buttons: Add up to two extra buttons to the pop-up controls row. Each can be assigned to Volume, Seek Step, Audio Output, Sleep Timer, Playback Speed, or Recently Played history.\n" +
+                       "• First-Time Hint: A one-time tip in the pop-up suggests checking settings for more options (custom buttons, scroll actions, etc.). Dismissible with a click or via the settings button.\n" +
+					   "• Scroll on Hover Only: A new setting to scroll long text only when hovering over the pill.\n\n" +
+                       "🐛 Bug Fixes:\n" +
+					   "• Fixed GNOME Shell freezes (metadata crash) when player state unexpectedly becomes undefined.\n" +
+                       "• Fixed History showing incorrect album art for slow players (Zen Browser/Web apps) and prevents rapid-skip duplicates.\n" +
+                       "• Fixed Dash to Dock autohide breaking after locking and unlocking the screen.\n" +
+                       "• Fixed two pills appearing in the dock (could occur unreliably after Lock and Unlock).\n" +
+                       "• Fixed duplicate title and artist display.\n" +
+                       "• Fixed visualizer failing to update when transitioning between pill and pop-up with Dash to Dock.\n" +
+                       "• Fixed history scroll area being covered and unclickable (switched to non-overlay scrollbars).\n" +
+                       "• Fixed first-time hint buttons (Settings, X) not responding to clicks."
+            },
+            {
+                version: "V29",
+                subtitle: "Real-Time Visualizer, App Mapping & Major Fixes",
+                expanded: false,
+                notes: "✨ New Features:\n" +
+                       "• Real-Time Visualizer: Added CAVA-powered real-time audio visualizer!\n" +
+                       "• Accent Color Sync: Dynamically change the GNOME accent color to match the current album art.\n" +
+                       "• Manual App Mapping: Added a new settings page to manually map unrecognized App IDs (fixes Open/Close app actions).\n" +
+                       "• Translations: Implemented multi-language support! Contributions to complete missing languages are welcome on GitHub.\n" +
+                       "• Shared Engine: Implemented a shared visualizer engine for better performance (paving the way for simultaneous Dash & Top Panel placement).\n" +
+                       "• Implemented cache system for better performance.\n\n" +
+                       "🎨 Customization & Enhancements:\n" +
+                       "• Advanced Visualizer:Deep customization options added (bar count, width, height, margin, and border radius).\n" +
+                       "• Smooth Fading: Added adjustable fade-in/out transitions for Lyrics and edge-fading for scrolling text.\n" +
+                       "• Touch & Tablet: Added a dedicated Play/Pause button in Tablet Mode and implemented proper touchscreen target controls.\n" +
+                       "• Pop-up Tweaks: Adjustable Vinyl rotation speed and a new option to auto-hide the pop-up on mouse leave/hover.\n" +
+                       "• Added dynamic width with crossfade and a new 'Outer Edge Margin' setting.\n\n" +
+                       "🐛 Bug Fixes:\n" +
+                       "• Fixed blurry album art, text, and numbers inside the pop-up menu.\n" +
+                       "• Fixed background color not updating properly to reflect the album artwork.\n" +
+                       "• Fixed an issue where selecting a non-playing player caused the pill to hide and break the player selector.\n" +
+                       "• Fixed Spotify window failing to close properly.\n" +
+                       "• Fixed a bug where the microphone would activate when the CAVA visualizer was enabled.\n" +
+                       "• Fixed floating menu alignment issues when using Dash to Dock.\n" +
+                       "• Fixed Dash to Dock aligment when tried to change an icon position.\n" +
+                       "• Fixed and issue with Strawberry player where the art image didn't loaded."
+            },
+        	{
+                version: "V27",
+                subtitle: "Small Features and Fixes",
+                expanded: false,
+                notes: "• Added Double Click Mouse Actin\n" +
+                       "• Added Always ON mode\n" +
+                       "• Fixed an issue where the seek bar become glitchy\n" +
+                       "• Fixed a huge CPU drain with dash to dock autohide mode"
+            },     
+        	{
+                version: "V26",
+                subtitle: "Dynamic Contrast & Readability Improvements",
+                expanded: false,
+                notes: "• Added dynamic contrast: Popup text and buttons now automatically turn dark on light album arts for perfect readability\n" +
+                       "• The Player Selector menu now correctly follows your Custom Color settings\n" +
+                       "• Dynamic contrast is also applied to the Player Selector menu\n" +
+                       "• Improved Player Selector: Added smart DBus logic to accurately detect and display media player names and icons\n" +
+                       "• Fixed an issue where the popup menu would jump or resize incorrectly when Custom Width was enabled"
+            },
+            {
+                version: "V25",
+                subtitle: "Ubuntu Dock Support, UI Fixes & Stability",
+                expanded: false,
+                notes: "• Added automatic vertical mode for side panels (e.g., Ubuntu Dock)\n" +
+                       "• Fixed an issue where the pill disappeared when moving the dock\n" +
+                       "• Improved seeker sync when changing tracks\n" +
+                       "• New toggle for Outline Border for the Main Pill, now you can disable it\n" +
+                       "• Fixed the pill hitbox"                   
+            },
+            {
+                version: "V21-V23",
+                subtitle: "Custom Colors & Player Selector",
+                expanded: false,
+                notes: "• Added custom text and background color options\n" +
+                       "• New Player Selector\n" +
+                       "• New Invert Scrolling Toggle\n" +
+                       "• New Mouse Action (Hover)\n" +
+                       "• Bugfixes and performance improvements"
+            }
+        ];
+
+        changelog.forEach(release => {
+            let row = new Adw.ExpanderRow({
+                title: release.version,
+                subtitle: release.subtitle,
+                expanded: release.expanded
+            });
+
+            let label = new Gtk.Label({
+                label: release.notes,
+                justify: Gtk.Justification.LEFT, 
+                xalign: 0,                       
+                wrap: true,                      
+                margin_top: 10,
+                margin_bottom: 10,
+                margin_start: 15,
+                margin_end: 15
+            });
+
+            row.add_row(label);
+            whatsNewGroup.add(row);
+        });
+
+        aboutPage.add(whatsNewGroup);
+
+        const supportGroup = new Adw.PreferencesGroup();
+        supportGroup.set_title(_('Support the Project'));
+
+        const kofiRow = new Adw.ActionRow({
+            title: _('Support on Ko-fi'),
+            subtitle: _('Buy me a coffee on Ko-fi')
+        });
+        const kofiBtn = new Gtk.Button({ label: _('Open'), valign: Gtk.Align.CENTER, css_classes: ['suggested-action'] });
+        kofiBtn.connect('clicked', () => Gio.AppInfo.launch_default_for_uri('https://ko-fi.com/andbal', null));
+        kofiRow.add_suffix(kofiBtn);
+        supportGroup.add(kofiRow);
+
+        const bmacRow = new Adw.ActionRow({
+            title: _('Buy Me a Coffee'),
+            subtitle: _('Support via BuyMeACoffee')
+        });
+        const bmacBtn = new Gtk.Button({ label: _('Open'), valign: Gtk.Align.CENTER, css_classes: ['suggested-action'] });
+        bmacBtn.connect('clicked', () => Gio.AppInfo.launch_default_for_uri('https://buymeacoffee.com/andbal', null));
+        bmacRow.add_suffix(bmacBtn);
+        supportGroup.add(bmacRow);
+
+        const githubRow = new Adw.ActionRow({
+            title: _('Source Code'),
+            subtitle: _('Report bugs or view source on GitHub')
+        });
+        const githubBtn = new Gtk.Button({ icon_name: 'external-link-symbolic', valign: Gtk.Align.CENTER });
+        githubBtn.connect('clicked', () => Gio.AppInfo.launch_default_for_uri('https://github.com/Andbal23/dynamic-music-pill', null));
+        githubRow.add_suffix(githubBtn);
+        supportGroup.add(githubRow);
+
+        aboutPage.add(supportGroup);
+        window.add(aboutPage);
+
+        function updateGroupVisibility(targetVal) {
+            if (targetVal === 0) {
+                dockDimGroup.set_visible(true);
+                panelDimGroup.set_visible(false);
+            } else {
+                dockDimGroup.set_visible(false);
+                panelDimGroup.set_visible(true);
+            }
+        }
+        updateGroupVisibility(settings.get_int('target-container'));
+        
+        window.present();
+}

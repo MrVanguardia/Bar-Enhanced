@@ -1292,6 +1292,41 @@
       <summary>Dash shadow On-Off</summary>
       <description>Show shadow of Dash or Dock.</description>
     </key>
+    <key type="b" name="notif-icons-enabled">
+      <default>false</default>
+      <summary>Enable Notification Icons in Top Bar</summary>
+      <description>Show notification source icons next to the clock in the top bar.</description>
+    </key>
+    <key type="b" name="privacy-accent-enabled">
+      <default>false</default>
+      <summary>Enable Privacy Indicators Accent Color</summary>
+      <description>Apply the system accent color to privacy and screen sharing/recording indicators.</description>
+    </key>
+    <key type="b" name="privacy-indicators">
+      <default>true</default>
+      <summary>Color Privacy Indicators</summary>
+      <description>Apply the accent color to camera, microphone, and location indicators.</description>
+    </key>
+    <key type="b" name="screen-sharing-indicator">
+      <default>true</default>
+      <summary>Color Screen Sharing Indicator</summary>
+      <description>Apply the accent color to the screen sharing indicator.</description>
+    </key>
+    <key type="b" name="screen-recording-indicator">
+      <default>true</default>
+      <summary>Color Screen Recording Indicator</summary>
+      <description>Apply the accent color to the screen recording indicator.</description>
+    </key>
+    <key type="b" name="privacy-blur">
+      <default>false</default>
+      <summary>Glow Blur on Sharing/Recording Indicators</summary>
+      <description>Use a glow blur background instead of a solid color block for sharing/recording indicators.</description>
+    </key>
+    <key type="b" name="privacy-neutral">
+      <default>false</default>
+      <summary>Neutral Color for Indicators</summary>
+      <description>Apply neutral colors (white/dark grey) to sharing and recording indicators instead of colors.</description>
+    </key>
     <key type="b" name="apply-gtk">
       <default>false</default>
       <summary>Apply accent color to Gtk apps</summary>
@@ -1472,5 +1507,437 @@
       <summary>Sync with System Accent Color</summary>
       <description>Automatically sync the panel border and neon glow with Fedora's active system accent color.</description>
     </key>
+    <key type="b" name="enable-gtk-window-custom">
+      <default>false</default>
+      <summary>Enable custom styling for GDK/GTK window theme</summary>
+      <description>Activate or deactivate custom background color and transparency styling for desktop GTK/GDK windows.</description>
+    </key>
+    <key name="bluetooth-battery-enabled" type="b">
+      <default>true</default>
+      <summary>Enable Bluetooth Battery Meter</summary>
+      <description>Shows battery level of connected Bluetooth devices</description>
+    </key>
+    <key name="vitals-enabled" type="b">
+      <default>true</default>
+      <summary>Enable Vitals</summary>
+      <description>Shows system vitals in the top panel</description>
+    </key>
+    <key name="music-pill-enabled" type="b">
+      <default>true</default>
+      <summary>Enable Dynamic Music Pill</summary>
+      <description>Shows the dynamic music pill for media control</description>
+    </key>
+    <key name="dash-to-dock-enabled" type="b">
+      <default>true</default>
+      <summary>Enable Dash to Dock</summary>
+      <description>Enables the dash to dock module</description>
+    </key>
   </schema>
+
+  
+
+  <schema id="org.gnome.shell.extensions.bar-enhanced.gdm.accessibility" path="/org/gnome/shell/extensions/bar-enhanced/gdm/accessibility/">
+    <key name="always-show-accessibility-menu" type="b">
+	   <default>true</default>
+	 </key>
+  </schema>
+
+  <schema id="org.gnome.shell.extensions.bar-enhanced.gdm.appearance" path="/org/gnome/shell/extensions/bar-enhanced/gdm/appearance/">
+    <key name="accent-color" type="s">
+	   <default>"blue"</default>
+	   <choices>
+	     <choice value="blue" />
+	     <choice value="teal" />
+	     <choice value="green" />
+	     <choice value="yellow" />
+	     <choice value="orange" />
+	     <choice value="red" />
+	     <choice value="pink" />
+	     <choice value="purple" />
+	     <choice value="slate" />
+	   </choices>
+	 </key>
+    <key name="light-mode" type="b">
+		<default>false</default>
+	 </key>
+    <key name="shell-theme" type="s">
+	   <default>"default"</default>
+	   <summary>Theme Name</summary>
+	 </key>
+    <key name="icon-theme" type="s">
+      <default>"Adwaita"</default>
+    </key>
+    <key name="cursor-theme" type="s">
+      <default>"Adwaita"</default>
+    </key>
+    <key name="background-type" type="s">
+	   <default>"default"</default>
+	   <summary>Type of Background</summary>
+      
+	   <description>
+	     Whether GDM background should be an Image, Color or Default.
+	   </description>
+	   <choices>
+	     <choice value="default" />
+	     <choice value="image" />
+	     <choice value="color" />
+	   </choices>
+	 </key>
+    <key name="background-image" type="s">
+	   <default>""</default>
+	   <summary>Background Image</summary>
+      
+	   <description>
+	     The image file to use as GDM background
+	   </description>
+	 </key>
+    <key name="bg-adjustment" type="s">
+	   <default>"zoom"</default>
+	   <summary>Background Image Adjustment</summary>
+	   <description>
+	     Strategy for adjustment of background image.
+	   </description>
+	   <choices>
+	     <choice value="zoom" />
+	     <choice value="repeat" />
+	   </choices>
+	 </key>
+    <key name="background-color" type="s">
+	   <default>"rgb(40,40,40)"</default>
+	   <summary>Background Color</summary>
+      
+	   <description>
+	     The Color to use as GDM background
+	   </description>
+	 </key>
+    <key name="blur-background" type="b">
+      <default>false</default>
+      <summary>Blur Background Image</summary>
+      <description>Whether to blur the GDM background image.</description>
+    </key>
+    <key name="blur-background-value" type="i">
+      <default>30</default>
+      <summary>Blur Background Value</summary>
+      <description>The blur radius for the GDM background image (0 to 100).</description>
+    </key>
+  </schema>
+
+  <schema id="org.gnome.shell.extensions.bar-enhanced.gdm.fonts" path="/org/gnome/shell/extensions/bar-enhanced/gdm/fonts/">
+    <key name="font" type="s">
+      <default>"Sans 11"</default>
+    </key>
+    <key name="antialiasing" type="s">
+      <default>"grayscale"</default>
+      <choices>
+        <choice value="grayscale" />
+        <choice value="rgba" />
+        <choice value="none" />
+      </choices>
+    </key>
+    <key name="hinting" type="s">
+      <default>"slight"</default>
+      <choices>
+        <choice value="full" />
+        <choice value="medium" />
+        <choice value="slight" />
+        <choice value="none" />
+      </choices>
+    </key>
+    <key name="scaling-factor" type="d">
+      <default>1.0</default>
+      <range min="0.5" max="3" />
+    </key>
+  </schema>
+
+  <schema id="org.gnome.shell.extensions.bar-enhanced.gdm.main" path="/org/gnome/shell/extensions/bar-enhanced/gdm/main/">
+    <key name="donation-dialog-shown" type="b">
+      <default>false</default>
+    </key>
+    <key name="initial-warning" type="b">
+      <default>true</default>
+    </key>
+    <key name="never-applied" type="b">
+      <default>true</default>
+    </key>
+  </schema>
+
+  <schema id="org.gnome.shell.extensions.bar-enhanced.gdm.misc" path="/org/gnome/shell/extensions/bar-enhanced/gdm/misc/">
+    <key name="enable-welcome-message" type="b">
+      <default>false</default>
+    </key>
+    <key name="welcome-message" type="s">
+      <default>"Welcome!"</default>
+    </key>
+    <key name="enlarge-welcome-message" type="b">
+      <default>true</default>
+    </key>
+    <key name="enable-logo" type="b">
+      <default>false</default>
+    </key>
+    <key name="logo" type="s">
+      <default>""</default>
+    </key>
+    <key name="disable-restart-buttons" type="b">
+      <default>false</default>
+    </key>
+    <key name="disable-user-list" type="b">
+      <default>false</default>
+    </key>
+    <key name="enable-fingerprint-authentication" type="b">
+      <default>true</default>
+    </key>
+    <key name="enable-custom-auth-box" type="b">
+      <default>false</default>
+    </key>
+    <key name="auth-box-color" type="s">
+      <default>"rgba(0,0,0,0.5)"</default>
+    </key>
+    <key name="auth-box-opacity" type="d">
+      <default>50.0</default>
+    </key>
+    <key name="auth-box-blur" type="b">
+      <default>true</default>
+    </key>
+  </schema>
+
+  <schema id="org.gnome.shell.extensions.bar-enhanced.gdm.mouse" path="/org/gnome/shell/extensions/bar-enhanced/gdm/mouse/">
+    <key name="pointer-acceleration" type="s">
+      <default>"default"</default>
+      <choices>
+        <choice value="default" />
+        <choice value="flat" />
+        <choice value="adaptive" />
+      </choices>
+    </key>
+    <key name="natural-scrolling" type="b">
+      <default>false</default>
+    </key>
+    <key name="speed" type="d">
+      <default>0.35</default>
+      <summary>Pointer speed</summary>
+      <description>Pointer speed for the touchpad. Accepted values are in the [-1..1] range (from “unaccelerated” to “fast”). A value of 0 is the system default.</description>
+      <range min="-1" max="1" />
+    </key>
+  </schema>
+
+  <schema id="org.gnome.shell.extensions.bar-enhanced.gdm.night-light" path="/org/gnome/shell/extensions/bar-enhanced/gdm/night-light/">
+    <key name="enabled" type="b">
+      <default>false</default>
+      <summary>If the night light mode is enabled</summary>
+      <description>Night light mode changes the color temperature of your display when the sun has gone down or at preset times.</description>
+    </key>
+    <key name="temperature" type="u">
+      <default>3000</default>
+      <summary>Temperature of the display when enabled</summary>
+      <description>This temperature in Kelvin is used to modify the screen tones when night light mode is enabled. Higher values are bluer, lower redder.</description>
+    </key>
+    <key name="schedule-automatic" type="b">
+      <default>true</default>
+      <summary>Use the sunrise and sunset</summary>
+      <description>Calculate the sunrise and sunset times automatically, from the current location.</description>
+    </key>
+    <key name="start-hour" type="i">
+      <default>19</default>
+      <summary>The start time's hour</summary>
+      <description>When “schedule-automatic” is disabled, use this start time in hours.</description>
+      <range min="0" max="23" />
+    </key>
+    <key name="start-minute" type="i">
+      <default>0</default>
+      <summary>The start time's minute</summary>
+      <description>When “schedule-automatic” is disabled, use this start time minutes.</description>
+      <range min="0" max="59" />
+    </key>
+    <key name="end-hour" type="i">
+      <default>6</default>
+      <summary>The end time's hour</summary>
+      <description>When “schedule-automatic” is disabled, use this end time in hours.</description>
+      <range min="0" max="23" />
+    </key>
+    <key name="end-minute" type="i">
+      <default>0</default>
+      <summary>The end time's minute</summary>
+      <description>When “schedule-automatic” is disabled, use this end time minutes.</description>
+      <range min="0" max="59" />
+    </key>
+  </schema>
+
+  <schema id="org.gnome.shell.extensions.bar-enhanced.gdm.pointing" path="/org/gnome/shell/extensions/bar-enhanced/gdm/pointing/">
+    <key name="cursor-size" type="i">
+      <default>24</default>
+    </key>
+  </schema>
+
+  <schema id="org.gnome.shell.extensions.bar-enhanced.gdm.power" path="/org/gnome/shell/extensions/bar-enhanced/gdm/power/">
+    <key name="power-button-action" type="s">
+      <default>'suspend'</default>
+      <choices>
+        <choice value="nothing" />
+        <choice value="suspend" />
+        <choice value="hibernate" />
+        <choice value="interactive" />
+      </choices>
+      <summary>Power button action</summary>
+      <description>The action to take when the system power button is pressed. This action is hard-coded (and the setting ignored) on virtual machines (power off) and tablets (suspend).</description>
+    </key>
+    <key name="auto-power-saver" type="b">
+      <default>true</default>
+      <summary>Enable power-saver profile when battery is low</summary>
+      <description>Automatically enable the "power-saver" profile using power-profiles-daemon if the battery is low.</description>
+    </key>
+    <key name="dim-screen" type="b">
+      <default>true</default>
+      <summary>Dim the screen after a period of inactivity</summary>
+      <description>If the screen should be dimmed to save power when the computer is idle.</description>
+    </key>
+    <key name="blank-screen" type="b">
+      <default>true</default>
+      <summary>Whether to blank screen when session is idle</summary>
+      <description>If the screen should be blanked to save power when the computer is idle.</description>
+    </key>
+    <key name="idle-delay" type="d">
+      <default>10</default>
+      <summary>Time before session is considered idle</summary>
+      <description>The number of minutes of inactivity before the session is considered idle.</description>
+    </key>
+    <key name="suspend-on-battery" type="b">
+      <default>true</default>
+      <summary>Whether to suspend when inactive and using battery</summary>
+    </key>
+    <key name="suspend-on-battery-delay" type="d">
+      <default>20</default>
+      <summary>Sleep timeout for computer when on battery</summary>
+      <description>The amount of time in minutes the computer on battery power needs to be inactive before it goes to sleep. A value of 0 means never.</description>
+    </key>
+    <key name="suspend-on-ac" type="b">
+      <default>false</default>
+      <summary>Whether to suspend when inactive and plugged in</summary>
+    </key>
+    <key name="suspend-on-ac-delay" type="d">
+      <default>60</default>
+      <summary>Sleep timeout for computer when plugged in</summary>
+      <description>The amount of time in minutes the computer on AC power needs to be inactive before it goes to sleep. A value of 0 means never.</description>
+    </key>
+  </schema>
+
+  <schema id="org.gnome.shell.extensions.bar-enhanced.gdm.sound" path="/org/gnome/shell/extensions/bar-enhanced/gdm/sound/">
+    <key name="theme" type="s">
+      <default>"freedesktop"</default>
+    </key>
+    <key name="over-amplification" type="b">
+      <default>false</default>
+    </key>
+    <key name="event-sounds" type="b">
+      <default>true</default>
+    </key>
+    <key name="feedback-sounds" type="b">
+      <default>false</default>
+    </key>
+  </schema>
+
+  <schema id="org.gnome.shell.extensions.bar-enhanced.gdm.tools" path="/org/gnome/shell/extensions/bar-enhanced/gdm/tools/">
+    <key name="top-bar-tweaks" type="b">
+      <default>true</default>
+      <summary>
+         Whether to apply top bar tweaks to extracted theme
+      </summary>
+    </key>
+  </schema>
+
+  <schema id="org.gnome.shell.extensions.bar-enhanced.gdm.top-bar" path="/org/gnome/shell/extensions/bar-enhanced/gdm/top-bar/">
+    <key name="disable-arrows" type="b">
+      <default>false</default>
+      <summary>Whether to disable top bar arrows</summary>
+    </key>
+    <key name="disable-rounded-corners" type="b">
+      <default>false</default>
+      <summary>Whether to disable top bar rounded corners</summary>
+    </key>
+    <key name="change-text-color" type="b">
+      <default>false</default>
+      <summary>Whether to change top bar text color</summary>
+    </key>
+    <key name="text-color" type="s">
+	   <default>"rgb(255,255,255)"</default>
+      <summary>Top bar text color</summary>
+    </key>
+    <key name="change-background-color" type="b">
+      <default>false</default>
+      <summary>Whether to change top bar background</summary>
+    </key>
+    <key name="background-color" type="s">
+	   <default>"rgb(0,0,0)"</default>
+      <summary>Top bar background color</summary>
+    </key>
+    <key name="show-date" type="b">
+      <default>true</default>
+    </key>
+    <key name="show-weekday" type="b">
+      <default>false</default>
+    </key>
+    <key name="time-format" type="s">
+      <default>"24h"</default>
+      <choices>
+        <choice value="12h" />
+        <choice value="24h" />
+      </choices>
+    </key>
+    <key name="show-seconds" type="b">
+      <default>false</default>
+    </key>
+    <key name="show-battery-percentage" type="b">
+      <default>true</default>
+    </key>
+  </schema>
+
+  <schema id="org.gnome.shell.extensions.bar-enhanced.gdm.touchpad" path="/org/gnome/shell/extensions/bar-enhanced/gdm/touchpad/">
+    <key name="enable" type="b">
+      <default>true</default>
+    </key>
+    <key name="disable-on-external-mouse" type="b">
+      <default>false</default>
+    </key>
+    <key name="disable-while-typing" type="b">
+      <default>true</default>
+    </key>
+    <key name="tap-to-click" type="b">
+      <default>true</default>
+    </key>
+    <key name="natural-scrolling" type="b">
+      <default>true</default>
+    </key>
+    <key name="two-finger-scrolling" type="b">
+      <default>true</default>
+    </key>
+    <key name="speed" type="d">
+      <default>0.35</default>
+      <summary>Pointer speed</summary>
+      <description>Pointer speed for the touchpad. Accepted values are in the [-1..1] range (from “unaccelerated” to “fast”). A value of 0 is the system default.</description>
+      <range min="-1" max="1" />
+    </key>
+  </schema>
+
+  <schema id="org.gnome.shell.extensions.bar-enhanced.gdm.window-state" path="/org/gnome/shell/extensions/bar-enhanced/gdm/window-state/">
+    <key name="width" type="u">
+	   <default>1080</default>
+	 </key>
+    <key name="height" type="u">
+	   <default>580</default>
+	 </key>
+    <key name="last-visited-page" type="s">
+	   <default>"appearance"</default>
+	   <choices>
+	     <choice value="appearance" />
+	     <choice value="fonts" />
+	     <choice value="display" />
+	     <choice value="sound" />
+	     <choice value="top_bar" />
+	     <choice value="pointing" />
+	     <choice value="misc" />
+	     <choice value="power" />
+	     <choice value="tools" />
+	   </choices>
+	 </key>
+  </schema>
+
 </schemalist>

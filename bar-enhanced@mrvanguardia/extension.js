@@ -27,7 +27,9 @@ import GdkPixbuf from 'gi://GdkPixbuf';
 import Meta from 'gi://Meta';
 import Clutter from 'gi://Clutter';
 import GLib from 'gi://GLib';
+import Shell from 'gi://Shell';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
+import * as MessageTray from 'resource:///org/gnome/shell/ui/messageTray.js';
 import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
 import * as Calendar from 'resource:///org/gnome/shell/ui/calendar.js';
 import * as LayoutManager from 'resource:///org/gnome/shell/ui/layout.js';
@@ -36,6 +38,10 @@ import { Extension, gettext as _ } from 'resource:///org/gnome/shell/extensions/
 import * as Quantize from './quantize.js';
 import * as AutoThemes from './autothemes.js';
 import * as StyleSheets from './stylesheets.js';
+import { DockManager } from './dash-to-dock/docking.js';
+import { MusicController } from './dynamic-music-pill/controller.js';
+import { VitalsMenuButton } from './vitals/extension.js';
+import { BluetoothBatteryButton } from './bluetooth-battery.js';
 
 const ES_MAP = {
     'Bar Enhanced': 'Bar Enhanced',
@@ -49,7 +55,14 @@ const ES_MAP = {
     'Floating': 'Flotante',
     'Islands': 'Islas',
     'Mainland': 'Continental',
-    'Trilands': 'Trilands'
+    'Trilands': 'Trilands',
+    'Bluetooth Devices': 'Dispositivos Bluetooth',
+    'No connected devices': 'No hay dispositivos conectados',
+    'Unknown Device': 'Dispositivo Desconocido',
+    'Enable Bluetooth Battery Meter': 'Activar Medidor de Batería Bluetooth',
+    'Show battery percentage of connected devices in the top bar.': 'Muestra el porcentaje de batería de los dispositivos conectados en la barra superior.',
+    'Bluetooth Battery Settings': 'Ajustes de Batería Bluetooth',
+    'Manage native Bluetooth battery indicator.': 'Administra el indicador nativo de batería Bluetooth.'
 };
 
 const T = (text) => {
@@ -86,191 +99,394 @@ class ConnectManager {
         });
         // Remove obj on destroy except following that don't have destroy signal
         if (!(obj instanceof Gio.Settings || obj instanceof LayoutManager.LayoutManager || obj instanceof Meta.WorkspaceManager | obj instanceof Meta.Display)) {
-            obj.connect('destroy', () => {
-                this.removeObject(obj)
+            let destroyId = obj.connect('destroy', () => {
+                this.removeObject(obj);
             });
+            this.connections[this.connections.length - 1].destroyId = destroyId;
         }
     }
 
     // remove an object WITHOUT disconnecting it, use only when you know the object is destroyed
     removeObject(object) {
-        this.connections = this.connections.filter(({ id, obj, sig }) => obj != object);
+        this.connections = this.connections.filter(c => {
+            if (c.obj === object) {
+                // We don't disconnect c.id here because we only call this when it's destroyed,
+                // but we should clear it just in case.
+                return false;
+            }
+            return true;
+        });
     }
 
     disconnect(object, signal) {
-        let disconnections = this.connections.filter(({ id, obj, sig }) => obj == object && sig == signal);
+        let disconnections = this.connections.filter(c => c.obj == object && c.sig == signal);
         disconnections.forEach(c => {
-            c.obj.disconnect(c.id);
+            if (c.obj && c.id > 0) c.obj.disconnect(c.id);
+            if (c.obj && c.destroyId > 0) c.obj.disconnect(c.destroyId);
         });
-        this.connections = this.connections.filter(({ id, obj, sig }) => obj != object || sig != signal);
+        this.connections = this.connections.filter(c => c.obj != object || c.sig != signal);
     }
 
     disconnectAll() {
         this.connections.forEach(c => {
-            // console.log('Disconnect All - c.id: ', c.id);
-            if (c.obj && c.id > 0)
-                c.obj.disconnect(c.id);
-        })
+            if (c.obj && c.id > 0) c.obj.disconnect(c.id);
+            if (c.obj && c.destroyId > 0) {
+                try { c.obj.disconnect(c.destroyId); } catch(e) {}
+            }
+        });
+        this.connections = [];
     }
 }
 
 
 const BarEnhancedDashboard = GObject.registerClass(
-class BarEnhancedDashboard extends PanelMenu.Button {
-    _init(obar) {
-        super._init(0.5, 'Bar Enhanced Dashboard');
-        this.obar = obar;
+    class BarEnhancedDashboard extends PanelMenu.Button {
+        _init(obar) {
+            super._init(0.5, 'Bar Enhanced Dashboard');
+            this.obar = obar;
 
-        // Custom Symbolic paint-palette/color icon representing aesthetics
-        let icon = new St.Icon({
-            icon_name: 'preferences-color-symbolic',
-            style_class: 'system-status-icon'
-        });
-        this.add_child(icon);
+            // Custom Symbolic paint-palette/color icon representing aesthetics
+            let icon = new St.Icon({
+                icon_name: 'preferences-color-symbolic',
+                style_class: 'system-status-icon'
+            });
+            this.add_child(icon);
 
-        // Build Glassmorphic container
-        let widgetBox = new St.BoxLayout({
-            vertical: true,
-            style_class: 'bar-enhanced-dashboard-menu'
-        });
+            // Build Glassmorphic container
+            let widgetBox = new St.BoxLayout({
+                vertical: true,
+                style_class: 'bar-enhanced-dashboard-menu'
+            });
 
-        // 1. Header
-        let titleLabel = new St.Label({
-            text: T('Bar Enhanced'),
-            style_class: 'bar-enhanced-dashboard-header'
-        });
-        widgetBox.add_child(titleLabel);
+            // 1. Header
+            let titleLabel = new St.Label({
+                text: T('Bar Enhanced'),
+                style_class: 'bar-enhanced-dashboard-header'
+            });
+            widgetBox.add_child(titleLabel);
 
-        let subtitleLabel = new St.Label({
-            text: T('Premium Customize Center'),
-            style_class: 'bar-enhanced-dashboard-subtitle'
-        });
-        widgetBox.add_child(subtitleLabel);
+            let subtitleLabel = new St.Label({
+                text: T('Premium Customize Center'),
+                style_class: 'bar-enhanced-dashboard-subtitle'
+            });
+            widgetBox.add_child(subtitleLabel);
 
-        // Section: Layouts
-        let layoutTitle = new St.Label({
-            text: T('Top Bar Layouts'),
-            style_class: 'bar-enhanced-dashboard-section-title'
-        });
-        widgetBox.add_child(layoutTitle);
+            // Section: Layouts
+            let layoutTitle = new St.Label({
+                text: T('Top Bar Layouts'),
+                style_class: 'bar-enhanced-dashboard-section-title'
+            });
+            widgetBox.add_child(layoutTitle);
 
-        // Grid rows for layout selection
-        let row1 = new St.BoxLayout({ vertical: false, style_class: 'bar-enhanced-dashboard-row' });
-        let row2 = new St.BoxLayout({ vertical: false, style_class: 'bar-enhanced-dashboard-row' });
-        widgetBox.add_child(row1);
-        widgetBox.add_child(row2);
+            // Grid rows for layout selection
+            let row1 = new St.BoxLayout({ vertical: false, style_class: 'bar-enhanced-dashboard-row' });
+            let row2 = new St.BoxLayout({ vertical: false, style_class: 'bar-enhanced-dashboard-row' });
+            widgetBox.add_child(row1);
+            widgetBox.add_child(row2);
 
-        const layouts = ['Floating', 'Islands', 'Mainland', 'Trilands'];
-        let layoutBtns = {};
+            const layouts = ['Floating', 'Islands', 'Mainland', 'Trilands'];
+            let layoutBtns = {};
 
-        layouts.forEach((layout, index) => {
-            let btn = new St.Button({
-                label: T(layout),
-                style_class: 'bar-enhanced-dashboard-button',
+            layouts.forEach((layout, index) => {
+                let btn = new St.Button({
+                    label: T(layout),
+                    style_class: 'bar-enhanced-dashboard-button',
+                    x_expand: true,
+                    can_focus: true
+                });
+
+                btn.connect('clicked', () => {
+                    this.obar._settings.set_string('bartype', layout);
+                });
+
+                layoutBtns[layout] = btn;
+
+                if (index < 2) {
+                    row1.add_child(btn);
+                } else {
+                    row2.add_child(btn);
+                }
+            });
+
+            // Track active layout mode and add/remove style class
+            const updateActiveLayoutHighlight = () => {
+                let activeLayout = this.obar._settings.get_string('bartype');
+                layouts.forEach(l => {
+                    let btn = layoutBtns[l];
+                    if (btn) {
+                        if (l === activeLayout) {
+                            btn.add_style_class_name('active');
+                        } else {
+                            btn.remove_style_class_name('active');
+                        }
+                    }
+                });
+            };
+
+            this.obar._settings.connect('changed::bartype', updateActiveLayoutHighlight);
+            updateActiveLayoutHighlight();
+
+            // Section: Live Toggles
+            let togglesTitle = new St.Label({
+                text: T('Engine Controls'),
+                style_class: 'bar-enhanced-dashboard-section-title'
+            });
+            widgetBox.add_child(togglesTitle);
+
+            // Focus Glow Toggle
+            let focusGlowBtn = new St.Button({
+                label: T('Focus Glow'),
+                style_class: 'bar-enhanced-dashboard-button toggle-button',
                 x_expand: true,
                 can_focus: true
             });
-            
-            btn.connect('clicked', () => {
-                this.obar._settings.set_string('bartype', layout);
+
+            const updateFocusGlowBtn = () => {
+                let active = this.obar._settings.get_boolean('focus-glow');
+                focusGlowBtn.set_label(active ? T('Focus Glow: ON') : T('Focus Glow: OFF'));
+                if (active) {
+                    focusGlowBtn.add_style_class_name('active');
+                } else {
+                    focusGlowBtn.remove_style_class_name('active');
+                }
+            };
+
+            focusGlowBtn.connect('clicked', () => {
+                let active = !this.obar._settings.get_boolean('focus-glow');
+                this.obar._settings.set_boolean('focus-glow', active);
             });
 
-            layoutBtns[layout] = btn;
+            this.obar._settings.connect('changed::focus-glow', updateFocusGlowBtn);
+            updateFocusGlowBtn();
+            widgetBox.add_child(focusGlowBtn);
 
-            if (index < 2) {
-                row1.add_child(btn);
-            } else {
-                row2.add_child(btn);
-            }
-        });
+            // Pywal Sync Toggle
+            let pywalSyncBtn = new St.Button({
+                label: T('Pywal Sync'),
+                style_class: 'bar-enhanced-dashboard-button toggle-button',
+                x_expand: true,
+                can_focus: true
+            });
 
-        // Track active layout mode and add/remove style class
-        const updateActiveLayoutHighlight = () => {
-            let activeLayout = this.obar._settings.get_string('bartype');
-            layouts.forEach(l => {
-                let btn = layoutBtns[l];
-                if (btn) {
-                    if (l === activeLayout) {
-                        btn.add_style_class_name('active');
-                    } else {
-                        btn.remove_style_class_name('active');
-                    }
+            const updatePywalSyncBtn = () => {
+                let active = this.obar._settings.get_boolean('pywal-sync');
+                pywalSyncBtn.set_label(active ? T('Pywal Sync: ON') : T('Pywal Sync: OFF'));
+                if (active) {
+                    pywalSyncBtn.add_style_class_name('active');
+                } else {
+                    pywalSyncBtn.remove_style_class_name('active');
+                }
+            };
+
+            pywalSyncBtn.connect('clicked', () => {
+                let active = !this.obar._settings.get_boolean('pywal-sync');
+                this.obar._settings.set_boolean('pywal-sync', active);
+                if (active) {
+                    this.obar._syncWithPywal();
                 }
             });
-        };
 
-        this.obar._settings.connect('changed::bartype', updateActiveLayoutHighlight);
-        updateActiveLayoutHighlight();
+            this.obar._settings.connect('changed::pywal-sync', updatePywalSyncBtn);
+            updatePywalSyncBtn();
+            widgetBox.add_child(pywalSyncBtn);
 
-        // Section: Live Toggles
-        let togglesTitle = new St.Label({
-            text: T('Engine Controls'),
-            style_class: 'bar-enhanced-dashboard-section-title'
+            // Add whole box to the menu
+            this.menu.box.add_child(widgetBox);
+        }
+    });
+
+
+// --- Notification Icons Integration ---
+class NotifIcon {
+    constructor(source, actualIconSize, gicon, iconName, coloredIcons, notificationCount, hideCountWhenOne) {
+        this._source = source;
+        this._hideCountWhenOne = hideCountWhenOne;
+        this._widget = new St.Widget({ layout_manager: new Clutter.BinLayout() });
+        this._icon = new St.Icon({ icon_size: actualIconSize, style_class: 'topbar-notification-icon' });
+        if (gicon) this._icon.gicon = gicon;
+        else this._icon.icon_name = iconName || 'notification-symbolic';
+        if (!coloredIcons) {
+            this._icon.add_style_class_name('app-menu-icon');
+            this._icon.add_effect(new Clutter.DesaturateEffect());
+        }
+        this._widget.add_child(this._icon);
+        if (notificationCount) {
+            this._signal = source.connect('notify::count', this._updateNotificationCount.bind(this));
+            this._badge = new St.Label({
+                style_class: 'notification-count',
+                text: this._getNotificationCount(),
+                x_align: Clutter.ActorAlign.END,
+                y_align: Clutter.ActorAlign.START
+            });
+            this._badge.visible = this._badge.text !== '';
+            this._widget.add_child(this._badge);
+        }
+    }
+    _getNotificationCount() {
+        const count = this._source.notifications ? this._source.notifications.length : 0;
+        if (this._hideCountWhenOne) return count > 1 ? count.toString() : '';
+        return count > 0 ? count.toString() : '';
+    }
+    _updateNotificationCount() {
+        this._badge.text = this._getNotificationCount();
+        this._badge.visible = this._badge.text !== '';
+    }
+}
+
+const TopbarNotification = GObject.registerClass(
+class TopbarNotification extends St.BoxLayout {
+    _init(niSettings) {
+        super._init({
+            y_align: Clutter.ActorAlign.CENTER,
+            x_align: Clutter.ActorAlign.CENTER,
+            visible: true,
+            style_class: 'topbar-notification-container'
         });
-        widgetBox.add_child(togglesTitle);
-
-        // Focus Glow Toggle
-        let focusGlowBtn = new St.Button({
-            label: T('Focus Glow'),
-            style_class: 'bar-enhanced-dashboard-button toggle-button',
-            x_expand: true,
-            can_focus: true
-        });
-
-        const updateFocusGlowBtn = () => {
-            let active = this.obar._settings.get_boolean('focus-glow');
-            focusGlowBtn.set_label(active ? T('Focus Glow: ON') : T('Focus Glow: OFF'));
-            if (active) {
-                focusGlowBtn.add_style_class_name('active');
-            } else {
-                focusGlowBtn.remove_style_class_name('active');
+        this._niSettings = niSettings;
+        this._icons = new Map();
+        this._signals = [];
+        this._dndSignals = [];
+        this._dndMode = this._niSettings.get_int('dnd-mode');
+        this._coloredIcons = this._niSettings.get_boolean('colored-icons');
+        this._notificationCount = this._niSettings.get_boolean('notification-count');
+        this._hideCountWhenOne = this._niSettings.get_boolean('hide-count-when-one');
+        this._iconSize = this._niSettings.get_int('icon-size');
+        this._isDndActive = false;
+        this._sourceIdCounter = 0;
+        this._sourceIdMap = new WeakMap();
+        this._connectSignals();
+        this._updateDndState();
+        this._updateAllSources();
+    }
+    _connectSignals() {
+        this._signals = [
+            Main.messageTray.connect('source-added', this._onSourceAdded.bind(this)),
+            Main.messageTray.connect('source-removed', this._onSourceRemoved.bind(this)),
+        ];
+        this._monitorDndState();
+    }
+    _getSourceId(source) {
+        if (source._policy && source._policy.id) return `policy:${source._policy.id}`;
+        if (source.app && source.app.get_id) return `app:${source.app.get_id()}`;
+        if (source.title) return `title:${source.title}`;
+        if (!this._sourceIdMap.has(source)) this._sourceIdMap.set(source, `generated:${this._sourceIdCounter++}`);
+        return this._sourceIdMap.get(source);
+    }
+    _onSourceAdded(tray, source) {
+        if (!source) return;
+        const sourceId = this._getSourceId(source);
+        if (!this._shouldShowInDND(source)) return;
+        if (!this._icons.has(sourceId)) {
+            const icon = this._createIcon(source);
+            this._icons.set(sourceId, icon);
+            this.add_child(icon._widget);
+        }
+    }
+    _onSourceRemoved(tray, source) {
+        if (!source) return;
+        const sourceId = this._getSourceId(source);
+        const icon = this._icons.get(sourceId);
+        if (icon) {
+            this.remove_child(icon._widget);
+            this._destroyIcon(icon);
+            this._icons.delete(sourceId);
+        }
+    }
+    _createIcon(source) {
+        const iconSizeMap = [16, 18, 20];
+        const actualIconSize = iconSizeMap[this._iconSize] || 18;
+        const gicon = this._getGIconForSource(source);
+        const iconName = gicon ? null : this._getIconNameForSource(source);
+        return new NotifIcon(source, actualIconSize, gicon, iconName, this._coloredIcons, this._notificationCount, this._hideCountWhenOne);
+    }
+    _getGIconForSource(source) {
+        if (source.icon && source.icon instanceof Gio.Icon) return source.icon;
+        if (source.notifications && source.notifications.length > 0) {
+            for (const n of source.notifications) { if (n.gicon) return n.gicon; }
+        }
+        if (source.app && source.app.get_icon) { const ai = source.app.get_icon(); if (ai) return ai; }
+        if (source.gicon && source.gicon instanceof Gio.Icon) return source.gicon;
+        return null;
+    }
+    _getIconNameForSource(source) {
+        if (source.notifications && source.notifications.length > 0) {
+            for (const n of source.notifications) {
+                if (n.gicon && n.gicon instanceof Gio.ThemedIcon) { const names = n.gicon.get_names(); if (names && names.length > 0) return names[0]; }
+                if (n.iconName) return n.iconName;
             }
-        };
-
-        focusGlowBtn.connect('clicked', () => {
-            let active = !this.obar._settings.get_boolean('focus-glow');
-            this.obar._settings.set_boolean('focus-glow', active);
-        });
-
-        this.obar._settings.connect('changed::focus-glow', updateFocusGlowBtn);
-        updateFocusGlowBtn();
-        widgetBox.add_child(focusGlowBtn);
-
-        // Pywal Sync Toggle
-        let pywalSyncBtn = new St.Button({
-            label: T('Pywal Sync'),
-            style_class: 'bar-enhanced-dashboard-button toggle-button',
-            x_expand: true,
-            can_focus: true
-        });
-
-        const updatePywalSyncBtn = () => {
-            let active = this.obar._settings.get_boolean('pywal-sync');
-            pywalSyncBtn.set_label(active ? T('Pywal Sync: ON') : T('Pywal Sync: OFF'));
-            if (active) {
-                pywalSyncBtn.add_style_class_name('active');
-            } else {
-                pywalSyncBtn.remove_style_class_name('active');
-            }
-        };
-
-        pywalSyncBtn.connect('clicked', () => {
-            let active = !this.obar._settings.get_boolean('pywal-sync');
-            this.obar._settings.set_boolean('pywal-sync', active);
-            if (active) {
-                this.obar._syncWithPywal();
-            }
-        });
-
-        this.obar._settings.connect('changed::pywal-sync', updatePywalSyncBtn);
-        updatePywalSyncBtn();
-        widgetBox.add_child(pywalSyncBtn);
-
-        // Add whole box to the menu
-        this.menu.box.add_child(widgetBox);
+        }
+        if (source.icon && source.icon instanceof Gio.ThemedIcon) { const names = source.icon.get_names(); if (names && names.length > 0) return names[0]; }
+        if (source.iconName) return source.iconName;
+        if (source.app && source.app.get_id) { const appId = source.app.get_id(); if (appId) return appId.replace(/\.desktop$/, ''); }
+        if (source.title) return source.title.toLowerCase().replace(/\s+/g, '-');
+        return 'notification-symbolic';
+    }
+    _monitorDndState() {
+        const settings = new Gio.Settings({ schema_id: 'org.gnome.desktop.notifications' });
+        this._dndSignals = [settings.connect('changed::show-banners', this._onDndStateChanged.bind(this))];
+        this._dndSettings = settings;
+        this._updateDndState();
+    }
+    _updateDndState() {
+        const wasDndActive = this._isDndActive;
+        this._isDndActive = this._dndSettings ? !this._dndSettings.get_boolean('show-banners') : false;
+        if (wasDndActive !== this._isDndActive) this._updateAllSources();
+    }
+    _onDndStateChanged() { this._updateDndState(); }
+    _shouldShowInDND(source) {
+        if (!this._isDndActive) return true;
+        const dndMode = this._niSettings.get_int('dnd-mode');
+        switch (dndMode) {
+            case 0: return true;
+            case 1: return this._isUrgentNotification(source);
+            case 2: return false;
+            default: return true;
+        }
+    }
+    _isUrgentNotification(source) {
+        if (!source) return false;
+        if (source.notifications && source.notifications.length > 0) {
+            return source.notifications.some(n => {
+                if (n._urgency === 2 || n._urgency === 3) return true;
+                if (n.urgency === MessageTray.Urgency.CRITICAL || n.urgency === MessageTray.Urgency.HIGH) return true;
+                return false;
+            });
+        }
+        return false;
+    }
+    _updateAllSources() {
+        this.remove_all_children();
+        this._icons.forEach(icon => this._destroyIcon(icon));
+        this._icons.clear();
+        const sources = Main.messageTray.getSources();
+        sources.forEach(source => this._onSourceAdded(null, source));
+    }
+    _destroyIcon(icon) {
+        if (icon._signal) icon._source.disconnect(icon._signal);
+        icon._widget.destroy();
+    }
+    updateSettings() {
+        const newDndMode = this._niSettings.get_int('dnd-mode');
+        const newColoredIcons = this._niSettings.get_boolean('colored-icons');
+        const newNotificationCount = this._niSettings.get_boolean('notification-count');
+        const newHideCountWhenOne = this._niSettings.get_boolean('hide-count-when-one');
+        const newIconSize = this._niSettings.get_int('icon-size');
+        let needsUpdate = false;
+        if (newDndMode !== this._dndMode) { this._dndMode = newDndMode; needsUpdate = true; }
+        if (newColoredIcons !== this._coloredIcons) { this._coloredIcons = newColoredIcons; needsUpdate = true; }
+        if (newNotificationCount !== this._notificationCount) { this._notificationCount = newNotificationCount; needsUpdate = true; }
+        if (newHideCountWhenOne !== this._hideCountWhenOne) { this._hideCountWhenOne = newHideCountWhenOne; needsUpdate = true; }
+        if (newIconSize !== this._iconSize) { this._iconSize = newIconSize; needsUpdate = true; }
+        if (needsUpdate) this._updateAllSources();
+    }
+    destroy() {
+        if (this._signals) { this._signals.forEach(s => { if (s) Main.messageTray.disconnect(s); }); this._signals = []; }
+        if (this._dndSignals && this._dndSettings) { this._dndSignals.forEach(s => { if (s) this._dndSettings.disconnect(s); }); this._dndSignals = []; this._dndSettings = null; }
+        this._icons.forEach(icon => this._destroyIcon(icon));
+        this._icons.clear();
+        super.destroy();
     }
 });
-
 
 // BarEnhanced Extension main class
 export default class BarEnhanced extends Extension {
@@ -417,8 +633,12 @@ export default class BarEnhanced extends Extension {
     }
 
     unloadStylesheet() {
+        if (this._reloadStyleTimeoutId) {
+            GLib.Source.remove(this._reloadStyleTimeoutId);
+            this._reloadStyleTimeoutId = null;
+        }
         const theme = this.themeContext.get_theme();
-        const stylesheet = this.obarRunDir.get_child('stylesheet.css');
+        const stylesheet = this.obarRunDir.get_child('bar-enhanced.css');
         try {
             theme.unload_stylesheet(stylesheet);
         }
@@ -429,12 +649,34 @@ export default class BarEnhanced extends Extension {
 
     loadStylesheet() {
         const theme = this.themeContext.get_theme();
-        const stylesheet = this.obarRunDir.get_child('stylesheet.css');
+        const stylesheet = this.obarRunDir.get_child('bar-enhanced.css');
         try {
             theme.load_stylesheet(stylesheet);
         }
         catch (e) {
             console.log('BarEnhanced: Error loading stylesheet: ', e);
+        }
+    }
+
+    loadDashToDockStylesheet() {
+        const theme = this.themeContext.get_theme();
+        const stylesheet = Gio.File.new_for_path(GLib.build_filenamev([this.path, 'dash-to-dock', 'dash-to-dock.css']));
+        try {
+            theme.load_stylesheet(stylesheet);
+        }
+        catch (e) {
+            console.log('BarEnhanced: Error loading dash-to-dock stylesheet: ', e);
+        }
+    }
+
+    unloadDashToDockStylesheet() {
+        const theme = this.themeContext.get_theme();
+        const stylesheet = Gio.File.new_for_path(GLib.build_filenamev([this.path, 'dash-to-dock', 'dash-to-dock.css']));
+        try {
+            theme.unload_stylesheet(stylesheet);
+        }
+        catch (e) {
+            console.log('BarEnhanced: Error unloading dash-to-dock stylesheet: ', e);
         }
     }
 
@@ -689,29 +931,6 @@ export default class BarEnhanced extends Extension {
                     }
                 }
             }
-            // for(let k=0; k<btns.length; k++) {
-            //     if(btns[k].child instanceof PanelMenu.Button || btns[k].child instanceof PanelMenu.ButtonBox) {
-            //         // ['one-child', 'left-child', 'right-child', 'mid-child'].forEach(cls => {
-            //             // btns[k].child.remove_style_pseudo_class(cls);
-            //         // });
-            //         btns[k].child.style = ``;
-            //         if(bartype == 'Trilands') {
-            //             let borderRadius = this._settings.get_double('bradius');
-            //             if(k == firstIdx && k == lastIdx)
-            //                 btns[k].child.style = ` border-radius: ${borderRadius}px ${borderRadius}px ${borderRadius}px ${borderRadius}px !important; `;
-            //                 // btns[k].child.add_style_pseudo_class('one-child');
-            //             else if(k == firstIdx)
-            //                 btns[k].child.style = ` border-radius: ${borderRadius}px 0px 0px ${borderRadius}px !important; `;
-            //                 // btns[k].child.add_style_pseudo_class('left-child');
-            //             else if(k == lastIdx)
-            //                 btns[k].child.style = ` border-radius: 0px ${borderRadius}px ${borderRadius}px 0px !important; `;
-            //                 // btns[k].child.add_style_pseudo_class('right-child');
-            //             else
-            //                 btns[k].child.style = ` border-radius: 0px !important; `;
-            //                 // btns[k].child.add_style_pseudo_class('mid-child');
-            //         }
-            //     }
-            // }
         }
     }
 
@@ -831,7 +1050,7 @@ export default class BarEnhanced extends Extension {
 
         // GTK Apps styles
         let gtkKeys = ['apply-gtk', 'headerbar-hint', 'hbar-gtk3only', 'sidebar-hint', 'sbar-gradient', 'card-hint', 'view-hint', 'window-hint', 'winbradius', 'corner-radius',
-            'winbcolor', 'winbalpha', 'winbwidth', 'traffic-light', 'menu-radius', 'gtk-transparency', 'gtk-popover', 'mscolor', 'msalpha', 'hscd-color', 'vw-color', 'gtk-shadow'];
+            'winbcolor', 'winbalpha', 'winbwidth', 'traffic-light', 'menu-radius', 'gtk-transparency', 'gtk-popover', 'mscolor', 'msalpha', 'hscd-color', 'vw-color', 'gtk-shadow', 'enable-gtk-window-custom'];
         if (gtkKeys.includes(key)) {
             // console.log('Call saveGtkCss from extension for key: ', key);
             this.gtkCSS = true;
@@ -1313,20 +1532,20 @@ export default class BarEnhanced extends Extension {
                 (bind, value) => [true, panel.y + value], null);
 
             // Connect signals for hover
-            btn.FittsWidget.connect('enter-event', (actor, event) => {
+            this._connections.connect(btn.FittsWidget, 'enter-event', (actor, signal, event) => {
                 btn.child.add_style_pseudo_class('hover');
                 return Clutter.EVENT_PROPAGATE;
-            });
-            btn.FittsWidget.connect('leave-event', (actor, event) => {
+            });;
+            this._connections.connect(btn.FittsWidget, 'leave-event', (actor, signal, event) => {
                 btn.child.remove_style_pseudo_class('hover');
                 return Clutter.EVENT_PROPAGATE;
-            });
+            });;
 
             // Connect signals for captured-event
-            btn.FittsWidget.connect('captured-event', (actor, event) => {
+            this._connections.connect(btn.FittsWidget, 'captured-event', (actor, signal, event) => {
                 btn.child.event(event, false);
                 return Clutter.EVENT_PROPAGATE;
-            });
+            });;
 
             Main.layoutManager.addChrome(btn.FittsWidget, { trackFullscreen: true });
         }
@@ -1600,10 +1819,13 @@ export default class BarEnhanced extends Extension {
         this._settings.set_int('monitor-width', panelMonitor.width);
 
         // Connect to the settings changes
-        this._settings.connect('changed', (settings, key) => {
+        this._settingsChangedId = this._settings.connect('changed', (settings, key) => {
             this.updatePanelStyle(settings, key);
             if (key === 'neon' || key === 'focus-glow') {
                 this._onFocusWindowChanged();
+            }
+            if (key === 'enable-gtk-window-custom' || key === 'gtk-transparency') {
+                this.updateWindowsBlur();
             }
         });
 
@@ -1616,6 +1838,7 @@ export default class BarEnhanced extends Extension {
             [global.display, 'window-entered-monitor', this.setWindowMaxBar.bind(this), 'window-entered-monitor'],
             [global.display, 'window-left-monitor', this.setWindowMaxBar.bind(this), 'window-left-monitor'],
             [global.display, 'notify::focus-window', this._onFocusWindowChanged.bind(this), 'focus-window'],
+            [global.display, 'window-created', this.updateWindowsBlur.bind(this), 'window-created'],
             [Main.layoutManager, 'startup-complete', this.postStartup.bind(this)],
             // [ Main.sessionMode, 'updated', this.updatePanelStyle.bind(this), 'session-mode-updated' ],
         ];
@@ -1795,10 +2018,307 @@ export default class BarEnhanced extends Extension {
             this._syncWithSystemAccent();
         });
         this._syncWithSystemAccent();
+        this.updateWindowsBlur();
+
+        this.loadDashToDockStylesheet();
+
+        // Dash to Dock
+        this._dashToDockEnabled = this._settings.get_boolean('dash-to-dock-enabled');
+        if (this._dashToDockEnabled) this._enableDashToDock();
+        this._dashToDockSettingId = this._settings.connect('changed::dash-to-dock-enabled', () => {
+            this._dashToDockEnabled = this._settings.get_boolean('dash-to-dock-enabled');
+            if (this._dashToDockEnabled) this._enableDashToDock();
+            else this._disableDashToDock();
+        });
+
+        // Dynamic Music Pill
+        this._musicPillEnabled = this._settings.get_boolean('music-pill-enabled');
+        if (this._musicPillEnabled) this._enableMusicPill();
+        this._musicPillSettingId = this._settings.connect('changed::music-pill-enabled', () => {
+            this._musicPillEnabled = this._settings.get_boolean('music-pill-enabled');
+            if (this._musicPillEnabled) this._enableMusicPill();
+            else this._disableMusicPill();
+        });
+
+        // Vitals
+        this._vitalsEnabled = this._settings.get_boolean('vitals-enabled');
+        if (this._vitalsEnabled) this._enableVitals();
+        this._vitalsSettingId = this._settings.connect('changed::vitals-enabled', () => {
+            this._vitalsEnabled = this._settings.get_boolean('vitals-enabled');
+            if (this._vitalsEnabled) this._enableVitals();
+            else this._disableVitals();
+        });
+
+
+        // Bluetooth Battery Menu
+        this._btBatteryEnabled = this._settings.get_boolean('bluetooth-battery-enabled');
+        if (this._btBatteryEnabled) this._enableBluetoothBattery();
+        this._btBatterySettingId = this._settings.connect('changed::bluetooth-battery-enabled', () => {
+            this._btBatteryEnabled = this._settings.get_boolean('bluetooth-battery-enabled');
+            if (this._btBatteryEnabled) this._enableBluetoothBattery();
+            else this._disableBluetoothBattery();
+        });
+
+        // Notification Icons
+        this._notifIconsEnabled = this._settings.get_boolean('notif-icons-enabled');
+        this._niSettings = this.getSettings('org.gnome.shell.extensions.notification-icons');
+        if (this._notifIconsEnabled) this._enableNotifIcons();
+        this._notifIconsSettingId = this._settings.connect('changed::notif-icons-enabled', () => {
+            const enabled = this._settings.get_boolean('notif-icons-enabled');
+            if (enabled && !this._topbarNotification) this._enableNotifIcons();
+            else if (!enabled && this._topbarNotification) this._disableNotifIcons();
+        });
+
+        // Privacy Indicators Accent Color
+        this._privacyAccentEnabled = this._settings.get_boolean('privacy-accent-enabled');
+        if (this._privacyAccentEnabled) this._enablePrivacyAccent();
+        this._privacyAccentSettingId = this._settings.connect('changed::privacy-accent-enabled', () => {
+            const enabled = this._settings.get_boolean('privacy-accent-enabled');
+            if (enabled) this._enablePrivacyAccent();
+            else this._disablePrivacyAccent();
+        });
+    }
+
+    _enableNotifIcons() {
+        this._topbarNotification = new TopbarNotification(this._niSettings);
+        this._niSignals = [
+            this._niSettings.connect('changed::right-side', () => this._onNiSettingsChanged()),
+            this._niSettings.connect('changed::colored-icons', () => this._onNiSettingsChanged()),
+            this._niSettings.connect('changed::dnd-mode', () => this._onNiSettingsChanged()),
+            this._niSettings.connect('changed::notification-count', () => this._onNiSettingsChanged()),
+            this._niSettings.connect('changed::hide-count-when-one', () => this._onNiSettingsChanged()),
+            this._niSettings.connect('changed::icon-size', () => this._onNiSettingsChanged()),
+        ];
+        this._insertNotifWidget();
+    }
+
+    _disableNotifIcons() {
+        if (this._niSignals) {
+            this._niSignals.forEach(s => { if (s) this._niSettings.disconnect(s); });
+            this._niSignals = [];
+        }
+        if (this._topbarNotification) {
+            const dateMenu = Main.panel.statusArea.dateMenu;
+            if (dateMenu) {
+                try { dateMenu.get_first_child().remove_child(this._topbarNotification); } catch(e) {}
+            }
+            this._topbarNotification.destroy();
+            this._topbarNotification = null;
+        }
+    }
+
+    _onNiSettingsChanged() {
+        if (this._topbarNotification) {
+            this._topbarNotification.updateSettings();
+            this._repositionNotifWidget();
+        }
+    }
+
+    _insertNotifWidget() {
+        const dateMenu = Main.panel.statusArea.dateMenu;
+        if (!dateMenu || !dateMenu._clockDisplay) return;
+        const rightSide = this._niSettings.get_boolean('right-side');
+        const container = dateMenu.get_first_child();
+        if (rightSide) container.insert_child_above(this._topbarNotification, dateMenu._clockDisplay);
+        else container.insert_child_below(this._topbarNotification, dateMenu._clockDisplay);
+    }
+
+    _repositionNotifWidget() {
+        const dateMenu = Main.panel.statusArea.dateMenu;
+        if (!dateMenu || !dateMenu._clockDisplay) return;
+        const rightSide = this._niSettings.get_boolean('right-side');
+        const container = dateMenu.get_first_child();
+        container.remove_child(this._topbarNotification);
+        if (rightSide) container.insert_child_above(this._topbarNotification, dateMenu._clockDisplay);
+        else container.insert_child_below(this._topbarNotification, dateMenu._clockDisplay);
+    }
+
+    _enablePrivacyAccent() {
+        this._privacySignals = [
+            this._settings.connect('changed::privacy-indicators', () => this._updatePrivacyClasses()),
+            this._settings.connect('changed::screen-sharing-indicator', () => this._updatePrivacyClasses()),
+            this._settings.connect('changed::screen-recording-indicator', () => this._updatePrivacyClasses()),
+            this._settings.connect('changed::privacy-blur', () => this._updatePrivacyClasses()),
+            this._settings.connect('changed::privacy-neutral', () => this._updatePrivacyClasses()),
+        ];
+        this._updatePrivacyClasses();
+    }
+
+    _disablePrivacyAccent() {
+        if (this._privacyAccentTimeout) {
+            GLib.source_remove(this._privacyAccentTimeout);
+            this._privacyAccentTimeout = null;
+        }
+        if (this._privacySignals) {
+            this._privacySignals.forEach(s => { if (s) this._settings.disconnect(s); });
+            this._privacySignals = null;
+        }
+        this._updateUiGroupClass(false, 'privacy-indicators-accent-color');
+        this._updateUiGroupClass(false, 'screen-sharing-indicator-accent-color');
+        this._updateUiGroupClass(false, 'screen-recording-indicator-accent-color');
+        this._updateUiGroupClass(false, 'screen-sharing-recording-indicators-blur');
+        this._updateUiGroupClass(false, 'neutral-color');
+    }
+
+    _enableDashToDock() {
+        if (!this.dockManager) {
+            try {
+                this.dockManager = new DockManager(this);
+            } catch (e) {
+                console.log('BarEnhanced: Error instantiating DockManager: ', e);
+            }
+        }
+    }
+
+    _disableDashToDock() {
+        if (this.dockManager) {
+            try {
+                this.dockManager.destroy();
+            } catch (e) {
+                console.log('BarEnhanced: Error destroying DockManager: ', e);
+            }
+            this.dockManager = null;
+        }
+    }
+
+    _enableMusicPill() {
+        if (!this.musicController) {
+            try {
+                this.musicController = new MusicController(this);
+                this.musicController.enable();
+            } catch (e) {
+                console.log('BarEnhanced: Error instantiating MusicController: ', e);
+            }
+        }
+    }
+
+    _disableMusicPill() {
+        if (this.musicController) {
+            try {
+                this.musicController.disable();
+            } catch (e) {
+                console.log('BarEnhanced: Error destroying MusicController: ', e);
+            }
+            this.musicController = null;
+        }
+    }
+
+    _enableVitals() {
+        if (!this.vitalsMenu) {
+            try {
+                this.vitalsMenu = new VitalsMenuButton(this);
+                let position = this.vitalsMenu._positionInPanel();
+                Main.panel.addToStatusArea('vitalsMenu', this.vitalsMenu, position[1], position[0]);
+            } catch (e) {
+                console.log('BarEnhanced: Error instantiating Vitals: ', e);
+            }
+        }
+    }
+
+    _disableVitals() {
+        if (this.vitalsMenu) {
+            try {
+                this.vitalsMenu.destroy();
+            } catch (e) {
+                console.log('BarEnhanced: Error destroying Vitals: ', e);
+            }
+            this.vitalsMenu = null;
+        }
+    }
+
+    _enableBluetoothBattery() {
+        if (!this.btBatteryMenu) {
+            try {
+                this.btBatteryMenu = new BluetoothBatteryButton(this);
+                Main.panel.addToStatusArea('bluetoothBatteryMenu', this.btBatteryMenu, 0, 'right');
+            } catch (e) {
+                console.log('BarEnhanced: Error instantiating Bluetooth Battery: ', e);
+            }
+        }
+    }
+
+    _disableBluetoothBattery() {
+        if (this.btBatteryMenu) {
+            try {
+                this.btBatteryMenu.destroy();
+            } catch (e) {
+                console.log('BarEnhanced: Error destroying Bluetooth Battery: ', e);
+            }
+            this.btBatteryMenu = null;
+        }
+    }
+
+    _updateUiGroupClass(add, className) {
+        try {
+            if (add) {
+                Main.layoutManager.uiGroup.add_style_class_name(className);
+            } else {
+                Main.layoutManager.uiGroup.remove_style_class_name(className);
+            }
+        } catch(e) {
+            console.error('BarEnhanced: Error updating uiGroup class: ', e);
+        }
+    }
+
+    _updatePrivacyClasses() {
+        const pInd = this._settings.get_boolean('privacy-indicators');
+        const sShare = this._settings.get_boolean('screen-sharing-indicator');
+        const sRec = this._settings.get_boolean('screen-recording-indicator');
+        const blur = this._settings.get_boolean('privacy-blur');
+        const neutral = this._settings.get_boolean('privacy-neutral');
+
+        this._updateUiGroupClass(pInd, 'privacy-indicators-accent-color');
+        this._updateUiGroupClass(sShare, 'screen-sharing-indicator-accent-color');
+        this._updateUiGroupClass(sRec, 'screen-recording-indicator-accent-color');
+        this._updateUiGroupClass(blur, 'screen-sharing-recording-indicators-blur');
+        this._updateUiGroupClass(neutral, 'neutral-color');
     }
 
     disable() {
         this.disabling = true;
+
+        // Notification Icons cleanup
+        if (this._notifIconsSettingId) {
+            this._settings.disconnect(this._notifIconsSettingId);
+            this._notifIconsSettingId = null;
+        }
+        this._disableNotifIcons();
+        this._niSettings = null;
+
+        // Privacy Indicators cleanup
+        if (this._privacyAccentSettingId) {
+            this._settings.disconnect(this._privacyAccentSettingId);
+            this._privacyAccentSettingId = null;
+        }
+        this._disablePrivacyAccent();
+
+        // Bluetooth Battery cleanup
+        if (this._btBatterySettingId) {
+            this._settings.disconnect(this._btBatterySettingId);
+            this._btBatterySettingId = null;
+        }
+        this._disableBluetoothBattery();
+
+
+        if (this._dashToDockSettingId) {
+            this._settings.disconnect(this._dashToDockSettingId);
+            this._dashToDockSettingId = null;
+        }
+        this._disableDashToDock();
+
+        if (this._musicPillSettingId) {
+            this._settings.disconnect(this._musicPillSettingId);
+            this._musicPillSettingId = null;
+        }
+        this._disableMusicPill();
+
+        if (this._vitalsSettingId) {
+            this._settings.disconnect(this._vitalsSettingId);
+            this._vitalsSettingId = null;
+        }
+        this._disableVitals();
+        this.unloadDashToDockStylesheet();
+
         this._resetFocusGlow();
 
         if (this._interfaceSettings && this._interfaceSettingsId > 0) {
@@ -1822,6 +2342,11 @@ export default class BarEnhanced extends Extension {
         if (this._showDashboardId > 0) {
             this._settings.disconnect(this._showDashboardId);
             this._showDashboardId = 0;
+        }
+
+        if (this._settingsChangedId) {
+            this._settings.disconnect(this._settingsChangedId);
+            this._settingsChangedId = null;
         }
 
         if (this.dashboardBtn) {
@@ -1910,6 +2435,15 @@ export default class BarEnhanced extends Extension {
         StyleSheets.saveGtkCss(this, 'disable');
         StyleSheets.saveFlatpakOverrides(this, 'disable');
 
+        // Clear window blur
+        let winActors = global.get_window_actors();
+        for (let actor of winActors) {
+            let effect = actor.get_effect('bar-enhanced-blur');
+            if (effect) {
+                actor.remove_effect(effect);
+            }
+        }
+
         this.main = null;
         this._settings = null;
         this._bgSettings = null;
@@ -1988,7 +2522,7 @@ export default class BarEnhanced extends Extension {
         let padmod = (bartype === 'Mainland' || bartype === 'Floating') ? -2 : vPad;
         let radThreshold = Math.ceil(((height - 2 * padmod) / 10.0 - 1) * 5);
         let spread = 0;
-        
+
         if (borderRadius <= radThreshold) {
             spread = gradient ? -3 : 0;
         } else {
@@ -2038,7 +2572,8 @@ export default class BarEnhanced extends Extension {
             let [ok, contents] = GLib.file_get_contents(walPath);
             if (!ok) return;
 
-            let hexColors = contents.toString().trim().split('\n')
+            let decodedContents = new TextDecoder('utf-8').decode(contents);
+            let hexColors = decodedContents.trim().split('\n')
                 .map(c => c.trim())
                 .filter(c => c.startsWith('#') && c.length === 7);
 
@@ -2070,7 +2605,7 @@ export default class BarEnhanced extends Extension {
             let bgR = (parseInt(bgHex.substring(1, 3), 16) / 255.0).toFixed(3);
             let bgG = (parseInt(bgHex.substring(3, 5), 16) / 255.0).toFixed(3);
             let bgB = (parseInt(bgHex.substring(5, 7), 16) / 255.0).toFixed(3);
-            
+
             this._settings.set_strv('bgcolor', [bgR, bgG, bgB]);
             this._settings.set_strv('iscolor', [bgR, bgG, bgB]);
             this._settings.set_strv('dark-bgcolor', [bgR, bgG, bgB]);
@@ -2099,7 +2634,7 @@ export default class BarEnhanced extends Extension {
             let smbgR = (parseInt(smbgHex.substring(1, 3), 16) / 255.0).toFixed(3);
             let smbgG = (parseInt(smbgHex.substring(3, 5), 16) / 255.0).toFixed(3);
             let smbgB = (parseInt(smbgHex.substring(5, 7), 16) / 255.0).toFixed(3);
-            
+
             this._settings.set_strv('smbgcolor', [smbgR, smbgG, smbgB]);
             this._settings.set_strv('dark-smbgcolor', [smbgR, smbgG, smbgB]);
             this._settings.set_strv('light-smbgcolor', [smbgR, smbgG, smbgB]);
@@ -2130,7 +2665,7 @@ export default class BarEnhanced extends Extension {
             this._settings.set_strv('hscd-color', [bgR, bgG, bgB]);
             this._settings.set_strv('dark-hscd-color', [bgR, bgG, bgB]);
             this._settings.set_strv('light-hscd-color', [bgR, bgG, bgB]);
-            
+
             this._settings.set_strv('vw-color', [bgR, bgG, bgB]);
             this._settings.set_strv('dark-vw-color', [bgR, bgG, bgB]);
             this._settings.set_strv('light-vw-color', [bgR, bgG, bgB]);
@@ -2173,6 +2708,42 @@ export default class BarEnhanced extends Extension {
             if (this.dashboardBtn) {
                 this.dashboardBtn.destroy();
                 this.dashboardBtn = null;
+            }
+        }
+    }
+
+    updateWindowsBlur() {
+        if (!this._settings) return;
+        const active = this._settings.get_boolean('enable-gtk-window-custom');
+        const transparency = this._settings.get_double('gtk-transparency');
+        const winAlpha = active ? Math.max(0.45, transparency) : 1.0;
+
+        let winActors = global.get_window_actors();
+        for (let actor of winActors) {
+            let metaWindow = actor.get_meta_window();
+            if (!metaWindow || metaWindow.get_window_type() !== Meta.WindowType.NORMAL)
+                continue;
+
+            let effect = actor.get_effect('bar-enhanced-blur');
+            if (active && winAlpha < 1.0) {
+                actor.set_opacity(Math.round(255 * winAlpha));
+                if (!effect) {
+                    try {
+                        let newEffect = new Shell.BlurEffect({
+                            brightness: 0.85,
+                            sigma: 30
+                        });
+                        newEffect.set_mode(Shell.BlurMode.BACKGROUND);
+                        actor.add_effect_with_name('bar-enhanced-blur', newEffect);
+                    } catch (e) {
+                        console.error('Bar Enhanced: Error adding blur effect to window actor', e);
+                    }
+                }
+            } else {
+                actor.set_opacity(255);
+                if (effect) {
+                    actor.remove_effect(effect);
+                }
             }
         }
     }

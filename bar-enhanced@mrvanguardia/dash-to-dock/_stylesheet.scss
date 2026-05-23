@@ -1,0 +1,514 @@
+// From https://gitlab.gnome.org/GNOME/gnome-shell/-/blob/43.0/data/theme/gnome-shell-sass/_common.scss#L28
+$base_padding: 6px;
+$base_margin: 4px;
+
+$base_border_radius: 8px;
+$modal_radius: $base_border_radius * 2;
+
+// From https://gitlab.gnome.org/GNOME/gnome-shell/-/blob/43.0/data/theme/gnome-shell-sass/_colors.scss
+$variant: 'dark';
+$fg_color: if($variant == 'light', transparentize(black, .2), white);
+$borders_color: if($variant == 'light', transparentize($fg_color, .5), transparentize($fg_color, .9));
+$_dark_base_color: darken(desaturate(#241f31, 100%), 2%);
+$base_color: if($variant =='light', #fff, $_dark_base_color);
+$system_bg_color: $base_color;
+
+$remark_color: rgba(238, 238, 238, 0.2);
+
+// From https://gitlab.gnome.org/GNOME/gnome-shell/-/blob/43.0/data/theme/gnome-shell-sass/widgets/_dash.scss
+$dash_background_color: lighten($system_bg_color, 5%);
+$dash_placeholder_size: 32px;
+$dash_padding: $base_padding*2; // 12px
+$dash_border_radius: $modal_radius + $dash_padding;
+$dash_padding_gnome: $dash_padding;
+
+$dash_edge_offset: $base_margin * 3;
+
+// Dash to dock specifics
+$dash_padding: $base_padding + 4px; // 10px
+$dash_border_radius: $modal_radius * 1.5;
+
+$dock_spacing: round($base_padding / 4);
+$dock_bottom_margin: $base_margin * 4;
+$dock_start_margin: $dock_bottom_margin;
+$dock_side_margin: $dock_start_margin / 4;
+$dock_edge_items_padding: $dash_padding - $dock_spacing;
+$dock_fixed_inner_margin: $dock_side_margin;
+$dock_icons_distance: 4px;
+
+@function shrink($val) {
+    @return round($val / 4);
+}
+
+@function shrink_light($val) {
+    @return round($val * 0.75);
+}
+
+@function is_horizontal($side) {
+    @return $side == top or $side == bottom;
+}
+
+@function checked-map-get($map, $key) {
+    $value: map-get($map, $key);
+    @if ($value == null) {
+        @error 'Key ' + $key + ' not found';
+    }
+    @return $value;
+}
+
+@function opposite($val) {
+    @return checked-map-get(
+        (
+            left: right,
+            right: left,
+            top: bottom,
+            bottom: top,
+        ),
+        $val
+    );
+}
+
+// minor-dimension is vertical space in horizontal mode and
+// horizontal space in vertical mode.
+@mixin set-internal-children-property($side, $property,
+                                      $minor_dimension,
+                                      $major_dimension: $minor_dimension,
+                                      $edges: 0) {
+    @if $property != margin and $property != padding {
+        @error "Property " + $property + " not supported!";
+    }
+
+    @if is_horizontal($side) {
+        #{$property}: $minor_dimension $major_dimension;
+        &:ltr:first-child, &:rtl:last-child {
+            #{$property}-left: $edges;
+        }
+        &:ltr:last-child, &:rtl:first-child {
+            #{$property}-right: $edges;
+        }
+    } @else {
+        #{$property}: $major_dimension $minor_dimension;
+        &:first-child {
+            #{$property}-top: $edges;
+        }
+        &:last-child {
+            #{$property}-bottom: $edges;
+        }
+    }
+}
+
+@mixin padded-edge-child($chid, $side, $padding) {
+    @if $chid == first {
+        @if is_horizontal($side) {
+            padding-left: $padding;
+        } @else {
+            padding-top: $padding;
+        }
+    } @else if $chid == last {
+        @if is_horizontal($side) {
+            padding-right: $padding;
+        } @else {
+            padding-bottom: $padding;
+        }
+    } @else {
+        @error "Invalid rule";
+    }
+}
+
+// In extended mode we need to use the first and last .dash-item-container's
+// to apply the padding on the dock, to ensure that the actual first or last
+// child show-apps item will actually include the padding area so that it will
+// be clickable up to the dock edge, and make Fitts happy.
+// I don't think the same should happen for normal icons, so in the other side
+// the padding will be applied via the scrolled area, given we can't get the
+// parent of the first/last app-well-app icon to apply a rule there.
+@mixin padded-dash-edge-items($side, $padding) {
+    @each $child_pos in first, last {
+        > :#{$child_pos}-child {
+            // Use this instead of #dashtodockDashScrollview rule to apply the
+            // padding via the last app-icon item
+            //.dash-item-container:#{$child_pos}-child .app-well-app,
+            .show-apps {
+                @include padded-edge-child($child_pos, $side, $padding);
+            }
+        }
+
+        #dashtodockDashScrollview:#{$child_pos}-child {
+            @include padded-edge-child($child_pos, $side, $padding);
+        }
+    }
+}
+
+$dock_sides: [bottom, top, left, right];
+$dock_style_modes: [null, shrink, extended, extended-shrink];
+
+@mixin dock-container-style($side, $style_mode, $parameters) {
+    $style_selector: '';
+    $is_shrink: checked-map-get($parameters, is_shrink);
+    $is_extended: checked-map-get($parameters, is_extended);
+    $base_padding: checked-map-get($parameters, base_padding);
+    $spacing: checked-map-get($parameters, spacing);
+    $border_radius: checked-map-get($parameters, border_radius);
+    $side_margin: checked-map-get($parameters, side_margin);
+    $padding: checked-map-get($parameters, padding);
+    $margin: checked-map-get($parameters, margin);
+    $edge_items_padding: checked-map-get($parameters, edge_items_padding);
+    $fixed_inner_margin: checked-map-get($parameters, fixed_inner_margin);
+
+    @if ($is_extended) {
+        $style_selector: $style_selector +'.extended';
+    }
+
+    @if ($is_shrink) {
+        $style_selector: $style_selector +'.shrink';
+    }
+
+    &#{$style_selector} {
+        #dash {
+            margin: 0px;
+            padding: 0px;
+
+            .dash-background {
+                margin: 0;
+                margin-#{$side}: $side_margin;
+                padding: 0;
+                border-radius: $border_radius;
+                spacing: $base_padding;
+            }
+
+            .dash-separator {
+                background-color: $borders_color;
+                @if is_horizontal($side) {
+                    margin: 0 $margin;
+                    width: 1px;
+                    height: 0;
+                } @else {
+                    width: 0;
+                    height: 1px;
+                    margin: $margin 0;
+                }
+                margin-#{$side}: $side_margin;
+            }
+
+            #dashtodockDashContainer {
+                padding: if($is_extended, 0, $padding);
+                padding-#{$side}: 0;
+                padding-#{opposite($side)}: 0;
+
+                @if ($is_extended) {
+                    @include padded-dash-edge-items($side, $edge_items_padding);
+                }
+            }
+
+            .dash-item-container {
+                /* Disable all margins defined upstream, we handle them here */
+                > * {margin: 0;}
+
+                @include set-internal-children-property($side, margin,
+                    0, $dock_icons_distance / 2);
+
+                .app-well-app,
+                .show-apps,
+                .overview-tile {
+                    @include set-internal-children-property($side, padding, $spacing);
+                    padding-#{$side}: $padding + $side_margin;
+                    padding-#{opposite($side)}: $padding;
+
+                    &.updating {
+                        opacity: 0.5;
+                    };
+                }
+
+                .app-well-app,
+                .overview-tile {
+                    &.running .overview-icon {
+                        background-image: none;
+                    }
+                    &.focused .overview-icon {
+                        background-color: $remark_color;
+                    }
+
+                    .app-well-app-running-dot,
+                    .app-grid-running-dot {
+                        margin-bottom: 2px;
+                    }
+                }
+
+                > StButton {
+                    transition-duration: 250;
+                    background-size: contain;
+                }
+            }
+        }
+
+        &.fixed {
+            #dash {
+                .dash-background {
+                    margin-#{opposite($side)}: $fixed_inner_margin;
+                }
+
+                .dash-item-container {
+
+                    .app-well-app,
+                    .show-apps {
+                        padding-#{opposite($side)}: $padding + $fixed_inner_margin;
+                    }
+                }
+            }
+        }
+    }
+}
+
+.dash-item-container .overview-tile .overview-icon,
+.dash-item-container .show-apps .overview-icon {
+    background-color: rgba(255,255,255,0);
+}
+
+.dash-item-container .overview-tile:hover .overview-icon,
+.dash-item-container .overview-tile.focused .overview-icon,
+.dash-item-container .show-apps:hover .overview-icon {
+    background-color: $remark_color;
+}
+
+.dash-item-container .overview-tile .app-grid-running-dot {
+    margin-bottom: $dash_padding_gnome - 4px;
+    offset-y: -$dash_padding + $dash_edge_offset;
+}
+
+@each $side in $dock_sides {
+    @each $style_mode in $dock_style_modes {
+        $is_shrink: str-index(#{$style_mode}, shrink) !=null;
+        $is_extended: str-index(#{$style_mode}, extended) !=null;
+
+        #dashtodockContainer.#{$side} {
+            $parameters: (
+                is_shrink: $is_shrink,
+                is_extended: $is_extended,
+                base_padding: $base_padding,
+                spacing: $dock_spacing,
+                border_radius: $dash_border_radius,
+                side_margin: $dock_side_margin,
+                padding: $dash_padding,
+                margin: $base_margin,
+                edge_items_padding: $dock_edge_items_padding,
+                fixed_inner_margin: $dock_fixed_inner_margin,
+            );
+
+            @if ($is_shrink) {
+                $parameters: map-merge($parameters, (
+                    base_padding: shrink($base_padding),
+                    spacing: shrink($dock_spacing),
+                    border_radius: shrink_light($dash_border_radius),
+                    side_margin: /* not shrunk */ $dock_side_margin,
+                    padding: shrink($dash_padding),
+                    margin: shrink($base_margin),
+                    edge_items_padding: shrink_light($dock_edge_items_padding),
+                    fixed_inner_margin: shrink($dock_fixed_inner_margin),
+                ));
+            }
+
+            @if ($is_extended) {
+                $parameters: map-merge($parameters, (
+                    border_radius: 0,
+                    side_margin: 0,
+                    fixed_inner_margin: 0,
+                ));
+            }
+
+            @include dock-container-style($side, $style_mode, $parameters);
+        }
+
+        .dash-label.#{$side} {
+            $label_offset: if($is_shrink, shrink($dash_padding), $dash_padding);
+            $style_selector: if($is_shrink, '.shrink', null);
+
+            &#{$style_selector} {
+                @if is_horizontal($side) {
+                    margin-#{$side}: $label_offset;
+                    -x-offset: 0;
+                    -y-offset: 0;
+                } @else {
+                    margin: 0;
+                    -x-offset: $label_offset;
+                    -y-offset: 0;
+                }
+            }
+        }
+    }
+
+    .dashtodock-app-well-preview-menu-item.#{$side} {
+        @include set-internal-children-property($side, padding,
+            0.5em, 0.5em, 1em);
+    }
+}
+
+#dashtodockContainer.top.shrink #dash .dash-background {
+    margin-top: 4px;
+    margin-bottom: 0;
+}
+
+#dashtodockContainer.straight-corner #dash .dash-background,
+#dashtodockContainer.shrink.straight-corner #dash .dash-background {
+    border-radius: 0px;
+}
+
+/* Scrollview style */
+.bottom #dashtodockDashScrollview,
+.top #dashtodockDashScrollview {
+    -st-hfade-offset: 24px;
+}
+
+.left #dashtodockDashScrollview,
+.right #dashtodockDashScrollview {
+    -st-vfade-offset: 24px;
+}
+
+#dashtodockContainer.dashtodock #dash .dash-background {
+    background: $dash_background_color;
+}
+
+#dashtodockContainer.dashtodock .progress-bar,
+.overview-tile .progress-bar,
+.icon-grid .progress-bar {
+    /* Customization of the progress bar style. The possible elements
+     * are:
+     *
+     * -XXXXXX-YYYYYY: plain color
+     * -XXXXXX-YYYYYY-color-start: start color for gradient
+     * -XXXXXX-YYYYYY-color-end: end color for gradient
+     * -XXXXXX-YYYYYY-offset-start: offset for start color in gradient (0-1)
+     * -XXXXXX-YYYYYY-offset-end: offset for end color in gradient (0-1)
+     * -XXXXXX-line-width: width value for the line used for the border
+     *
+     * XXXXXX can be either
+     *
+     *    progress-bar-track: the "track" over which the progress bar is shown
+     *    progress-bar: the progress bar itself
+     *
+     * YYYYYY can be either
+     *
+     *    background: for the background color
+     *    border: for the border color
+     *
+     * plain color entries have priority over gradients, so if both are set for
+     * an element, the plain color will be used.
+     *
+     * Examples:
+     *
+     *  -progress-bar-track-background: rgba(128, 128, 0, 0.75);
+     *  -progress-bar-track-border: rgba(0, 0, 255, 0.25);
+     *
+     *  -progress-bar-background: rgba(0, 204, 204, 1);
+     *  -progress-bar-border: rgba(230, 230, 230, 1);
+     *
+     * Default values when these entries aren't set are equivalent to:
+     *   -progress-bar-track-background-color-start: 64, 64, 64, 1.0
+     *   -progress-bar-track-background-color-end: 89, 89, 89, 1.0
+     *   -progress-bar-track-background-start-offset: 0.4
+     *   -progress-bar-track-background-end-offset: 0.9
+     *   -progress-bar-track-border-color-start: 128, 128, 128, 0.1
+     *   -progress-bar-track-border-color-end: 89, 89, 89, 0.4
+     *   -progress-bar-track-border-start-offset: 0.5
+     *   -progress-bar-track-border-end-offset: 0.9
+     *   -progress-bar-track-line-width: 1
+     *   -progress-bar-background: 204, 204, 204, 1.0
+     *   -progress-bar-border: 230, 230, 230, 1.0
+     *   -progress-bar-height-factor: (0.20) 20% of the icon size
+     *   -progress-bar-line-width: 1
+     *   -progress-bar-top-offset: undefined
+     *   -progress-bar-valign: 1.0
+     *   -progress-bar-horizontal-padding: 0.05 (5% of icon size)
+     *   -progress-bar-vertical-padding: 0.05 (5% of icon size)
+     */
+    -progress-bar-track-background: rgba(0, 0, 0, 0.45);
+    -progress-bar-track-border: rgba(0, 0, 0, 0.7);
+    -progress-bar-background: rgba(255, 255, 255, 1.0);
+    -progress-bar-border: rgba(255, 255, 255, 1.0);
+}
+
+#overview,
+.apps-scroll-view {
+    .progress-bar {
+        -progress-bar-height-factor: 0.15;
+        -progress-bar-top-offset: 0;
+        -progress-bar-valign: 0.95;
+    }
+}
+
+#overview .grid-search-results .overview-tile .progress-bar,
+#overview .app-folder-dialog .progress-bar {
+    -progress-bar-height-factor: 0.13;
+}
+
+#dashtodockContainer.top #dash .placeholder,
+#dashtodockContainer.bottom #dash .placeholder {
+    width: 32px;
+    height: 1px;
+}
+
+/*
+ * This is applied to a dummy actor. Only the alpha value for the background and border color
+ * and the transition-duration are used
+ */
+#dashtodockContainer.dummy-opaque {
+    background-color: rgba(0, 0, 0, 0.8);
+    border-color: rgba(0, 0, 0, 0.4);
+    transition-duration: 300ms;
+}
+
+/*
+ * This is applied to a dummy actor. Only the alpha value for the background and border color
+ * and the transition-duration are used
+ */
+#dashtodockContainer.dummy-transparent {
+    background-color: rgba(0, 0, 0, 0.2);
+    border-color: rgba(0, 0, 0, 0.1);
+    transition-duration: 500ms;
+}
+
+#dashtodockContainer .number-overlay,
+.overview-tile .number-overlay,
+.icon-grid .number-overlay {
+    color: rgba(255, 255, 255, 1);
+    background-color: rgba(0, 0, 0, 0.8);
+    text-align: center;
+}
+
+#dashtodockContainer .notification-badge,
+.overview-tile .notification-badge,
+.icon-grid .notification-badge {
+    color: rgba(255, 255, 255, 1);
+    background-color: rgba(255, 0, 0, 1);
+    padding: 0.2em 0.5em;
+    border-radius: 1em;
+    font-weight: bold;
+    text-align: center;
+    margin: 2px;
+}
+
+#dashtodockPreviewSeparator.popup-separator-menu-item-horizontal {
+    width: 1px;
+    height: auto;
+    border-right-width: 1px;
+    margin: 32px 0px;
+}
+
+#dashtodockContainer .metro .overview-icon {
+    border-radius: 0px;
+}
+
+@for $i from 2 through 4 {
+    #dashtodockContainer.bottom .metro.running#{$i}.focused,
+    #dashtodockContainer.top .metro.running#{$i}.focused {
+        background-image: url("./media/highlight_stacked_bg.svg");
+        background-position: 0px 0px;
+        background-size: contain;
+    }
+
+    #dashtodockContainer.left .metro.running#{$i}.focused,
+    #dashtodockContainer.right .metro.running#{$i}.focused {
+        background-image: url("./media/highlight_stacked_bg_h.svg");
+        background-position: 0px 0px;
+        background-size: contain;
+    }
+}

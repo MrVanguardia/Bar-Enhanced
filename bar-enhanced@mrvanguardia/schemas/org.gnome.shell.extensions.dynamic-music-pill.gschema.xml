@@ -1,0 +1,387 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  <schema id="org.gnome.shell.extensions.dynamic-music-pill" path="/org/gnome/shell/extensions/dynamic-music-pill/" gettext-domain="dynamic-music-pill">
+    <key name="edge-margin" type="i">
+      <default>6</default>
+      <range min="0" max="50"/>
+      <summary>Edge Margin (Outer Padding)</summary>
+      <description>Distance before the album art and after the visualizer.</description>
+    </key>
+    <key name="sync-accent-color" type="b">
+      <default>false</default>
+      <summary>Sync GNOME Shell Accent Color</summary>
+      <description>Dynamically change the GNOME Shell accent color to match the album art.</description>
+    </key>
+    <key name="always-show-pill" type="b">
+      <default>false</default>
+      <summary>Always Show Pill</summary>
+      <description>Retain last known track and keep pill visible after closing the player</description>
+    </key>
+    <key name="scroll-action" type="s">
+      <default>'track'</default>
+      <summary>Scroll Action</summary>
+      <description>What to do when scrolling (track, volume, player, or seek)</description>
+    </key>
+	<key name="hide-text" type="b">
+	<default>false</default>
+	<summary>Hide title and artist entirely</summary>
+    </key>
+    <key name="action-hover" type="s">
+      <default>'none'</default>
+      <summary>Hover Action</summary>
+    </key>
+    <key name="hover-delay" type="i">
+      <default>1500</default>
+      <range min="0" max="3000"/>
+      <summary>Hover Delay in ms</summary>
+    </key>
+    <key name="show-pill-border" type="b">
+      <default>true</default>
+      <summary>Show pill outline/border</summary>
+      <description>Display a subtle border around the main pill.</description>
+    </key>
+    <key name="selected-player-bus" type="s">
+      <default>''</default>
+      <summary>Manually selected player bus name</summary>
+    </key>
+    <key name="popup-show-player-selector" type="b">
+      <default>false</default>
+      <summary>Show player selector in pop-up</summary>
+    </key>
+    <key name="popup-follow-custom-bg" type="b">
+      <default>false</default>
+      <summary>Popup Follows Custom Background Color</summary>
+      <description>If custom colors are enabled, the popup uses the custom background color.</description>
+    </key>
+    <key name="popup-follow-custom-text" type="b">
+      <default>false</default>
+      <summary>Popup Follows Custom Text Color</summary>
+      <description>If custom colors are enabled, the popup uses the custom text color.</description>
+    </key>
+    <key name="compatibility-delay" type="b">
+      <default>false</default>
+      <summary>Compatibility Mode for slow players</summary>
+    </key>
+    <key name="fallback-art-path" type="s">
+      <default>''</default>
+      <summary>Fallback Album Art Path</summary>
+    </key>
+    <key name="player-filter-mode" type="i">
+	<default>0</default>
+	<summary>0: Off, 1: Blacklist, 2: Whitelist</summary>
+    </key>
+    <key name="popup-show-visualizer" type="b">
+      <default>false</default>
+      <summary>Show Visualizer in Pop-up</summary>
+    </key>
+    <key name="popup-hide-pill-visualizer" type="b">
+      <default>false</default>
+      <summary>Hide Pill Visualizer when Pop-up is open</summary>
+    </key>
+    <key name="player-filter-list" type="s">
+	<default>''</default>
+	<summary>Comma separated list of players (e.g. firefox,chrome,spotify)</summary>
+    </key>
+    <key name="visualizer-padding" type="i">
+      <default>10</default>
+      <summary>Visualizer Margin</summary>
+      <description>Spacing between the text and the visualizer.</description>
+    </key>
+    <key name="popup-vinyl-rotate" type="b">
+      <default>true</default>
+      <summary>Rotate Vinyl in Pop-up</summary>
+    </key>
+    <key name="popup-vinyl-speed" type="i">
+      <default>10</default>
+      <range min="1" max="50"/>
+      <summary>Vinyl Rotation Speed</summary>
+      <description>Multiplier for the vinyl rotation speed. Default is 10.</description>
+    </key>
+    <key name="visualizer-bars" type="i">
+      <default>4</default>
+      <range min="2" max="32"/>
+    </key>
+    <key name="popup-enable-shadow" type="b">
+      <default>true</default>
+      <summary>Enable shadow for the pop-up menu</summary>
+    </key>
+    <key name="popup-follow-transparency" type="b">
+      <default>true</default>
+      <summary>Pop-up inherits transparency settings</summary>
+    </key>
+    <key name="popup-follow-radius" type="b">
+      <default>true</default>
+      <summary>Pop-up inherits border radius</summary>
+    </key>
+    <key name="popup-vinyl-square" type="b">
+      <default>true</default>
+      <summary>Square Vinyl (No Rotation)</summary>
+    </key>
+    <key name="pill-dynamic-width" type="b">
+      <default>false</default>
+      <summary>Dynamic Pill Width</summary>
+    </key>
+    <key name="popup-use-custom-width" type="b">
+      <default>false</default>
+      <summary>Use custom width for popup</summary>
+    </key>
+    <key name="popup-custom-width" type="i">
+      <default>320</default>
+      <range min="200" max="800"/>
+    </key>
+    <key name="popup-show-vinyl" type="b">
+      <default>true</default>
+      <summary>Show Vinyl in Pop-up</summary>
+    </key>
+
+    <key name="show-shuffle-loop" type="b">
+      <default>true</default>
+      <summary>Show Shuffle and Loop buttons</summary>
+    </key>
+
+    <key name="use-custom-colors" type="b">
+      <default>false</default>
+      <summary>Use Custom Colors</summary>
+    </key>
+    <key name="custom-bg-color" type="s">
+      <default>'40,40,40'</default>
+      <summary>Custom Background Color (R,G,B)</summary>
+    </key>
+    <key name="custom-text-color" type="s">
+      <default>'255,255,255'</default>
+      <summary>Custom Text Color (R,G,B)</summary>
+    </key>
+    <key name="app-name-mapping" type="s">
+      <default>''</default>
+      <summary>Custom App Name Mapping</summary>
+      <description>Manually map players that don't open.</description>
+    </key>
+    <key name="lyric-fade-enable" type="b">
+      <default>true</default>
+      <summary>Enable lyric fade-in effect</summary>
+    </key>
+    <key name="lyric-fade-duration" type="i">
+      <default>250</default>
+      <summary>Fade-in duration in ms</summary>
+    </key>
+    <key name="visualizer-bar-width" type="i">
+      <default>2</default>
+      <summary>Width of the visualizer bars</summary>
+    </key>
+    <key name="visualizer-height" type="i">
+      <default>24</default>
+      <summary>Height of the visualizer</summary>
+    </key>
+    <key name="popup-visualizer-bars" type="i">
+      <default>10</default>
+      <summary>Popup Visualizer Bar Count</summary>
+    </key>
+    <key name="popup-visualizer-bar-width" type="i">
+      <default>3</default>
+      <summary>Popup Visualizer Bar Width</summary>
+    </key>
+    <key name="popup-visualizer-height" type="i">
+      <default>80</default>
+      <summary>Popup Visualizer Height</summary>
+    </key>
+    <key name="tablet-mode" type="i">
+      <default>0</default>
+      <summary>Tablet Controls Mode</summary>
+      <description>0: Off, 1: Skip Only, 2: Play/Pause Only, 3: All Controls</description>
+    </key>
+    <key name="popup-hide-on-leave" type="b">
+      <default>false</default>
+      <summary>Hide popup when mouse leaves</summary>
+      <description>Automatically close the expanded player when the mouse cursor leaves its area.</description>
+    </key>
+    <key name="inline-artist" type="b">
+      <default>true</default>
+      <summary>Append artist to title when squeezed</summary>
+    </key>
+
+    <key name="dock-art-size" type="i">
+      <default>44</default>
+      <summary>Album Art size in Dock mode</summary>
+    </key>
+    <key name="panel-art-size" type="i">
+      <default>22</default>
+      <summary>Album Art size in Panel mode</summary>
+    </key>
+    
+    <key name="hide-default-player" type="b">
+      <default>true</default>
+      <summary>Hide Default GNOME Player</summary>
+    </key>
+
+    <key name="scroll-text" type="b">
+      <default>true</default>
+      <summary>Scrolling Text</summary>
+    </key>
+    <key name="scroll-on-hover-only" type="b">
+      <default>false</default>
+      <summary>Scroll Text Only on Hover</summary>
+      <description>When enabled, text only scrolls while hovering over the pill.</description>
+    </key>
+    <key name="enable-transparency" type="b">
+      <default>false</default>
+      <summary>Enable Transparency</summary>
+    </key>
+    <key name="transparency-strength" type="i">
+      <default>60</default>
+      <range min="0" max="100"/>
+      <summary>Opacity Level</summary>
+    </key>
+    <key name="transparency-art" type="b">
+      <default>false</default>
+      <summary>Transparent Art</summary>
+    </key>
+    <key name="transparency-text" type="b">
+      <default>false</default>
+      <summary>Transparent Text</summary>
+    </key>
+    <key name="transparency-vis" type="b">
+      <default>false</default>
+      <summary>Transparent Visualizer</summary>
+    </key>
+    <key name="invert-scroll-animation" type="b">
+      <default>false</default>
+      <summary>Invert Scroll Animation</summary>
+    </key>
+    <key name="invert-scroll-direction" type="b">
+      <default>false</default>
+      <summary>Invert Scroll Direction</summary>
+      <description>Swap up/down scrolling for next/previous actions</description>
+    </key>
+    <key name="enable-scroll-controls" type="b">
+      <default>true</default>
+      <summary>Enable Scroll Controls</summary>
+    </key>
+    
+    <key name="pill-width" type="i">
+      <default>250</default>
+      <range min="100" max="600"/>
+    </key>
+    <key name="panel-pill-width" type="i">
+      <default>250</default>
+      <range min="100" max="600"/>
+    </key>
+    <key name="pill-height" type="i">
+      <default>56</default>
+      <range min="20" max="100"/>
+    </key>
+    <key name="panel-pill-height" type="i">
+      <default>28</default>
+      <range min="20" max="60"/>
+    </key>
+
+    <key name="vertical-offset" type="i">
+      <default>-1</default>
+      <range min="-30" max="30"/>
+    </key>
+    <key name="horizontal-offset" type="i">
+      <default>0</default>
+      <range min="-50" max="50"/>
+    </key>
+    <key name="position-mode" type="i">
+      <default>3</default>
+      <range min="0" max="3"/>
+    </key>
+    <key name="dock-position" type="i">
+      <default>0</default>
+      <range min="0" max="20"/>
+    </key>
+    <key name="target-container" type="i">
+      <default>0</default>
+      <range min="0" max="3"/>
+    </key>
+    <key name="show-album-art" type="b">
+      <default>true</default>
+      <summary>Show Album Art</summary>
+    </key>
+	<key name="enable-lyrics" type="b">
+      <default>false</default>
+      <summary>Enable Lyrics Display</summary>
+    </key>
+    <key name="lyrics-language-preference" type="i">
+      <default>0</default>
+      <summary>Preferred lyrics script</summary>
+      <description>0=auto, 1=prefer original script (CJK/Hangul), 2=prefer Latin (romanized or translated)</description>
+    </key>
+    <key name="enable-gamemode" type="b">
+      <default>true</default>
+      <summary>Game Mode</summary>
+    </key>
+    <key name="visualizer-style" type="i">
+      <default>2</default>
+      <range min="0" max="3"/>
+    </key>
+    <key name="border-radius" type="i">
+      <default>22</default>
+      <range min="0" max="50"/>
+    </key>
+    <key name="enable-shadow" type="b">
+      <default>true</default>
+    </key>
+    <key name="shadow-opacity" type="i">
+      <default>15</default>
+      <range min="0" max="100"/>
+    </key>
+    <key name="shadow-blur" type="i">
+      <default>8</default>
+      <range min="0" max="50"/>
+    </key>
+
+    <key name="action-left-click" type="s">
+      <default>'play_pause'</default>
+      <summary>Left Click Action</summary>
+    </key>
+    <key name="action-middle-click" type="s">
+      <default>'open_app'</default>
+      <summary>Middle Click Action</summary>
+    </key>
+    <key name="action-right-click" type="s">
+      <default>'toggle_menu'</default>
+      <summary>Right Click Action</summary>
+    </key>
+    <key name="action-double-click" type="s">
+      <default>'open_player_menu'</default>
+      <summary>none</summary>
+    </key>
+
+    <key name="enable-custom-buttons" type="b">
+      <default>false</default>
+      <summary>Enable Custom Control Buttons</summary>
+      <description>Show up to two additional customizable buttons in the expanded player controls row.</description>
+    </key>
+    <key name="custom-button-1" type="s">
+      <default>'none'</default>
+      <summary>Custom Button 1 Action</summary>
+      <description>The action triggered by custom button 1. Options: none, volume, seek_step, output_switch, sleep_timer, playback_speed, history.</description>
+    </key>
+    <key name="custom-button-2" type="s">
+      <default>'none'</default>
+      <summary>Custom Button 2 Action</summary>
+      <description>The action triggered by custom button 2. Options: none, volume, seek_step, output_switch, sleep_timer, playback_speed, history.</description>
+    </key>
+    <key name="playback-history" type="s">
+      <default>'[]'</default>
+      <summary>Playback History</summary>
+      <description>JSON array of recently played tracks (title, artist, artUrl, time).</description>
+    </key>
+    <key name="has-seen-first-hint" type="b">
+      <default>false</default>
+      <summary>Has seen first-time settings hint</summary>
+      <description>Whether the user has dismissed the first-time hint in the popup.</description>
+    </key>
+    <key name="show-hours-format" type="b">
+      <default>true</default>
+      <summary>Show HH:MM:SS for long media</summary>
+      <description>Display time as HH:MM:SS instead of MM:SS when the media file is longer than 60 minutes.</description>
+    </key>
+    <key name="popup-show-album-title" type="b">
+      <default>false</default>
+      <summary>Show Album Title in Pop-up</summary>
+      <description>Display album name next to the artist in the popup (Artist • Album).</description>
+    </key>
+  </schema>
+</schemalist>

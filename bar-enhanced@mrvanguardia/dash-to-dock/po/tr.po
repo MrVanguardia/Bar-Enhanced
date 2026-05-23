@@ -1,0 +1,777 @@
+# Turkish translation for dash-to-dock GNOME shell extension.
+# Copyright (C) 2015-2023, dash-to-dock'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the dash-to-dock package.
+#
+# Mustafa Akgün <mustafa.akgun@gmail.com>, 2015.
+# Çağatay Yiğit Şahin <cyigitsahin@outlook.com>, 2016.
+# Serdar Sağlam <teknomobil@yandex.com>, 2018, 2019.
+# Sabri Ünal <libreajans@gmail.com>, 2019, 2022, 2023.
+#
+# Note for all turkish translators:
+# Lütfen GNOME Shell çevirileri ile uyumlu çevirmeye gayret edelim.
+#
+# Important: Eklenti geliştiricisi kararlı bir pot dosyası sağlamadığı için
+# Poedit ile js ve ui dosyalarından dizgeleri derliyoruz.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: dash-to-dock master\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-11-15 18:58+0300\n"
+"PO-Revision-Date: 2025-11-15 18:58+0300\n"
+"Last-Translator: Sabri Ünal <yakushabb@gmail.com>\n"
+"Language-Team: Turkish <gnome-turk@gnome.org>\n"
+"Language: tr\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+"X-Generator: Poedit 3.8\n"
+"X-Project-Style: gnome\n"
+"X-Poedit-Basepath: ..\n"
+"X-Poedit-KeywordsList: _;N_;__;N__\n"
+"X-Poedit-SearchPath-0: Settings.ui\n"
+"X-Poedit-SearchPath-1: appIconIndicators.js\n"
+"X-Poedit-SearchPath-2: appIcons.js\n"
+"X-Poedit-SearchPath-3: appIconsDecorator.js\n"
+"X-Poedit-SearchPath-4: appSpread.js\n"
+"X-Poedit-SearchPath-5: dash.js\n"
+"X-Poedit-SearchPath-6: dbusmenuUtils.js\n"
+"X-Poedit-SearchPath-7: default.nix\n"
+"X-Poedit-SearchPath-8: desktopIconsIntegration.js\n"
+"X-Poedit-SearchPath-9: docking.js\n"
+"X-Poedit-SearchPath-10: extension.js\n"
+"X-Poedit-SearchPath-11: fileManager1API.js\n"
+"X-Poedit-SearchPath-12: imports.js\n"
+"X-Poedit-SearchPath-13: intellihide.js\n"
+"X-Poedit-SearchPath-14: launcherAPI.js\n"
+"X-Poedit-SearchPath-15: locations.js\n"
+"X-Poedit-SearchPath-16: locationsWorker.js\n"
+"X-Poedit-SearchPath-17: metadata.json\n"
+"X-Poedit-SearchPath-18: notificationsMonitor.js\n"
+"X-Poedit-SearchPath-19: prefs.js\n"
+"X-Poedit-SearchPath-20: theming.js\n"
+"X-Poedit-SearchPath-21: utils.js\n"
+"X-Poedit-SearchPath-22: windowPreview.js\n"
+"X-Poedit-SearchPathExcluded-0: schemas\n"
+
+#: Settings.ui:41
+msgid ""
+"When set to minimize, double clicking minimizes all the windows of the "
+"application."
+msgstr ""
+"Küçültmeye ayarlandığında, çift tıklamak uygulamanın tüm pencerelerini "
+"küçültür."
+
+#: Settings.ui:59
+msgid "Shift+Click action"
+msgstr "Shift + Tıklama eylemi"
+
+# Tweak ayarlarında raise için öne çıkar kullanılmış
+#: Settings.ui:73 Settings.ui:145 Settings.ui:217 Settings.ui:1684
+msgid "Raise window"
+msgstr "Pencereyi büyüt"
+
+#: Settings.ui:74 Settings.ui:146 Settings.ui:218
+msgid "Minimize window"
+msgstr "Pencereyi küçült"
+
+#: Settings.ui:75 Settings.ui:147 Settings.ui:219 Settings.ui:1686
+msgid "Launch new instance"
+msgstr "Yeni uygulama örneği başlat"
+
+#: Settings.ui:76 Settings.ui:148 Settings.ui:220 Settings.ui:1687
+#: Settings.ui:1775
+msgid "Cycle through windows"
+msgstr "Pencere döngüsü"
+
+#: Settings.ui:77 Settings.ui:149 Settings.ui:221 Settings.ui:1688
+msgid "Minimize or overview"
+msgstr "Küçült yada genel bakış"
+
+#: Settings.ui:78 Settings.ui:150 Settings.ui:222 Settings.ui:1689
+msgid "Show window previews"
+msgstr "Pencere önizlemelerini göster"
+
+#: Settings.ui:79 Settings.ui:151 Settings.ui:223 Settings.ui:1690
+msgid "Minimize or show previews"
+msgstr "Küçült yada önizlemeleri göster"
+
+#: Settings.ui:80 Settings.ui:152 Settings.ui:224 Settings.ui:1691
+msgid "Focus or show previews"
+msgstr "Odaklan veya önizlemeleri göster"
+
+#: Settings.ui:81 Settings.ui:153 Settings.ui:225 Settings.ui:1692
+msgid "Focus or app spread"
+msgstr "Odaklan veya uygulama yay"
+
+#: Settings.ui:82 Settings.ui:154 Settings.ui:226 Settings.ui:1693
+msgid "Focus, minimize or show previews"
+msgstr "Odaklan, küçült yada önizlemeleri göster"
+
+#: Settings.ui:83 Settings.ui:155 Settings.ui:227 Settings.ui:1694
+msgid "Focus, minimize or app spread"
+msgstr "Odaklan, küçült yada uygulama yay"
+
+#: Settings.ui:84 Settings.ui:156 Settings.ui:228 appIcons.js:1250
+#: appIcons.js:1262
+msgid "Quit"
+msgstr "Çık"
+
+#: Settings.ui:113
+msgid "Behavior for Middle-Click."
+msgstr "Orta Tıklama davranışı."
+
+#: Settings.ui:131
+msgid "Middle-Click action"
+msgstr "Orta Tıklama eylemi"
+
+#: Settings.ui:185
+msgid "Behavior for Shift+Middle-Click."
+msgstr "Shift + Orta Tıklama davranışı."
+
+#: Settings.ui:203
+msgid "Shift+Middle-Click action"
+msgstr "Shift + Orta Tıklama eylemi"
+
+# glossy backlit için serbest çeviri yapıldı
+#: Settings.ui:305
+msgid "Enable Unity7 like glossy backlit items"
+msgstr "Unity7 tipi parlak öğeleri etkinleştir"
+
+#: Settings.ui:318
+msgid "Apply glossy effect."
+msgstr "Parlaklık efekti uygula."
+
+#: Settings.ui:330
+msgid "Use dominant color"
+msgstr "Baskın rengi kullan"
+
+#: Settings.ui:355
+msgid "Customize indicator style"
+msgstr "Gösterge biçemini özelleştir"
+
+#: Settings.ui:381
+msgid "Color"
+msgstr "Renk"
+
+#: Settings.ui:401
+msgid "Border color"
+msgstr "Kenarlık rengi"
+
+#: Settings.ui:421
+msgid "Border width"
+msgstr "Kenarlık genişliği"
+
+#: Settings.ui:502
+msgid "Show the dock on"
+msgstr "Rıhtımʼı göster"
+
+#: Settings.ui:523
+msgid "Show on all monitors"
+msgstr "Tüm ekranlarda göster"
+
+#: Settings.ui:559
+msgid "Position on screen"
+msgstr "Ekrandaki konumu"
+
+#: Settings.ui:569 prefs.js:435
+msgid "Left"
+msgstr "Sol"
+
+#: Settings.ui:578
+msgid "Bottom"
+msgstr "Alt"
+
+#: Settings.ui:587
+msgid "Top"
+msgstr "Üst"
+
+#: Settings.ui:597 prefs.js:434
+msgid "Right"
+msgstr "Sağ"
+
+#: Settings.ui:642
+msgid ""
+"Hide the dock when it obstructs a window of the current application. More "
+"refined settings are available."
+msgstr ""
+"Geçerli uygulamanın penceresini engellediğinde rıhtımı gizle. Daha detaylı "
+"ayarlar mevcuttur."
+
+#: Settings.ui:659
+msgid "Intelligent autohide"
+msgstr "Akıllı gizleme"
+
+# son limit cümlesi kasten çevrilmedi
+#: Settings.ui:735
+msgid "Dock size limit"
+msgstr "Rıhtım boyutu"
+
+#: Settings.ui:757
+msgid "Panel mode: extend to the screen edge"
+msgstr "Panel kipi: Ekran köşelerine genişlet"
+
+#: Settings.ui:769
+msgid "Place icons to the center"
+msgstr "Simgeleri ortala"
+
+# son limit cümlesi kasten çevrilmedi
+#: Settings.ui:794
+msgid "Icon size limit"
+msgstr "Simge boyutu"
+
+#: Settings.ui:820
+msgid "Fixed icon size: scroll to reveal other icons"
+msgstr "Sabit simge boyutu: Diğer simgeleri görmek için kaydır"
+
+#: Settings.ui:848
+msgid "Preview size scale"
+msgstr "Önizleme boyutu ölçeği"
+
+#: Settings.ui:890
+msgid "Position and size"
+msgstr "Konum ve boyut"
+
+#: Settings.ui:940
+msgid "Show pinned applications"
+msgstr "Sabitlenmiş uygulamaları göster"
+
+#: Settings.ui:977
+msgid "Show running applications"
+msgstr "Çalışan uygulamaları göster"
+
+#: Settings.ui:987
+msgid "Isolate workspaces"
+msgstr "Çalışma alanlarını ayır"
+
+#: Settings.ui:1000
+msgid "Show urgent windows despite current workspace"
+msgstr "Geçerli çalışma alanına rağmen acil pencereleri göster"
+
+#: Settings.ui:1013
+msgid "Isolate monitors"
+msgstr "Ekranları ayır"
+
+#: Settings.ui:1027
+msgid "Show open windows' previews"
+msgstr "Açık pencere önizlemelerini göster"
+
+#: Settings.ui:1064
+msgid "Keep the focused application always visible in the dash"
+msgstr "Odaklanmış uygulamayı panelde her zaman görünür tut"
+
+# Anlamlı ve açıklayıcı olması için ilave değerler eklendi
+#: Settings.ui:1101
+msgid ""
+"If disabled, these settings are accessible from gnome-tweak-tool or the "
+"extension website."
+msgstr ""
+"Eğer kapatılmışsa, bu ayarlara GNOME İnce Ayarlar (gnome-tweak-tool) "
+"uygulamasından veya GNOME eklentileri (https://extensions.gnome.org) "
+"sitesinden ulaşılabilir."
+
+#: Settings.ui:1118
+msgid "Show <i>Applications</i> icon"
+msgstr "<i>Uygulamalar</i> simgesini göster"
+
+#: Settings.ui:1129
+msgid "Move at beginning of the dock"
+msgstr "Uygulamalar simgesini rıhtımʼın başlangıcına taşı"
+
+#: Settings.ui:1150
+msgid "Animate <i>Show Applications</i>"
+msgstr "<i>Uygulamaları Göster</i>ʼi Canlandır"
+
+#: Settings.ui:1171
+msgid "Put <i>Show Applications</i> in a dock edge when using Panel mode"
+msgstr ""
+"Panel kipini kullanırken <i>Uygulamaları Göster</i>ʼi rıhtım kenarına koy"
+
+#: Settings.ui:1211
+msgid "Show trash can"
+msgstr "Çöp kutusunu göster"
+
+#: Settings.ui:1248
+msgid "Show volumes and devices"
+msgstr "Birimleri ve aygıtları göster"
+
+#: Settings.ui:1258
+msgid "Only if mounted"
+msgstr "Sadece bağlıysa"
+
+#: Settings.ui:1271
+msgid "Include network volumes"
+msgstr "Ağ birimlerini dahil et"
+
+#: Settings.ui:1311
+msgid "Isolate volumes, devices and trash windows from file manager"
+msgstr "Dosya yöneticisinden birimleri, aygıtları ve çöp pencerelerini ayır"
+
+#: Settings.ui:1348
+msgid "Wiggle urgent applications"
+msgstr "Acil uygulamaları vurgula"
+
+#: Settings.ui:1385
+msgid "Hide application tooltip"
+msgstr "Uygulama ipucunu gizle"
+
+#: Settings.ui:1422
+msgid "Show icons emblems"
+msgstr "Simge amblemlerini gizle"
+
+#: Settings.ui:1435
+msgid ""
+"When enabled application icons will show notification counters and progress-"
+"bars (if Unity API is used)."
+msgstr ""
+"Etkinleştirildiğinde, uygulama simgeleri bildirim sayaçlarını ve ilerleme "
+"çubuklarını gösterecektir (Unity API kullanılıyorsa)."
+
+#: Settings.ui:1450
+msgid "Show the number of unread notifications"
+msgstr "Okunmamış bildirim sayısını göster"
+
+#: Settings.ui:1471
+msgid "Application-provided counter overrides the notifications counter"
+msgstr "Uygulama tarafından sağlanan sayaç, bildirim sayacını geçersiz kılar"
+
+#: Settings.ui:1498
+msgid "Launchers"
+msgstr "Başlatıcılar"
+
+#: Settings.ui:1538
+msgid ""
+"Enable Super+(0-9) as shortcuts to activate apps. It can also be used "
+"together with Shift and Ctrl."
+msgstr ""
+"Uygulamaları etkinleştirmek için Super+(0-9) seçeneğini kısayol olarak "
+"etkinleştir. Ayrıca Shift ve Ctrl ile birlikte de kullanılabilir."
+
+#: Settings.ui:1557
+msgid "Use keyboard shortcuts to activate apps"
+msgstr "Uygulamaları etkinleştirmek için klavye kısayollarını kullan"
+
+#: Settings.ui:1633
+msgid "Behaviour when clicking on the icon of a running application."
+msgstr "Çalışan bir uygulamanın simgesine tıklandığındaki davranışı."
+
+#: Settings.ui:1651
+msgid "Click action"
+msgstr "Tıklama eylemi"
+
+#: Settings.ui:1685
+msgid "Minimize"
+msgstr "Küçült"
+
+#: Settings.ui:1739
+msgid "Behaviour when scrolling on the icon of an application."
+msgstr "Bir uygulamanın simgesini kaydırdığınızdaki davranışı."
+
+#: Settings.ui:1757
+msgid "Scroll action"
+msgstr "Kaydırma eylemi"
+
+#: Settings.ui:1774
+msgid "Do nothing"
+msgstr "Hiçbir şey yapma"
+
+#: Settings.ui:1776
+msgid "Switch workspace"
+msgstr "Çalışma alanını değiştir"
+
+#: Settings.ui:1804
+msgid "Behavior"
+msgstr "Davranış"
+
+#: Settings.ui:1854
+msgid "Save space reducing padding and border radius."
+msgstr "Dolgu ve kenarlığı azaltarak yer kazan."
+
+# Shrink için genelde küçült çevirisini kullanıyoruz ama,
+# anlamlı ve eylemle uyumlu olduğu için daralt çevirisi kullanıldı
+#: Settings.ui:1870
+msgid "Shrink the dash"
+msgstr "Paneli daralt"
+
+# Daha anlaşılır olması için serbest çeviri yapıldı
+#: Settings.ui:1900
+msgid "Force straight corner"
+msgstr "Köşeleri düzleştir"
+
+#: Settings.ui:1930
+msgid "Show overview on startup"
+msgstr "Başlangıçta genel görünümü göster"
+
+# Çeviri yapmak yerine, Türkçe'de anlamlı, konuma uyumlu özgün metin oluşturuldu.
+#: Settings.ui:1972
+msgid ""
+"Few customizations meant to integrate the dock with the default GNOME theme. "
+"Alternatively, specific options can be enabled below."
+msgstr ""
+"Sistemde bulunan etkin GNOME teması kullanılır ve rıhtım ona göre "
+"şekillenir. Özelleştirmek isterseniz bu menüyü kapatın."
+
+#: Settings.ui:1990
+msgid "Use built-in theme"
+msgstr "Yerleşik temayı kullan"
+
+#: Settings.ui:2032
+msgid "Customize windows counter indicators"
+msgstr "Pencere sayı göstergelerini özelleştir"
+
+#: Settings.ui:2065 Settings.ui:2230
+msgid "Default"
+msgstr "Varsayılan"
+
+#: Settings.ui:2066
+msgid "Dots"
+msgstr "Noktalar"
+
+#: Settings.ui:2067
+msgid "Squares"
+msgstr "Kareler"
+
+#: Settings.ui:2068
+msgid "Dashes"
+msgstr "Tireler"
+
+#: Settings.ui:2069
+msgid "Segmented"
+msgstr "Segmentler"
+
+#: Settings.ui:2070
+msgid "Solid"
+msgstr "Kalın çizgi"
+
+#: Settings.ui:2071
+msgid "Ciliora"
+msgstr "Nokta ve çizgi"
+
+#: Settings.ui:2072
+msgid "Metro"
+msgstr "Metro"
+
+#: Settings.ui:2073
+msgid "Binary"
+msgstr "İkili"
+
+#: Settings.ui:2074
+msgid "Dot"
+msgstr "Nokta"
+
+#: Settings.ui:2107
+msgid "Set the background color for the dash."
+msgstr "Panel arkaplan rengini ayarla."
+
+#: Settings.ui:2125
+msgid "Customize the dash color"
+msgstr "Panel rengini özelleştir"
+
+#: Settings.ui:2181
+msgid "Tune the dash background opacity."
+msgstr "Panel arkaplan matlığını ayarla."
+
+#: Settings.ui:2197 prefs.js:1079
+msgid "Customize opacity"
+msgstr "Matlığı özelleştir"
+
+#: Settings.ui:2231
+msgid "Fixed"
+msgstr "Sabit"
+
+#: Settings.ui:2232
+msgid "Dynamic"
+msgstr "Dinamik"
+
+#: Settings.ui:2256
+msgid "Opacity"
+msgstr "Matlık"
+
+#: Settings.ui:2293
+msgid "Appearance"
+msgstr "Görünüm"
+
+#: Settings.ui:2332
+msgid "version: "
+msgstr "sürüm: "
+
+#: Settings.ui:2347
+msgid "Moves the dash out of the overview transforming it in a dock"
+msgstr "Paneli genel görünümden taşır ve rıhtımʼa dönüştürür"
+
+# Çeviri anlamlı olması için : eklendi
+#: Settings.ui:2361
+msgid "Created by"
+msgstr "Oluşturan:"
+
+#: Settings.ui:2374
+msgid "Webpage"
+msgstr "Web sitesi"
+
+#: Settings.ui:2385
+msgid ""
+"<span size=\"small\">This program comes with ABSOLUTELY NO WARRANTY.\n"
+"See the <a href=\"https://www.gnu.org/licenses/old-licenses/"
+"gpl-2.0.html\">GNU General Public License, version 2 or later</a> for "
+"details.</span>"
+msgstr ""
+"<span size=\"small\">Bu program kesinlikle hiçbir garanti vermiyor..\n"
+"Ayrıntılar için <a href=\"https://www.gnu.org/licenses/old-licenses/"
+"gpl-2.0.html\">GNU Genel Kamu Lisansı, sürüm 2 veya üstü</a> bağlantısına "
+"bakın</span>"
+
+#: Settings.ui:2398
+msgid "About"
+msgstr "Hakkında"
+
+# minimum and maximum değerleri çevrilmedi
+#: Settings.ui:2456
+msgid "Customize minimum and maximum opacity values"
+msgstr "Matlık değerlerini özelleştir"
+
+#: Settings.ui:2478
+msgid "Minimum opacity"
+msgstr "Asgari matlık"
+
+#: Settings.ui:2508
+msgid "Maximum opacity"
+msgstr "Azami matlık"
+
+#: Settings.ui:2589
+msgid "Number overlay"
+msgstr "Sayı yerleşimi"
+
+#: Settings.ui:2600
+msgid ""
+"Temporarily show the application numbers over the icons, corresponding to "
+"the shortcut."
+msgstr ""
+"Uygulama numaralarını, karşılık gelen simgelere göre geçici olarak göster "
+"kısayol."
+
+#: Settings.ui:2646
+msgid "Show the dock if it is hidden"
+msgstr "Gizlenmişse rıhtımʼı göster"
+
+#: Settings.ui:2657
+msgid ""
+"If using autohide, the dock will appear for a short time when triggering the "
+"shortcut."
+msgstr ""
+"Otomatik gizleme kullanıyorsanız, kısayol tetiklendiğinde rıhtım kısa bir "
+"süre için görünür."
+
+#: Settings.ui:2700
+msgid "Shortcut for the options above"
+msgstr "Yukarıdaki seçenekler için kısayol"
+
+#: Settings.ui:2711
+msgid "Syntax: <Shift>, <Ctrl>, <Alt>, <Super>"
+msgstr "Sözdizimi: <Shift>, <Ctrl>, <Alt>, <Super>"
+
+#: Settings.ui:2758 Settings.ui:3056
+msgid "Hide timeout (s)"
+msgstr "Gizleme zaman aşımı (s)"
+
+#: Settings.ui:2815
+msgid "Show the dock by mouse hover on the screen edge."
+msgstr "Fare ekran köşeleri üzerindeyken rıhtımʼı göster."
+
+#: Settings.ui:2832
+msgid "Autohide"
+msgstr "Otomatik gizle"
+
+# Anlaşılması kolay olsun diye, pressure burada etki olarak çevrilmiştir
+#: Settings.ui:2853
+msgid "Push to show: require pressure to show the dock"
+msgstr "Göstermek için it: Rıhtımʼın gösterilmesi için etki gerekir"
+
+#: Settings.ui:2864
+msgid "Enable in fullscreen mode"
+msgstr "Tam ekran kipinde etkinleştir"
+
+#: Settings.ui:2876
+msgid "Show dock for urgent notifications"
+msgstr "Acil bildirimler için rıhtımı göster"
+
+#: Settings.ui:2905
+msgid "Show the dock when it doesn't obstruct application windows."
+msgstr "Uygulama penceresine engel olmadığında rıhtımı göster."
+
+#: Settings.ui:2922
+msgid "Dodge windows"
+msgstr "Pencelereleri atlat"
+
+#: Settings.ui:2947
+msgid "All windows"
+msgstr "Tüm pencereler"
+
+#: Settings.ui:2955
+msgid "Only focused application's windows"
+msgstr "Sadece odaklanılan uygulamanın pencereleri"
+
+#: Settings.ui:2962
+msgid "Only maximized windows"
+msgstr "Sadece büyütülen pencereler"
+
+#: Settings.ui:2969
+msgid "Always on top"
+msgstr "Her zaman üstte"
+
+#: Settings.ui:3012
+msgid "Animation duration (s)"
+msgstr "Canlandırma süresi (s)"
+
+#: Settings.ui:3068
+msgid "Show timeout (s)"
+msgstr "Gösterim zaman aşımı (s)"
+
+# Anlaşılması kolay olsun diye, pressure burada etki olarak çevrilmiştir
+#: Settings.ui:3080
+msgid "Pressure threshold"
+msgstr "Etki eşiği"
+
+#: appIcons.js:755 appIconsDecorator.js:106
+#, javascript-format
+msgid "%s is updating, try again later"
+msgstr "%s güncelleniyor, lütfen daha sonra tekrar deneyin"
+
+#: appIcons.js:1087
+#, javascript-format
+msgid "%s is being updated…"
+msgstr "%s güncelleniyor…"
+
+#: appIcons.js:1098
+msgid "All Windows"
+msgstr "Tüm Pencereler"
+
+#: appIcons.js:1110
+msgid "Open Windows"
+msgstr "Pencereleri Aç"
+
+#: appIcons.js:1130
+msgid "New Window"
+msgstr "Yeni Pencere"
+
+#: appIcons.js:1149
+msgid "Launch using Integrated Graphics Card"
+msgstr "Tümleşik Ekran Kartıyla Başlat"
+
+#: appIcons.js:1150
+msgid "Launch using Discrete Graphics Card"
+msgstr "Ayrık Ekran Kartıyla Başlat"
+
+#: appIcons.js:1177 docking.js:2530
+msgid "Unpin"
+msgstr "Çıkar"
+
+#: appIcons.js:1183 docking.js:2530
+msgid "Pin to Dock"
+msgstr "Konsola İliştir"
+
+#: appIcons.js:1195 appIcons.js:1221
+msgid "App Details"
+msgstr "Uygulama Ayrıntıları"
+
+#: appIcons.js:1265
+#, javascript-format
+msgid "Quit %d Window"
+msgid_plural "Quit %d Windows"
+msgstr[0] "%d Pencereden Çık"
+
+#: appIcons.js:1549
+msgid "Dash to Dock"
+msgstr "Dash to Dock"
+
+#: appIcons.js:1551
+msgid "Settings"
+msgstr "Ayarlar"
+
+#: docking.js:1289
+msgid "Dash"
+msgstr "Rıhtım"
+
+#: locations.js:539
+msgid "Mount"
+msgstr "Bağla"
+
+#: locations.js:541
+msgid "Unmount"
+msgstr "Bağı Kaldır"
+
+#: locations.js:543
+msgid "Eject"
+msgstr "Çıkar"
+
+#: locations.js:603
+#, javascript-format
+msgid "Failed to mount “%s”"
+msgstr "“%s” bağlanamadı."
+
+#: locations.js:608
+#, javascript-format
+msgid "Failed to unmount “%s”"
+msgstr "“%s” bağı kaldırılamadı"
+
+#: locations.js:613
+#, javascript-format
+msgid "Failed to eject “%s”"
+msgstr "“%s” çıkartılamadı"
+
+#: locations.js:626
+msgid "Mount operation already in progress"
+msgstr "Bağla işlemi zaten sürüyor"
+
+#: locations.js:631
+msgid "Unmount operation already in progress"
+msgstr "Bağı kaldır işlemi zaten sürüyor"
+
+#: locations.js:636
+msgid "Eject operation already in progress"
+msgstr "Çıkart işlemi zaten sürüyor"
+
+#: locations.js:762
+msgid "Trash"
+msgstr "Çöp"
+
+#: locations.js:803
+msgid "Empty Trash"
+msgstr "Çöpü Boşalt"
+
+#: locations.js:1073
+#, javascript-format
+msgid "Failed to launch “%s”"
+msgstr "“%s” başlatılamadı"
+
+#: prefs.js:382
+msgid "Primary monitor: "
+msgstr "Birincil ekran: "
+
+#: prefs.js:388
+msgid "Secondary monitor "
+msgstr "İkincil ekran "
+
+#: prefs.js:490
+msgid "Intelligent autohide customization"
+msgstr "Akıllı otomatik gizleme özelleştirmeleri"
+
+#: prefs.js:498 prefs.js:816 prefs.js:875
+msgid "Reset to defaults"
+msgstr "Öntanımlı Değerlere Sıfırla"
+
+#: prefs.js:649
+msgid "Managed by GNOME Multitasking's Application Switching setting."
+msgstr "GNOME Çoklu Görevʼin Uygulama Değiştirme ayarı tarafından yönetilir."
+
+#: prefs.js:808
+msgid "Show dock and application numbers"
+msgstr "Rıhtımı ve uygulama sayılarını göster"
+
+#: prefs.js:867
+msgid "Customize middle-click behavior"
+msgstr "Orta tık davranışını özelleştir"
+
+#: prefs.js:964
+msgid "Customize running indicators"
+msgstr "Çalışan göstergeleri özelleştir"

@@ -18,6 +18,7 @@
  * Based on Open Bar by neuromorph
  */
 
+import GObject from 'gi://GObject';
 import Adw from 'gi://Adw';
 import Gtk from 'gi://Gtk';
 import Gdk from 'gi://Gdk';
@@ -26,6 +27,9 @@ import GLib from 'gi://GLib';
 import Soup from 'gi://Soup?version=3.0';
 import GdkPixbuf from 'gi://GdkPixbuf';
 import { ExtensionPreferences, gettext as _ } from 'resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js';
+import { fillMusicPillPreferences } from './dynamic-music-pill-prefs.js';
+import { fillVitalsPreferences } from './vitals-prefs.js';
+import { fillBluetoothBatteryPreferences } from './bluetooth-battery-prefs.js';
 
 const SCHEMA_PATH = '/org/gnome/shell/extensions/bar-enhanced/';
 
@@ -42,6 +46,7 @@ const ES_MAP = {
     'Layout Architecture': 'Arquitectura de Diseño', 'Support for Mainland, Floating, Trilands, and Island bar styles.': 'Soporte para estilos de barra Continental, Flotante, Trilands e Islas.',
     'Gtk Tunneling': 'Túnel Gtk', 'Experimental styling for Gtk3, Gtk4, and Flatpak applications.': 'Estilo experimental para aplicaciones Gtk3, Gtk4 y Flatpak.',
     'Visual Precision': 'Precisión Visual', 'Advanced control over borders, neon effects, and glassmorphism.': 'Control avanzado sobre bordes, efectos neón y glassmorphism.',
+    'Glassmorphism translúcido': 'Glassmorphism translúcido', 'Our custom transparency and background blur graphics engine.': 'Nuestro motor gráfico personalizado de transparencia y desenfoque de fondo.',
     'Quick Start Guide': 'Guía de Inicio Rápido', '1. Select Bar Type': '1. Selecciona Tipo de Barra',
     'Go to "Top Bar" and choose your preferred layout (e.g., Islands).': 'Ve a "Top Bar" y elige tu diseño preferido (ej. Islas).',
     '2. Apply Auto-Theme': '2. Aplicar Tema Automático', 'Go to "Auto Themes", select a base mode, and click Apply.': 'Ve a "Auto Themes", selecciona un modo base y haz clic en Aplicar.',
@@ -147,7 +152,361 @@ const ES_MAP = {
     'Compatible with legacy apps': 'Compatible con apps antiguas',
     'Compatible': 'Compatible',
     'GRUB/Boot Theme': 'Tema de GRUB/Arranque',
-    'Installed': 'Instalado'
+    'Installed': 'Instalado',
+    'GDM Login Screen Customizer': 'Personalizador de Inicio de Sesión GDM',
+    'Personalize lock screen, GDM wallpaper, and top bar clock safely': 'Personaliza pantalla de bloqueo, fondo GDM y reloj de la barra de forma segura',
+    'Customize GDM': 'Personalizar GDM',
+    'Configure GDM Login & Lock Screen': 'Configurar Inicio de Sesión y Bloqueo GDM',
+    'Changes require administrative privileges (auth prompt).': 'Los cambios requieren privilegios de administrador (solicitud de contraseña).',
+    'Background & Layout': 'Fondo y Diseño',
+    'Login Screen Background': 'Fondo de Pantalla de Inicio',
+    'Not configured (GNOME Default)': 'No configurado (Predeterminado de GNOME)',
+    'Select Image...': 'Seleccionar Imagen...',
+    'Select Login Background Wallpaper': 'Seleccionar Fondo de Inicio de Sesión',
+    'Use Desktop Wallpaper': 'Usar Fondo de Escritorio',
+    'Automatically apply your active desktop wallpaper to login screen': 'Aplicar automáticamente tu fondo de escritorio activo al login',
+    'Sync Wallpaper': 'Sincronizar Fondo',
+    'Unsupported image type or empty': 'Tipo de imagen no compatible o vacío',
+    'Password Dialog Card Customization': 'Personalización de Tarjeta de Contraseña',
+    'Enable Custom Password Box Style': 'Activar Estilo de Caja de Contraseña',
+    'Make GDM password entry box transparent with custom color': 'Hacer transparente y con color personalizado la caja de contraseña GDM',
+    'Password Box Color': 'Color de Caja de Contraseña',
+    'Choose custom background color for the password box': 'Elige el color de fondo personalizado para la caja de contraseña',
+    'Password Box Opacity': 'Opacidad de Caja de Contraseña',
+    'Control transparency level (0% to 100%)': 'Controlar nivel de transparencia (0% a 100%)',
+    'GDM Interface Tweaks': 'Ajustes de Interfaz GDM',
+    'Show Clock Seconds': 'Mostrar Segundos del Reloj',
+    'Display seconds in GDM top bar clock': 'Mostrar segundos en el reloj de la barra superior de GDM',
+    'Show Clock Date': 'Mostrar Fecha del Reloj',
+    'Display date in GDM top bar clock': 'Mostrar fecha en el reloj de la barra superior de GDM',
+    'Hide Power & Restart Buttons': 'Ocultar Botones de Apagado/Reinicio',
+    'Prevent powering down from lock/login screen': 'Evitar apagar/reiniciar desde la pantalla de bloqueo',
+    'Apply Changes to GDM': 'Aplicar Cambios a GDM',
+    'Restore GNOME Default GDM': 'Restaurar GDM Predeterminado',
+    'Please select a wallpaper or sync active background.': 'Por favor selecciona un fondo de pantalla o sincroniza el fondo activo.',
+    'Authenticating and applying settings...': 'Autenticando y aplicando configuraciones...',
+    'GDM customized successfully!': '¡GDM personalizado con éxito!',
+    'Authentication failed or declined.': 'Autenticación fallida o rechazada.',
+    'Error running customized GDM profile.': 'Error al ejecutar perfil GDM personalizado.',
+    'Execution failed.': 'Ejecución fallida.',
+    'Authenticating and restoring GNOME defaults...': 'Autenticando y restaurando valores por defecto...',
+    'GDM restored to default successfully!': '¡GDM restaurado a valores por defecto con éxito!',
+    'Error restoring default GDM profile.': 'Error al restaurar el perfil GDM por defecto.',
+    'Images': 'Imágenes',
+    'GDK Window Custom Styling': 'Personalización de Ventanas GDK',
+    'Window Background Color': 'Color de Fondo de Ventanas',
+    'Choose custom background color for GTK/GDK windows': 'Elige color de fondo personalizado para ventanas GTK/GDK',
+    'GDK Window Opacity': 'Opacidad de Ventanas GDK',
+    'GDK Window Border Customization': 'Personalización de Bordes de Ventana GDK',
+    'Border Width': 'Grosor de Borde',
+    'Border Transparency': 'Transparencia de Borde',
+    'Window Border Color': 'Color de Borde de Ventanas',
+    'Choose custom outline/border color for GTK/GDK windows': 'Elige color de contorno/borde personalizado para ventanas GTK/GDK',
+    'Enable Custom Window Styling': 'Activar Estilo de Ventana Personalizado',
+
+    // GDM Center translations
+    'Bar Enhanced GDM Center': 'Centro GDM de Bar Enhanced',
+    'Appearance': 'Apariencia',
+    'Accent Color': 'Color de Acento',
+    'Light Mode': 'Modo Claro',
+    'Background Type': 'Tipo de Fondo',
+    'GDM Background Image': 'Imagen de Fondo de GDM',
+    'GDM Background Color': 'Color de Fondo de GDM',
+    'Icons & Cursor': 'Iconos y Cursor',
+    'Cursor Theme': 'Tema del Cursor',
+    'Icon Theme': 'Tema de Iconos',
+    'Login Screen': 'Pantalla de Inicio',
+    'Authentication & Welcome': 'Autenticación y Bienvenida',
+    'Disable User List': 'Desactivar Lista de Usuarios',
+    'Require typing username manually': 'Requerir escribir el usuario manualmente',
+    'Disable Power/Restart Buttons': 'Desactivar Botones de Apagado/Reinicio',
+    'Show Welcome Message': 'Mostrar Mensaje de Bienvenida',
+    'Message Text': 'Texto del Mensaje',
+    'Fonts': 'Fuentes',
+    'Font (e.g. Sans 11)': 'Fuente (ej. Sans 11)',
+    'Scaling Factor': 'Factor de Escala',
+    'Antialiasing (grayscale/rgba/none)': 'Antialiasing (grayscale/rgba/none)',
+    'Antialiasing': 'Suavizado de contorno (Antialiasing)',
+    'Hinting': 'Optimización de trazos (Hinting)',
+    'Hinting (full/medium/slight/none)': 'Hinting (full/medium/slight/none)',
+    'Pointing & Touchpad': 'Puntero y Touchpad',
+    'Natural Scrolling': 'Desplazamiento Natural',
+    'Pointer Speed': 'Velocidad del Puntero',
+    'Acceleration Profile': 'Perfil de Aceleración',
+    'Pointer Acceleration': 'Perfil de Aceleración del Puntero',
+    'Tap to Click': 'Tocar para Hacer Clic',
+    'Two Finger Scrolling': 'Desplazamiento con Dos Dedos',
+    'Disable While Typing': 'Desactivar al Escribir',
+    'Disable Touchpad on External Mouse': 'Desactivar Touchpad al Conectar Mouse',
+    'Cursor Size': 'Tamaño del Cursor',
+    'Power': 'Energía',
+    'Power Button Action (suspend/nothing/interactive)': 'Acción del Botón de Encendido (suspend/nothing/interactive)',
+    'Power Button Action': 'Acción del Botón de Encendido',
+    'Auto Power Saver on Low Battery': 'Ahorro de Energía Automático en Batería Baja',
+    'Dim Screen on Idle': 'Atenuar Pantalla al estar Inactivo',
+    'Blank Screen': 'Apagar Pantalla',
+    'Idle Delay (minutes)': 'Retraso de Inactividad (minutos)',
+    'Automatic Suspend': 'Suspensión Automática',
+    'Suspend on AC': 'Suspender con Corriente Alterna',
+    'Suspend Delay (minutes)': 'Retraso de Suspensión (minutos)',
+    'Suspend on Battery': 'Suspender con Batería',
+    'Time Format': 'Formato de Hora',
+    'Sound': 'Sonido',
+    'Sound Preferences': 'Preferencias de Sonido',
+    'Sound Theme': 'Tema de Sonido',
+    'Over-amplification': 'Sobre-amplificación',
+    'Event Sounds': 'Sonidos de Eventos',
+    'Feedback Sounds': 'Sonidos de Comentarios',
+    'Display': 'Pantalla',
+    'Monitors Configuration': 'Configuración de Monitores',
+    'Apply your current display configuration (resolution, scaling, layout) to the GDM login screen.': 'Aplica tu configuración de pantalla actual (resolución, escala, diseño) a la pantalla de inicio de sesión de GDM.',
+    'Apply Current Display Settings to GDM': 'Aplicar Ajustes de Pantalla Actuales a GDM',
+    'Night Light': 'Luz Nocturna',
+    'Night Light Preferences': 'Preferencias de Luz Nocturna',
+    'Enable Night Light': 'Activar Luz Nocturna',
+    'Color Temperature (K)': 'Temperatura de Color (K)',
+    'Schedule Automatic': 'Horario Automático',
+    'Start Hour (0-23)': 'Hora de Inicio (0-23)',
+    'End Hour (0-23)': 'Hora de Fin (0-23)',
+    'Accessibility': 'Accesibilidad',
+    'Always Show Accessibility Menu': 'Mostrar Siempre el Menú de Accesibilidad',
+    'Tools': 'Herramientas',
+    'Default Shell Theme': 'Tema de Shell por Defecto',
+    'Include Top Bar Tweaks': 'Incluir Ajustes de Barra Superior',
+    'Extract default shell theme': 'Extraer tema de shell predeterminado',
+    'Extract': 'Extraer',
+    'Extracting default theme...': 'Extrayendo tema predeterminado...',
+    'Theme extracted to /tmp/default-theme!': '¡Tema extraído en /tmp/default-theme!',
+    'Extraction failed.': 'Extracción fallida.',
+    'Applying settings... please authenticate.': 'Aplicando configuraciones... por favor autentíquese.',
+    'Settings applied successfully!': '¡Configuraciones aplicadas con éxito!',
+    'Failed to apply settings.': 'Error al aplicar las configuraciones.',
+    'Actions': 'Acciones',
+    'Apply all configured settings to GDM (requires root authentication).': 'Aplicar todas las configuraciones a GDM (requiere autenticación de root).',
+    'Apply to GDM Login Screen': 'Aplicar a la Pantalla de Inicio GDM',
+    'Applying monitor layout...': 'Aplicando diseño de monitor...',
+    'Monitor layout applied!': '¡Diseño de monitor aplicado!',
+    'Failed to apply monitor layout.': 'Error al aplicar el diseño de monitor.',
+    'Enable Fingerprint Authentication': 'Activar Autenticación por Huella Digital',
+    'Enlarge Welcome Message': 'Agrandar Mensaje de Bienvenida',
+    'Enable Logo': 'Activar Logo',
+    'Logo Image Path': 'Ruta de Imagen del Logo',
+    'Logo': 'Logo',
+    'Select Image...': 'Seleccionar Imagen...',
+    'Select Login Background Wallpaper': 'Seleccionar Fondo de Pantalla de GDM',
+    'Select GDM Logo Image': 'Seleccionar Imagen del Logo para GDM',
+    'Password Dialog Card Customization': 'Personalización de Tarjeta de Contraseña',
+    'Enable Custom Password Box Style': 'Estilo Personalizado de Tarjeta',
+    'Make GDM password entry box transparent with custom color': 'Caja de contraseña GDM transparente o translúcida',
+    'Password Box Color (e.g. rgba(0,0,0,0.5))': 'Color de Fondo (ej. rgba(0,0,0,0.5))',
+    'Password Box Opacity': 'Opacidad de Tarjeta',
+    'Control transparency level (0% to 100%)': 'Ajustar nivel de opacidad (0% a 100%)',
+    'Enable Background Blur': 'Activar Difuminado / Desenfoque',
+    'Apply dynamic frosted glass blur to GDM login card': 'Efecto cristal esmerilado translúcido y desenfocado',
+    'System Maintenance': 'Mantenimiento del Sistema',
+    'Restore GDM to Default': 'Restaurar GDM al Estado Original',
+    'Revert all customized GDM settings and styles back to the system default.': 'Revierte todas las configuraciones y estilos personalizados de GDM al estado original del sistema.',
+    'Restore': 'Restaurar',
+    'Restoring GDM to default... please authenticate.': 'Restaurando GDM al estado original... por favor, autentíquese.',
+    'GDM restored to system default!': '¡GDM restaurado al estado original del sistema!',
+    'Failed to restore GDM.': 'Fallo al restaurar GDM.',
+
+    // Additional GDM Center translations
+    'Theme': 'Tema',
+    'Background': 'Fondo',
+    'Background Image Path': 'Ruta de Imagen de Fondo',
+    'Image Adjustment': 'Ajuste de Imagen',
+    'Select Background Color': 'Seleccionar Color de Fondo',
+    'Blur Background Image': 'Difuminar Imagen de Fondo',
+    'Applies a Gaussian blur to the GDM background image': 'Aplica un desenfoque Gaussiano a la imagen de fondo de GDM',
+    'Blur Radius': 'Radio de Desenfoque',
+    'Adjust the amount of background blur (0 to 100)': 'Ajustar la cantidad de desenfoque del fondo (0 a 100)',
+    'Select Password Box Color': 'Seleccionar Color de Caja de Contraseña',
+    'General': 'General',
+    'Clock & Status': 'Reloj y Estado',
+    'Show Seconds': 'Mostrar Segundos',
+    'Show Date': 'Mostrar Fecha',
+    'Show Weekday': 'Mostrar Día de la Semana',
+    'Show Battery Percentage': 'Mostrar Porcentaje de Batería',
+    'Panel Visuals': 'Apariencia del Panel',
+    'Change Background Color': 'Cambiar Color de Fondo',
+    'Change Text Color': 'Cambiar Color de Texto',
+    'Select Text Color': 'Seleccionar Color de Texto',
+    'Mouse': 'Ratón',
+    'Touchpad': 'Panel Táctil',
+    'Enable Touchpad': 'Activar Panel Táctil',
+    'Two-finger Scrolling': 'Desplazamiento con Dos Dedos',
+    'Disable While Mouse Attached': 'Desactivar con Ratón Conectado',
+    'Disable Arrows': 'Desactivar Flechas',
+    'Disable Rounded Corners': 'Desactivar Esquinas Redondeadas',
+
+    // Dash to Dock native settings translations
+    'Dock Position & Layout': 'Posición y Diseño del Dock',
+    'Screen Position': 'Posición en Pantalla',
+    'Top': 'Arriba', 'Right': 'Derecha', 'Bottom': 'Abajo', 'Left': 'Izquierda',
+    'Maximum Icon Size': 'Tamaño Máximo de Iconos',
+    'Dock Size Percentage': 'Porcentaje de Tamaño del Dock',
+    'Extend Dock to Full Screen Edge': 'Extender Dock al Borde de Pantalla',
+    'Always Center Icons': 'Centrar Iconos Siempre',
+    'Show Dock on All Monitors': 'Mostrar Dock en Todos los Monitores',
+    'Fixed Icon Size': 'Tamaño de Icono Fijo',
+    'Intelligent Behavior': 'Comportamiento Inteligente',
+    'Always Visible (Fixed)': 'Siempre Visible (Fijo)',
+    'Disable to enable smart autohide': 'Desactiva para habilitar auto-ocultar inteligente',
+    'Autohide': 'Auto-Ocultar',
+    'Intellihide (Dodge Windows)': 'Inteliocultar (Esquivar Ventanas)',
+    'Intellihide Mode': 'Modo Inteliocultar',
+    'All Windows': 'Todas las Ventanas',
+    'Focus App Windows': 'Ventanas de App Enfocada',
+    'Maximized Windows': 'Ventanas Maximizadas',
+    'Always on Top': 'Siempre Encima',
+    'Autohide in Fullscreen': 'Auto-Ocultar en Pantalla Completa',
+    'Require Pressure to Show': 'Requerir Presión para Mostrar',
+    'Pressure Threshold': 'Umbral de Presión',
+    'Animation Duration': 'Duración de Animación',
+    'Show Delay': 'Retraso al Mostrar',
+    'Hide Delay': 'Retraso al Ocultar',
+    'App Icons & Indicators': 'Iconos de Apps e Indicadores',
+    'Show Running Apps': 'Mostrar Apps Ejecutándose',
+    'Show Favorites': 'Mostrar Favoritos',
+    'Show Trash': 'Mostrar Papelera',
+    'Show Removable Drives': 'Mostrar Unidades Extraíbles',
+    'Show Applications Button': 'Mostrar Botón de Aplicaciones',
+    'Applications Button at Start': 'Botón de Aplicaciones al Inicio',
+    'Isolate Workspaces': 'Aislar Espacios de Trabajo',
+    'Isolate Monitors': 'Aislar Monitores',
+    'Window Previews on Hover': 'Vista Previa de Ventanas al Pasar',
+    'Preview Size Scale': 'Escala de Vista Previa',
+    'Wiggle Urgent Apps': 'Agitar Apps Urgentes',
+    'Show Dock on Urgent Notification': 'Mostrar Dock en Notificación Urgente',
+    'Hide Tooltips': 'Ocultar Tooltips',
+    'Show Icon Emblems': 'Mostrar Emblemas de Iconos',
+    'Notifications Counter Badge': 'Insignia de Contador de Notificaciones',
+    'Running Indicator Style': 'Estilo de Indicador de Ejecución',
+    'Default': 'Predeterminado', 'Dots': 'Puntos', 'Squares': 'Cuadros', 'Dashes': 'Guiones',
+    'Segmented': 'Segmentado', 'Solid': 'Sólido', 'Ciliora': 'Ciliora', 'Metro': 'Metro',
+    'Use Dominant Color for Indicator': 'Usar Color Dominante para Indicador',
+    'Unity Backlit Items': 'Retroiluminación Unity',
+    'Glossy Effect': 'Efecto Brillante',
+    'Click & Scroll Actions': 'Acciones de Clic y Scroll',
+    'Click Action': 'Acción al Clic',
+    'Raise': 'Elevar', 'Minimize': 'Minimizar', 'Launch': 'Lanzar', 'Cycle': 'Ciclar',
+    'Min or Overview': 'Minimizar o Vista General', 'Show Previews': 'Mostrar Vistas Previas',
+    'Min or Cycle': 'Minimizar o Ciclar', 'Show App Spread': 'Mostrar Expansión de Apps',
+    'Scroll Action': 'Acción al Scroll',
+    'Do Nothing': 'No Hacer Nada', 'Cycle Windows': 'Ciclar Ventanas', 'Switch Workspace': 'Cambiar Espacio de Trabajo',
+    'Enable Keyboard Shortcuts': 'Activar Atajos de Teclado',
+    'Scroll to Focused Application': 'Desplazar a App Enfocada',
+    'Disable Overview on Startup': 'Desactivar Vista General al Iniciar',
+    'Dock Appearance (Advanced)': 'Apariencia del Dock (Avanzado)',
+    'Transparency Mode': 'Modo de Transparencia',
+    'Adaptive': 'Adaptativo', 'Dynamic': 'Dinámico', 'Fixed': 'Fijo',
+    'Background Opacity': 'Opacidad de Fondo',
+    'Customize Min/Max Alpha': 'Personalizar Alpha Mín/Máx',
+    'Minimum Alpha': 'Alpha Mínimo',
+    'Maximum Alpha': 'Alpha Máximo',
+    'Custom Background Color': 'Color de Fondo Personalizado',
+    'Apply Custom Theme (shrink)': 'Aplicar Tema Personalizado (contraer)',
+    'Force Straight Corners': 'Forzar Esquinas Rectas',
+
+    // Notification Icons translations
+    'Notification Icons in Top Bar': 'Iconos de Notificación en la Barra Superior',
+    'Enable Notification Icons': 'Activar Iconos de Notificación',
+    'Colored Icons': 'Iconos a Color',
+    'Show colored icons instead of monochrome': 'Mostrar iconos a color en lugar de monocromáticos',
+    'Count Badge': 'Insignia de Conteo',
+    'Display number of unread notifications': 'Mostrar número de notificaciones sin leer',
+    'Hide Single Count': 'Ocultar Conteo Individual',
+    'Hide badge when only one notification': 'Ocultar insignia cuando solo hay una notificación',
+    'Right Side of Clock': 'Lado Derecho del Reloj',
+    'Show icons on the right side of the clock': 'Mostrar iconos al lado derecho del reloj',
+    'Notification Icon Size': 'Tamaño de Iconos de Notificación',
+    'Small (16px)': 'Pequeño (16px)',
+    'Medium (18px)': 'Mediano (18px)',
+    'Large (20px)': 'Grande (20px)',
+    'Do Not Disturb Behavior': 'Comportamiento de No Molestar',
+    'Urgent Only': 'Solo Urgentes',
+    'Never Show': 'Nunca Mostrar',
+
+    // Privacy Indicators translations
+    'Enable Privacy Indicators Accent Color': 'Activar Color de Acento en Indicadores de Privacidad',
+    'Apply accent colors to system privacy & sharing indicators': 'Aplica los colores de acento a los indicadores de privacidad y compartición del sistema',
+    'Color Privacy Indicators': 'Colorear Indicadores de Privacidad',
+    'Apply accent color to camera, microphone, and location indicators': 'Aplica el color de acento a los indicadores de cámara, micrófono y ubicación',
+    'Color Screen Sharing Indicator': 'Colorear Indicador de Compartir Pantalla',
+    'Apply accent color to the screen sharing indicator': 'Aplica el color de acento al indicador de pantalla compartida',
+    'Color Screen Recording Indicator': 'Colorear Indicador de Grabación de Pantalla',
+    'Apply accent color to the screen recording indicator': 'Aplica el color de acento al indicador de grabación de pantalla',
+    'Glow Blur Background': 'Fondo Difuminado (Glow Blur)',
+    'Use a glow blur background instead of a solid color block for sharing/recording': 'Usa un fondo difuminado con brillo en lugar de un bloque de color sólido al compartir o grabar',
+    'Neutral Color Mode': 'Modo de Color Neutro',
+    'Use neutral colors (white/dark grey) instead of accent colors': 'Usa colores neutros (blanco/gris oscuro) en lugar del color de acento',
+    'Privacy & Screen Indicators': 'Indicadores de Privacidad y Pantalla',
+
+    // Módulos Integrados
+    'Integrated Modules': 'Módulos Integrados',
+    'Enable or disable integrated extensions.': 'Activa o desactiva las extensiones integradas.',
+    'Shows a dock on the desktop': 'Muestra un dock en el escritorio',
+    'Dynamic Music Pill': 'Píldora Musical Dinámica',
+    'Media controls in the top bar': 'Controles de reproducción en la barra superior',
+    'Vitals': 'Vitales del Sistema',
+    'System hardware monitors': 'Monitores de hardware del sistema',
+    'Bluetooth Battery': 'Batería Bluetooth',
+    'Show battery level of connected Bluetooth devices': 'Muestra el nivel de batería de dispositivos Bluetooth conectados',
+    'Configure Dynamic Music Pill': 'Configurar Píldora Musical',
+    'Configure Vitals': 'Configurar Vitales del Sistema',
+    'Configure Bluetooth Battery': 'Configurar Batería Bluetooth',
+
+    // Modal de Vitals
+    'Vitals Settings': 'Ajustes de Vitales del Sistema',
+    'Close': 'Cerrar',
+
+    // Modal de Bluetooth Battery
+    'Bluetooth Battery Settings': 'Ajustes de Batería Bluetooth',
+    'Manage native Bluetooth battery indicator.': 'Gestiona el indicador de batería Bluetooth nativo.',
+    'Enable Bluetooth Battery Meter': 'Activar Medidor de Batería Bluetooth',
+    'Show battery percentage of connected devices in the top bar.': 'Muestra el porcentaje de batería de los dispositivos conectados en la barra superior.',
+
+    // Missing translations
+    'All customizations will be purged and reverted to factory defaults.': 'Se eliminarán todas las personalizaciones y se volverá a los valores predeterminados de fábrica.',
+    'Always Show': 'Mostrar siempre',
+    'Apply a style from a shared text string.': 'Aplica un estilo desde una cadena de texto compartida.',
+    'Auto Foreground Contrast': 'Contraste automático de texto/primer plano',
+    'Card Luminosity Hint': 'Sugerencia de luminosidad de tarjeta',
+    'Copy Code': 'Copiar código',
+    'Dash to Dock': 'Dash to Dock',
+    'Enable Welcome Message': 'Activar mensaje de bienvenida',
+    'Floating': 'Flotante',
+    'Foreground Opacity': 'Opacidad de texto/primer plano',
+    'Generate a shareable text string of your style.': 'Genera una cadena de texto compartida con tu estilo.',
+    'Gradients & Shadows': 'Degradados y sombras',
+    'Hide the user list on the login screen': 'Ocultar la lista de usuarios en la pantalla de inicio de sesión',
+    'Horizontal': 'Horizontal',
+    'Import Configuration': 'Importar configuración',
+    'Islands': 'Islas',
+    'Login Screen Logo': 'Logo de pantalla de inicio de sesión',
+    'Main Window Luminosity Hint': 'Sugerencia de luminosidad de la ventana principal',
+    'Mainland': 'Continental',
+    'Manage your icons and window themes.': 'Gestiona tus iconos y temas de ventanas.',
+    'Maximized Bar Height': 'Altura de barra maximizada',
+    'Native Theme': 'Tema nativo',
+    'No results or API error.': 'Sin resultados o error de API.',
+    'Not configured': 'No configurado',
+    'Open Advanced GDM Center': 'Abrir centro avanzado de GDM',
+    'Paste the theme code below to apply it.': 'Pega el código del tema abajo para aplicarlo.',
+    'Restore GNOME Defaults': 'Restaurar valores predeterminados de GNOME',
+    'Restored!': '¡Restaurado!',
+    'Secondary Palette Override': 'Sobrescribir paleta secundaria',
+    'Select Login Screen Logo': 'Seleccionar logo de la pantalla de inicio',
+    'Select Logo...': 'Seleccionar logo...',
+    'Select a .zip or .tar.gz archive.': 'Selecciona un archivo .zip o .tar.gz.',
+    'Show a banner message on the login screen': 'Mostrar un mensaje de banner en la pantalla de inicio',
+    'Text to display as welcome message': 'Texto a mostrar como mensaje de bienvenida',
+    'Tile Division Color': 'Color de división de mosaicos',
+    'Trilands': 'Trilands',
+    'Use this code to share your theme with others.': 'Usa este código para compartir tu tema con otros.',
+    'Vertical': 'Vertical',
+    'Welcome Message & Logo': 'Mensaje de bienvenida y logo'
 };
 
 const T = (text) => {
@@ -165,13 +524,14 @@ export default class BarEnhancedPreferences extends ExtensionPreferences {
 
         const settings = this.getSettings();
         const interfaceSettings = new Gio.Settings({ schema_id: 'org.gnome.desktop.interface' });
-        const prefs = new BarEnhancedPrefs(settings, interfaceSettings, this.path);
+        const prefs = new BarEnhancedPrefs(this, settings, interfaceSettings, this.path);
         prefs.fill(window);
     }
 }
 
 class BarEnhancedPrefs {
-    constructor(settings, interfaceSettings, path) {
+    constructor(extension, settings, interfaceSettings, path) {
+        this._extension = extension;
         this._settings = settings;
         this._interfaceSettings = interfaceSettings;
         this.path = path;
@@ -212,6 +572,7 @@ class BarEnhancedPrefs {
 
         const caps = [
             { title: T('Adaptive Engine'), desc: T('Extracts color palettes from your wallpaper dynamically.') },
+            { title: T('Glassmorphism translúcido'), desc: T('Our custom transparency and background blur graphics engine.') },
             { title: T('Layout Architecture'), desc: T('Support for Mainland, Floating, Trilands, and Island bar styles.') },
             { title: T('Gtk Tunneling'), desc: T('Experimental styling for Gtk3, Gtk4, and Flatpak applications.') },
             { title: T('Visual Precision'), desc: T('Advanced control over borders, neon effects, and glassmorphism.') }
@@ -295,11 +656,11 @@ class BarEnhancedPrefs {
         this.createPaletteDisplay(window, pBox1, pBox2);
         paletteBox.append(pBox1);
         paletteBox.append(pBox2);
-        const btnBox = new Gtk.Box({ 
-            orientation: Gtk.Orientation.HORIZONTAL, 
-            spacing: 12, 
-            halign: Gtk.Align.CENTER, 
-            margin_top: 12 
+        const btnBox = new Gtk.Box({
+            orientation: Gtk.Orientation.HORIZONTAL,
+            spacing: 12,
+            halign: Gtk.Align.CENTER,
+            margin_top: 12
         });
 
         const refreshBtn = new Gtk.Button({
@@ -525,6 +886,153 @@ class BarEnhancedPrefs {
         dGroup.add(this.createSwitchRow('dborder', T('Render Dock Outline')));
         dGroup.add(this.createSwitchRow('dshadow', T('Render Dock Projection Shadow')));
 
+        // --- Native Dash to Dock Settings (Adwaita Style) ---
+        const dockSettings = this._extension.getSettings('org.gnome.shell.extensions.dash-to-dock');
+
+        // Helper: create a switch row bound to dock settings
+        const dockSwitch = (key, title, subtitle = '') => {
+            const row = new Adw.SwitchRow({ title, subtitle });
+            dockSettings.bind(key, row, 'active', Gio.SettingsBindFlags.DEFAULT);
+            return row;
+        };
+
+        // Helper: create a scale row bound to dock settings
+        const dockScale = (key, title, lower, upper, step = 1) => {
+            const row = new Adw.ActionRow({ title });
+            const scale = new Gtk.Scale({
+                orientation: Gtk.Orientation.HORIZONTAL,
+                adjustment: new Gtk.Adjustment({ lower, upper, step_increment: step }),
+                digits: step < 1 ? 2 : 0, draw_value: true, value_pos: Gtk.PositionType.RIGHT,
+                width_request: 180, valign: Gtk.Align.CENTER
+            });
+            dockSettings.bind(key, scale.adjustment, 'value', Gio.SettingsBindFlags.DEFAULT);
+            row.add_suffix(scale);
+            return row;
+        };
+
+        // --- Position & Layout ---
+        const posGroup = new Adw.PreferencesGroup({ title: T('Dock Position & Layout') });
+        dashPage.add(posGroup);
+
+        const posRow = new Adw.ComboRow({ title: T('Screen Position') });
+        const posModel = new Gtk.StringList();
+        [T('Top'), T('Right'), T('Bottom'), T('Left')].forEach(l => posModel.append(l));
+        posRow.set_model(posModel);
+        posRow.set_selected(dockSettings.get_enum('dock-position'));
+        posRow.connect('notify::selected', () => dockSettings.set_enum('dock-position', posRow.get_selected()));
+        posGroup.add(posRow);
+
+        posGroup.add(dockScale('dash-max-icon-size', T('Maximum Icon Size'), 16, 128));
+        posGroup.add(dockScale('height-fraction', T('Dock Size Percentage'), 0.1, 1.0, 0.05));
+
+        const extendRow = dockSwitch('extend-height', T('Extend Dock to Full Screen Edge'));
+        posGroup.add(extendRow);
+        posGroup.add(dockSwitch('always-center-icons', T('Always Center Icons')));
+        posGroup.add(dockSwitch('multi-monitor', T('Show Dock on All Monitors')));
+        posGroup.add(dockSwitch('icon-size-fixed', T('Fixed Icon Size')));
+
+        // --- Intelligent Behavior ---
+        const behavGroup = new Adw.PreferencesGroup({ title: T('Intelligent Behavior') });
+        dashPage.add(behavGroup);
+
+        const fixedRow = new Adw.SwitchRow({ title: T('Always Visible (Fixed)'), subtitle: T('Disable to enable smart autohide') });
+        dockSettings.bind('dock-fixed', fixedRow, 'active', Gio.SettingsBindFlags.DEFAULT);
+        behavGroup.add(fixedRow);
+
+        behavGroup.add(dockSwitch('autohide', T('Autohide')));
+        behavGroup.add(dockSwitch('intellihide', T('Intellihide (Dodge Windows)')));
+
+        const ihModeRow = new Adw.ComboRow({ title: T('Intellihide Mode') });
+        const ihModel = new Gtk.StringList();
+        [T('All Windows'), T('Focus App Windows'), T('Maximized Windows'), T('Always on Top')].forEach(l => ihModel.append(l));
+        ihModeRow.set_model(ihModel);
+        ihModeRow.set_selected(dockSettings.get_enum('intellihide-mode'));
+        ihModeRow.connect('notify::selected', () => dockSettings.set_enum('intellihide-mode', ihModeRow.get_selected()));
+        behavGroup.add(ihModeRow);
+
+        behavGroup.add(dockSwitch('autohide-in-fullscreen', T('Autohide in Fullscreen')));
+        behavGroup.add(dockSwitch('require-pressure-to-show', T('Require Pressure to Show')));
+        behavGroup.add(dockScale('pressure-threshold', T('Pressure Threshold'), 0, 500));
+        behavGroup.add(dockScale('animation-time', T('Animation Duration'), 0, 1, 0.05));
+        behavGroup.add(dockScale('show-delay', T('Show Delay'), 0, 1, 0.05));
+        behavGroup.add(dockScale('hide-delay', T('Hide Delay'), 0, 1, 0.05));
+
+        // --- App Icons & Indicators ---
+        const appiGroup = new Adw.PreferencesGroup({ title: T('App Icons & Indicators') });
+        dashPage.add(appiGroup);
+
+        appiGroup.add(dockSwitch('show-running', T('Show Running Apps')));
+        appiGroup.add(dockSwitch('show-favorites', T('Show Favorites')));
+        appiGroup.add(dockSwitch('show-trash', T('Show Trash')));
+        appiGroup.add(dockSwitch('show-mounts', T('Show Removable Drives')));
+        appiGroup.add(dockSwitch('show-show-apps-button', T('Show Applications Button')));
+        appiGroup.add(dockSwitch('show-apps-at-top', T('Applications Button at Start')));
+        appiGroup.add(dockSwitch('isolate-workspaces', T('Isolate Workspaces')));
+        appiGroup.add(dockSwitch('isolate-monitors', T('Isolate Monitors')));
+        appiGroup.add(dockSwitch('show-windows-preview', T('Window Previews on Hover')));
+        appiGroup.add(dockScale('preview-size-scale', T('Preview Size Scale'), 0, 1, 0.05));
+        appiGroup.add(dockSwitch('dance-urgent-applications', T('Wiggle Urgent Apps')));
+        appiGroup.add(dockSwitch('show-dock-urgent-notify', T('Show Dock on Urgent Notification')));
+        appiGroup.add(dockSwitch('hide-tooltip', T('Hide Tooltips')));
+        appiGroup.add(dockSwitch('show-icons-emblems', T('Show Icon Emblems')));
+        appiGroup.add(dockSwitch('show-icons-notifications-counter', T('Notifications Counter Badge')));
+
+        const runRow = new Adw.ComboRow({ title: T('Running Indicator Style') });
+        const runModel = new Gtk.StringList();
+        [T('Default'), T('Dots'), T('Squares'), T('Dashes'), T('Segmented'), T('Solid'), T('Ciliora'), T('Metro')].forEach(l => runModel.append(l));
+        runRow.set_model(runModel);
+        runRow.set_selected(dockSettings.get_enum('running-indicator-style'));
+        runRow.connect('notify::selected', () => dockSettings.set_enum('running-indicator-style', runRow.get_selected()));
+        appiGroup.add(runRow);
+
+        appiGroup.add(dockSwitch('running-indicator-dominant-color', T('Use Dominant Color for Indicator')));
+        appiGroup.add(dockSwitch('unity-backlit-items', T('Unity Backlit Items')));
+        appiGroup.add(dockSwitch('apply-glossy-effect', T('Glossy Effect')));
+
+        // --- Click & Scroll Actions ---
+        const actGroup = new Adw.PreferencesGroup({ title: T('Click & Scroll Actions') });
+        dashPage.add(actGroup);
+
+        const clickRow = new Adw.ComboRow({ title: T('Click Action') });
+        const clickModel = new Gtk.StringList();
+        [T('Raise'), T('Minimize'), T('Launch'), T('Cycle'), T('Min or Overview'), T('Show Previews'), T('Min or Cycle'), T('Show App Spread')].forEach(l => clickModel.append(l));
+        clickRow.set_model(clickModel);
+        clickRow.set_selected(dockSettings.get_enum('click-action'));
+        clickRow.connect('notify::selected', () => dockSettings.set_enum('click-action', clickRow.get_selected()));
+        actGroup.add(clickRow);
+
+        const scrollRow = new Adw.ComboRow({ title: T('Scroll Action') });
+        const scrollModel = new Gtk.StringList();
+        [T('Do Nothing'), T('Cycle Windows'), T('Switch Workspace')].forEach(l => scrollModel.append(l));
+        scrollRow.set_model(scrollModel);
+        scrollRow.set_selected(dockSettings.get_enum('scroll-action'));
+        scrollRow.connect('notify::selected', () => dockSettings.set_enum('scroll-action', scrollRow.get_selected()));
+        actGroup.add(scrollRow);
+
+        actGroup.add(dockSwitch('hot-keys', T('Enable Keyboard Shortcuts')));
+        actGroup.add(dockSwitch('scroll-to-focused-application', T('Scroll to Focused Application')));
+        actGroup.add(dockSwitch('disable-overview-on-startup', T('Disable Overview on Startup')));
+
+        // --- Dock Appearance (Advanced) ---
+        const appGroup2 = new Adw.PreferencesGroup({ title: T('Dock Appearance (Advanced)') });
+        dashPage.add(appGroup2);
+
+        const transpRow = new Adw.ComboRow({ title: T('Transparency Mode') });
+        const transpModel = new Gtk.StringList();
+        [T('Default'), T('Fixed'), T('Adaptive'), T('Dynamic')].forEach(l => transpModel.append(l));
+        transpRow.set_model(transpModel);
+        transpRow.set_selected(dockSettings.get_enum('transparency-mode'));
+        transpRow.connect('notify::selected', () => dockSettings.set_enum('transparency-mode', transpRow.get_selected()));
+        appGroup2.add(transpRow);
+
+        appGroup2.add(dockScale('background-opacity', T('Background Opacity'), 0, 1, 0.05));
+        appGroup2.add(dockSwitch('customize-alphas', T('Customize Min/Max Alpha')));
+        appGroup2.add(dockScale('min-alpha', T('Minimum Alpha'), 0, 1, 0.05));
+        appGroup2.add(dockScale('max-alpha', T('Maximum Alpha'), 0, 1, 0.05));
+        appGroup2.add(dockSwitch('custom-background-color', T('Custom Background Color')));
+        appGroup2.add(dockSwitch('apply-custom-theme', T('Apply Custom Theme (shrink)')));
+        appGroup2.add(dockSwitch('force-straight-corner', T('Force Straight Corners')));
+
         // --- SYSTEM INTEGRATION ---
         const sysPage = new Adw.PreferencesPage({ title: T('System'), icon_name: 'preferences-desktop-screensaver-symbolic' });
         window.add(sysPage);
@@ -536,6 +1044,112 @@ class BarEnhancedPrefs {
         sGroup.add(this.createSwitchRow('apply-all-shell', T('Unified Shell Color Propagation')));
         sGroup.add(this.createSwitchRow('traffic-light', T('Apply Traffic Light Window Controls')));
 
+        // --- Notification Icons ---
+        const niGroup = new Adw.PreferencesGroup({ title: T('Notification Icons in Top Bar') });
+        sysPage.add(niGroup);
+        
+        const notifIconsRow = this.createSwitchRow('notif-icons-enabled', T('Enable Notification Icons'));
+        niGroup.add(notifIconsRow);
+
+        const niSettings = this._extension.getSettings('org.gnome.shell.extensions.notification-icons');
+
+        const niSwitch = (key, title, subtitle = '') => {
+            const row = new Adw.SwitchRow({ title, subtitle });
+            niSettings.bind(key, row, 'active', Gio.SettingsBindFlags.DEFAULT);
+            notifIconsRow.bind_property('active', row, 'sensitive', GObject.BindingFlags.DEFAULT | GObject.BindingFlags.SYNC_CREATE);
+            return row;
+        };
+
+        niGroup.add(niSwitch('colored-icons', T('Colored Icons'), T('Show colored icons instead of monochrome')));
+        niGroup.add(niSwitch('notification-count', T('Count Badge'), T('Display number of unread notifications')));
+        niGroup.add(niSwitch('hide-count-when-one', T('Hide Single Count'), T('Hide badge when only one notification')));
+        niGroup.add(niSwitch('right-side', T('Right Side of Clock'), T('Show icons on the right side of the clock')));
+
+        const niSizeRow = new Adw.ComboRow({ title: T('Notification Icon Size') });
+        const niSizeModel = new Gtk.StringList();
+        [T('Small (16px)'), T('Medium (18px)'), T('Large (20px)')].forEach(l => niSizeModel.append(l));
+        niSizeRow.set_model(niSizeModel);
+        niSizeRow.set_selected(niSettings.get_int('icon-size'));
+        niSizeRow.connect('notify::selected', () => niSettings.set_int('icon-size', niSizeRow.get_selected()));
+        notifIconsRow.bind_property('active', niSizeRow, 'sensitive', GObject.BindingFlags.DEFAULT | GObject.BindingFlags.SYNC_CREATE);
+        niGroup.add(niSizeRow);
+
+        const niDndRow = new Adw.ComboRow({ title: T('Do Not Disturb Behavior') });
+        const niDndModel = new Gtk.StringList();
+        [T('Always Show'), T('Urgent Only'), T('Never Show')].forEach(l => niDndModel.append(l));
+        niDndRow.set_model(niDndModel);
+        niDndRow.set_selected(niSettings.get_int('dnd-mode'));
+        niDndRow.connect('notify::selected', () => niSettings.set_int('dnd-mode', niDndRow.get_selected()));
+        notifIconsRow.bind_property('active', niDndRow, 'sensitive', GObject.BindingFlags.DEFAULT | GObject.BindingFlags.SYNC_CREATE);
+        niGroup.add(niDndRow);
+
+        // --- Privacy Indicators Accent Color ---
+        const privacyGroup = new Adw.PreferencesGroup({ title: T('Privacy & Screen Indicators') });
+        sysPage.add(privacyGroup);
+
+        const privacyAccentRow = this.createSwitchRow('privacy-accent-enabled', T('Enable Privacy Indicators Accent Color'), T('Apply accent colors to system privacy & sharing indicators'));
+        privacyGroup.add(privacyAccentRow);
+
+        const privacySwitch = (key, title, subtitle = '') => {
+            const row = this.createSwitchRow(key, title, subtitle);
+            privacyAccentRow.bind_property('active', row, 'sensitive', GObject.BindingFlags.DEFAULT | GObject.BindingFlags.SYNC_CREATE);
+            return row;
+        };
+
+        privacyGroup.add(privacySwitch('privacy-indicators', T('Color Privacy Indicators'), T('Apply accent color to camera, microphone, and location indicators')));
+        privacyGroup.add(privacySwitch('screen-sharing-indicator', T('Color Screen Sharing Indicator'), T('Apply accent color to the screen sharing indicator')));
+        privacyGroup.add(privacySwitch('screen-recording-indicator', T('Color Screen Recording Indicator'), T('Apply accent color to the screen recording indicator')));
+        privacyGroup.add(privacySwitch('privacy-blur', T('Glow Blur Background'), T('Use a glow blur background instead of a solid color block for sharing/recording')));
+        privacyGroup.add(privacySwitch('privacy-neutral', T('Neutral Color Mode'), T('Use neutral colors (white/dark grey) instead of accent colors')));
+
+        const modGroup = new Adw.PreferencesGroup({ title: T('Integrated Modules'), description: T('Enable or disable integrated extensions.') });
+        sysPage.add(modGroup);
+
+        const dockRow = this.createSwitchRow('dash-to-dock-enabled', T('Dash to Dock'), T('Shows a dock on the desktop'));
+        modGroup.add(dockRow);
+
+        const musicRow = this.createSwitchRow('music-pill-enabled', T('Dynamic Music Pill'), T('Media controls in the top bar'));
+        const musicBtn = new Gtk.Button({ icon_name: 'preferences-system-symbolic', tooltip_text: T('Configure Dynamic Music Pill'), valign: Gtk.Align.CENTER, css_classes: ['flat', 'circular'] });
+        musicBtn.connect('clicked', () => {
+            try {
+                fillMusicPillPreferences(window, this._extension.getSettings('org.gnome.shell.extensions.dynamic-music-pill'));
+            } catch(e) {
+                console.error('Bar Enhanced: Error opening Music Pill prefs:', e);
+                const d = new Adw.MessageDialog({ transient_for: window, modal: true, heading: 'Error', body: String(e) });
+                d.add_response('ok', 'OK'); d.connect('response', () => d.destroy()); d.present();
+            }
+        });
+        musicRow.add_suffix(musicBtn);
+        modGroup.add(musicRow);
+
+        const vitalsRow = this.createSwitchRow('vitals-enabled', T('Vitals'), T('System hardware monitors'));
+        const vitalsBtn = new Gtk.Button({ icon_name: 'preferences-system-symbolic', tooltip_text: T('Configure Vitals'), valign: Gtk.Align.CENTER, css_classes: ['flat', 'circular'] });
+        vitalsBtn.connect('clicked', () => {
+            try {
+                fillVitalsPreferences(window, this._extension);
+            } catch(e) {
+                console.error('Bar Enhanced: Error opening Vitals prefs:', e);
+                const d = new Adw.MessageDialog({ transient_for: window, modal: true, heading: 'Error', body: String(e) });
+                d.add_response('ok', 'OK'); d.connect('response', () => d.destroy()); d.present();
+            }
+        });
+        vitalsRow.add_suffix(vitalsBtn);
+        modGroup.add(vitalsRow);
+
+        const btRow = this.createSwitchRow('bluetooth-battery-enabled', T('Bluetooth Battery'), T('Show battery level of connected Bluetooth devices'));
+        const btBtn = new Gtk.Button({ icon_name: 'preferences-system-symbolic', tooltip_text: T('Configure Bluetooth Battery'), valign: Gtk.Align.CENTER, css_classes: ['flat', 'circular'] });
+        btBtn.connect('clicked', () => {
+            try {
+                fillBluetoothBatteryPreferences(window, this._settings);
+            } catch(e) {
+                console.error('Bar Enhanced: Error opening Bluetooth Battery prefs:', e);
+                const d = new Adw.MessageDialog({ transient_for: window, modal: true, heading: 'Error', body: String(e) });
+                d.add_response('ok', 'OK'); d.connect('response', () => d.destroy()); d.present();
+            }
+        });
+        btRow.add_suffix(btBtn);
+        modGroup.add(btRow);
+
         // --- APPS (EXPERIMENTAL) ---
         const appsPage = new Adw.PreferencesPage({ title: T('Apps'), icon_name: 'application-x-executable-symbolic' });
         window.add(appsPage);
@@ -543,12 +1157,148 @@ class BarEnhancedPrefs {
         appsPage.add(appGroup);
         appGroup.add(this.createSwitchRow('apply-gtk', T('Inject Theme into Gtk Ecosystem')));
         appGroup.add(this.createSwitchRow('apply-flatpak', T('Extend Support to Flatpak Sandbox')));
+
+        const gdmRow = new Adw.ActionRow({
+            title: T('GDM Login Screen Customizer'),
+            subtitle: T('Personalize lock screen, GDM wallpaper, and top bar clock safely')
+        });
+        const gdmBtn = new Gtk.Button({
+            label: T('Customize GDM'),
+            valign: Gtk.Align.CENTER,
+            css_classes: ['pill', 'suggested-action']
+        });
+        gdmBtn.connect('clicked', async () => {
+            try {
+                const uri = 'file://' + this.path + '/bar-enhanced-gdm-app/main.js';
+                const module = await import(uri);
+                module.openGdmCenter(window, this._extension, this.path, T);
+            } catch (e) {
+                console.error("BarEnhanced: Error launching GDM Center:", e);
+                try {
+                    const dialog = new Adw.MessageDialog({
+                        transient_for: window,
+                        modal: true,
+                        heading: 'Error Launching GDM Center',
+                        body: String(e) + '\n\nStack:\n' + String(e.stack || ''),
+                    });
+                    dialog.add_response('ok', 'OK');
+                    dialog.connect('response', () => dialog.destroy());
+                    dialog.present();
+                } catch (e2) {
+                    console.error(e2);
+                }
+            }
+        });
+        gdmRow.add_suffix(gdmBtn);
+        appGroup.add(gdmRow);
+
         appGroup.add(this.createScaleRow('headerbar-hint', T('Headerbar Luminosity Hint'), 0, 100));
         appGroup.add(this.createScaleRow('sidebar-hint', T('Sidebar Luminosity Hint'), 0, 100));
         appGroup.add(this.createScaleRow('card-hint', T('Card Luminosity Hint'), 0, 100));
         appGroup.add(this.createScaleRow('window-hint', T('Main Window Luminosity Hint'), 0, 100));
         appGroup.add(this.createScaleRow('winbradius', T('Global Window Corner Rounding'), 0, 25));
         appGroup.add(this.createSwitchRow('set-yarutheme', T('Coordinate with Yaru System Palette')));
+
+        const gtkStylingGroup = new Adw.PreferencesGroup({ title: T('GDK Window Custom Styling') });
+        appsPage.add(gtkStylingGroup);
+
+        const customGtkWindowSwitch = this.createSwitchRow('enable-gtk-window-custom', T('Enable Custom Window Styling'));
+        gtkStylingGroup.add(customGtkWindowSwitch);
+
+        const gtkOpacityRow = this.createScaleRow('gtk-transparency', T('GDK Window Opacity'), 0, 1, 0.01);
+        gtkStylingGroup.add(gtkOpacityRow);
+
+        const gtkColorRow = new Adw.ActionRow({
+            title: T('Window Background Color'),
+            subtitle: T('Choose custom background color for GTK/GDK windows')
+        });
+        gtkStylingGroup.add(gtkColorRow);
+
+        const gtkColorDialog = new Gtk.ColorDialog();
+        const gtkColorBtn = new Gtk.ColorDialogButton({
+            dialog: gtkColorDialog,
+            valign: Gtk.Align.CENTER
+        });
+
+        // Read current vw-color setting
+        let vwColorArr = this._settings.get_strv('vw-color');
+        let currentGtkColor = new Gdk.RGBA();
+        if (vwColorArr && vwColorArr.length === 3) {
+            currentGtkColor.red = parseFloat(vwColorArr[0]);
+            currentGtkColor.green = parseFloat(vwColorArr[1]);
+            currentGtkColor.blue = parseFloat(vwColorArr[2]);
+            currentGtkColor.alpha = 1.0;
+        } else {
+            currentGtkColor.parse('rgba(30, 30, 30, 1.0)');
+        }
+        gtkColorBtn.set_rgba(currentGtkColor);
+        gtkColorRow.add_suffix(gtkColorBtn);
+
+        gtkColorBtn.connect('notify::rgba', () => {
+            let rgba = gtkColorBtn.get_rgba();
+            let rStr = rgba.red.toFixed(3);
+            let gStr = rgba.green.toFixed(3);
+            let bStr = rgba.blue.toFixed(3);
+            this._settings.set_strv('vw-color', [rStr, gStr, bStr]);
+            this._settings.set_strv('dark-vw-color', [rStr, gStr, bStr]);
+            this._settings.set_strv('light-vw-color', [rStr, gStr, bStr]);
+            this._settings.set_strv('hscd-color', [rStr, gStr, bStr]);
+            this._settings.set_strv('dark-hscd-color', [rStr, gStr, bStr]);
+            this._settings.set_strv('light-hscd-color', [rStr, gStr, bStr]);
+            this.setTimeoutStyleReload();
+        });
+
+        const borderGroup = new Adw.PreferencesGroup({ title: T('GDK Window Border Customization') });
+        appsPage.add(borderGroup);
+        borderGroup.add(this.createScaleRow('winbwidth', T('Border Width'), 0, 10, 0.5));
+        borderGroup.add(this.createScaleRow('winbalpha', T('Border Transparency'), 0, 1, 0.01));
+
+        // Border Color picker
+        const bColorRow = new Adw.ActionRow({
+            title: T('Window Border Color'),
+            subtitle: T('Choose custom outline/border color for GTK/GDK windows')
+        });
+        borderGroup.add(bColorRow);
+
+        const bColorDialog = new Gtk.ColorDialog();
+        const bColorBtn = new Gtk.ColorDialogButton({
+            dialog: bColorDialog,
+            valign: Gtk.Align.CENTER
+        });
+
+        let winBColorArr = this._settings.get_strv('winbcolor');
+        let currentBColor = new Gdk.RGBA();
+        if (winBColorArr && winBColorArr.length === 3) {
+            currentBColor.red = parseFloat(winBColorArr[0]);
+            currentBColor.green = parseFloat(winBColorArr[1]);
+            currentBColor.blue = parseFloat(winBColorArr[2]);
+            currentBColor.alpha = 1.0;
+        } else {
+            currentBColor.parse('rgba(0, 191, 191, 1.0)');
+        }
+        bColorBtn.set_rgba(currentBColor);
+        bColorRow.add_suffix(bColorBtn);
+
+        bColorBtn.connect('notify::rgba', () => {
+            let rgba = bColorBtn.get_rgba();
+            let rStr = rgba.red.toFixed(3);
+            let gStr = rgba.green.toFixed(3);
+            let bStr = rgba.blue.toFixed(3);
+            this._settings.set_strv('winbcolor', [rStr, gStr, bStr]);
+            this._settings.set_strv('dark-winbcolor', [rStr, gStr, bStr]);
+            this._settings.set_strv('light-winbcolor', [rStr, gStr, bStr]);
+            this.setTimeoutStyleReload();
+        });
+
+        const updateGtkWindowSensitivity = () => {
+            const active = this._settings.get_boolean('enable-gtk-window-custom');
+            gtkOpacityRow.set_sensitive(active);
+            gtkColorRow.set_sensitive(active);
+            borderGroup.set_sensitive(active);
+        };
+        this._settings.connect('changed::enable-gtk-window-custom', updateGtkWindowSensitivity);
+        updateGtkWindowSensitivity();
+
 
         // --- ADMINISTRATION ---
         const adminPage = new Adw.PreferencesPage({ title: T('Admin'), icon_name: 'system-run-symbolic' });
@@ -836,26 +1586,97 @@ class BarEnhancedPrefs {
                             console.log('Bar Enhanced: Starting JSON import...');
                             this._settings.set_boolean('import-export', true);
 
-                            // Handle both categoried and flat JSON
+                            // 1. Import main settings
                             let mainData = data.main || (data.metadata ? data : null);
-                            let enhData = data.enhanced || {};
-
-                            // If it's a completely flat legacy JSON
                             if (!mainData) {
                                 mainData = data;
                             }
-
                             Object.keys(mainData).forEach(k => {
                                 if (allKeys.includes(k) && !['import-export', 'default-font'].includes(k)) {
                                     this._setTypedValue(this._settings, k, mainData[k]);
                                 }
                             });
 
-                            Object.keys(enhData).forEach(k => {
-                                if (allKeys.includes(k) && !['import-export', 'default-font'].includes(k)) {
-                                    this._setTypedValue(this._settings, k, enhData[k]);
+                            // 2. Import Dash to Dock settings
+                            let dockData = data['dash-to-dock'];
+                            if (dockData) {
+                                try {
+                                    const dockSettings = this._extension.getSettings('org.gnome.shell.extensions.dash-to-dock');
+                                    const dockKeys = dockSettings.list_keys();
+                                    Object.keys(dockData).forEach(k => {
+                                        if (dockKeys.includes(k)) {
+                                            this._setTypedValue(dockSettings, k, dockData[k]);
+                                        }
+                                    });
+                                } catch (e) {
+                                    console.error('Bar Enhanced: Failed to import Dash-to-dock settings:', e);
                                 }
-                            });
+                            }
+
+                            // 3. Import Notification Icons settings
+                            let niData = data['notification-icons'];
+                            if (niData) {
+                                try {
+                                    const niSettings = this._extension.getSettings('org.gnome.shell.extensions.notification-icons');
+                                    const niKeys = niSettings.list_keys();
+                                    Object.keys(niData).forEach(k => {
+                                        if (niKeys.includes(k)) {
+                                            this._setTypedValue(niSettings, k, niData[k]);
+                                        }
+                                    });
+                                } catch (e) {
+                                    console.error('Bar Enhanced: Failed to import Notification-icons settings:', e);
+                                }
+                            }
+
+                            // 3.5 Import Music Pill and Vitals
+                            let musicData = data['dynamic-music-pill'];
+                            if (musicData) {
+                                try {
+                                    const musicSettings = this._extension.getSettings('org.gnome.shell.extensions.dynamic-music-pill');
+                                    const musicKeys = musicSettings.list_keys();
+                                    Object.keys(musicData).forEach(k => {
+                                        if (musicKeys.includes(k)) {
+                                            this._setTypedValue(musicSettings, k, musicData[k]);
+                                        }
+                                    });
+                                } catch (e) {
+                                    console.error('Bar Enhanced: Failed to import Dynamic Music Pill settings:', e);
+                                }
+                            }
+
+                            let vitalsData = data['vitals'];
+                            if (vitalsData) {
+                                try {
+                                    const vitalsSettings = this._extension.getSettings('org.gnome.shell.extensions.vitals');
+                                    const vitalsKeys = vitalsSettings.list_keys();
+                                    Object.keys(vitalsData).forEach(k => {
+                                        if (vitalsKeys.includes(k)) {
+                                            this._setTypedValue(vitalsSettings, k, vitalsData[k]);
+                                        }
+                                    });
+                                } catch (e) {
+                                    console.error('Bar Enhanced: Failed to import Vitals settings:', e);
+                                }
+                            }
+
+                            // 4. Import GDM settings
+                            let gdmData = data.gdm;
+                            if (gdmData) {
+                                Object.keys(gdmData).forEach(sub => {
+                                    try {
+                                        const subSettings = this._extension.getSettings('org.gnome.shell.extensions.bar-enhanced.gdm.' + sub);
+                                        const subKeys = subSettings.list_keys();
+                                        Object.keys(gdmData[sub]).forEach(k => {
+                                            if (subKeys.includes(k)) {
+                                                this._setTypedValue(subSettings, k, gdmData[sub][k]);
+                                            }
+                                        });
+                                    } catch (e) {
+                                        console.error(`Bar Enhanced: Failed to import GDM ${sub} settings:`, e);
+                                    }
+                                });
+                            }
 
                             GLib.timeout_add(GLib.PRIORITY_DEFAULT, 800, () => {
                                 console.log('Bar Enhanced: Releasing Silent Mode and reloading...');
@@ -879,17 +1700,37 @@ class BarEnhancedPrefs {
                             this._settings.set_boolean('import-export', true);
 
                             const lines = rawContent.split('\n');
+                            let currentSettings = this._settings;
+
                             lines.forEach(line => {
                                 line = line.trim();
-                                if (line.includes('=') && !line.startsWith('#') && !line.startsWith('[')) {
+                                if (line.startsWith('[') && line.endsWith(']')) {
+                                    const section = line.substring(1, line.length - 1).trim();
+                                    if (section === 'org.gnome.shell.extensions.bar-enhanced') {
+                                        currentSettings = this._settings;
+                                    } else if (section === 'org.gnome.shell.extensions.dash-to-dock') {
+                                        try { currentSettings = this._extension.getSettings('org.gnome.shell.extensions.dash-to-dock'); } catch(e) { currentSettings = null; }
+                                    } else if (section === 'org.gnome.shell.extensions.notification-icons') {
+                                        try { currentSettings = this._extension.getSettings('org.gnome.shell.extensions.notification-icons'); } catch(e) { currentSettings = null; }
+                                    } else if (section === 'org.gnome.shell.extensions.vitals') {
+                                        try { currentSettings = this._extension.getSettings('org.gnome.shell.extensions.vitals'); } catch(e) { currentSettings = null; }
+                                    } else if (section === 'org.gnome.shell.extensions.dynamic-music-pill') {
+                                        try { currentSettings = this._extension.getSettings('org.gnome.shell.extensions.dynamic-music-pill'); } catch(e) { currentSettings = null; }
+                                    } else if (section.startsWith('org.gnome.shell.extensions.bar-enhanced.gdm.')) {
+                                        try { currentSettings = this._extension.getSettings(section); } catch(e) { currentSettings = null; }
+                                    } else {
+                                        currentSettings = null;
+                                    }
+                                } else if (line.includes('=') && !line.startsWith('#')) {
+                                    if (!currentSettings) return;
                                     let eqIdx = line.indexOf('=');
                                     let key = line.substring(0, eqIdx).trim();
                                     let value = line.substring(eqIdx + 1).trim();
 
                                     try {
                                         const variant = GLib.Variant.parse(null, value, null, null);
-                                        if (this._settings.list_keys().includes(key)) {
-                                            this._settings.set_value(key, variant);
+                                        if (currentSettings.list_keys().includes(key)) {
+                                            currentSettings.set_value(key, variant);
                                         }
                                     } catch (e) {
                                         console.warn(`Bar Enhanced: Failed to parse TXT key ${key}: ${e}`);
@@ -955,20 +1796,81 @@ class BarEnhancedPrefs {
                         let data = {
                             metadata: {
                                 author: 'MrVanguardia',
-                                version: '1.0',
+                                version: '2.0',
                                 created: new Date().toISOString(),
                                 engine: 'Bar Enhanced'
                             },
                             main: {},
-                            enhanced: {}
+                            'dash-to-dock': {},
+                            'notification-icons': {},
+                            'dynamic-music-pill': {},
+                            'vitals': {},
+                            gdm: {}
                         };
+                        
+                        // 1. Export main settings
                         this._settings.list_keys().forEach(k => {
                             if (!['import-export', 'default-font'].includes(k))
                                 data.main[k] = this._settings.get_value(k).deep_unpack();
                         });
-                        this._settings.list_keys().forEach(k => {
-                            data.enhanced[k] = this._settings.get_value(k).deep_unpack();
+                        
+                        // 2. Export Dash to Dock settings
+                        try {
+                            const dockSettings = this._extension.getSettings('org.gnome.shell.extensions.dash-to-dock');
+                            dockSettings.list_keys().forEach(k => {
+                                data['dash-to-dock'][k] = dockSettings.get_value(k).deep_unpack();
+                            });
+                        } catch (e) {
+                            console.warn('Bar Enhanced: Dash-to-dock settings not available for export:', e);
+                        }
+
+                        // 3. Export Notification Icons settings
+                        try {
+                            const niSettings = this._extension.getSettings('org.gnome.shell.extensions.notification-icons');
+                            niSettings.list_keys().forEach(k => {
+                                data['notification-icons'][k] = niSettings.get_value(k).deep_unpack();
+                            });
+                        } catch (e) {
+                            console.warn('Bar Enhanced: Notification-icons settings not available for export:', e);
+                        }
+
+                        // 3.5 Export Music Pill and Vitals settings
+                        try {
+                            const musicSettings = this._extension.getSettings('org.gnome.shell.extensions.dynamic-music-pill');
+                            musicSettings.list_keys().forEach(k => {
+                                data['dynamic-music-pill'][k] = musicSettings.get_value(k).deep_unpack();
+                            });
+                        } catch (e) {
+                            console.warn('Bar Enhanced: Dynamic Music Pill settings not available for export:', e);
+                        }
+
+                        try {
+                            const vitalsSettings = this._extension.getSettings('org.gnome.shell.extensions.vitals');
+                            vitalsSettings.list_keys().forEach(k => {
+                                data['vitals'][k] = vitalsSettings.get_value(k).deep_unpack();
+                            });
+                        } catch (e) {
+                            console.warn('Bar Enhanced: Vitals settings not available for export:', e);
+                        }
+
+                        // 4. Export GDM settings
+                        const GDM_SUBSCHEMAS = [
+                            'accessibility', 'appearance', 'fonts', 'main', 'misc', 'mouse',
+                            'night-light', 'pointing', 'power', 'sound', 'tools', 'top-bar',
+                            'touchpad', 'window-state'
+                        ];
+                        GDM_SUBSCHEMAS.forEach(sub => {
+                            try {
+                                const subSettings = this._extension.getSettings('org.gnome.shell.extensions.bar-enhanced.gdm.' + sub);
+                                data.gdm[sub] = {};
+                                subSettings.list_keys().forEach(k => {
+                                    data.gdm[sub][k] = subSettings.get_value(k).deep_unpack();
+                                });
+                            } catch (e) {
+                                console.warn(`Bar Enhanced: GDM ${sub} settings not available for export:`, e);
+                            }
                         });
+
                         content = JSON.stringify(data, null, 4);
                     } else {
                         // Manual dconf-style generation for reliability
@@ -979,6 +1881,63 @@ class BarEnhancedPrefs {
                                 lines.push(`${k}=${val}`);
                             }
                         });
+
+                        // Dash to Dock
+                        try {
+                            const dockSettings = this._extension.getSettings('org.gnome.shell.extensions.dash-to-dock');
+                            lines.push('\n[org.gnome.shell.extensions.dash-to-dock]');
+                            dockSettings.list_keys().forEach(k => {
+                                let val = dockSettings.get_value(k).print(true);
+                                lines.push(`${k}=${val}`);
+                            });
+                        } catch (e) {}
+
+                        // Notification Icons
+                        try {
+                            const niSettings = this._extension.getSettings('org.gnome.shell.extensions.notification-icons');
+                            lines.push('\n[org.gnome.shell.extensions.notification-icons]');
+                            niSettings.list_keys().forEach(k => {
+                                let val = niSettings.get_value(k).print(true);
+                                lines.push(`${k}=${val}`);
+                            });
+                        } catch (e) {}
+
+                        // GDM settings
+                        const GDM_SUBSCHEMAS = [
+                            'accessibility', 'appearance', 'fonts', 'main', 'misc', 'mouse',
+                            'night-light', 'pointing', 'power', 'sound', 'tools', 'top-bar',
+                            'touchpad', 'window-state'
+                        ];
+                        GDM_SUBSCHEMAS.forEach(sub => {
+                            try {
+                                const subSettings = this._extension.getSettings('org.gnome.shell.extensions.bar-enhanced.gdm.' + sub);
+                                lines.push(`\n[org.gnome.shell.extensions.bar-enhanced.gdm.${sub}]`);
+                                subSettings.list_keys().forEach(k => {
+                                    let val = subSettings.get_value(k).print(true);
+                                    lines.push(`${k}=${val}`);
+                                });
+                            } catch (e) {}
+                        });
+
+                        // Vitals & Music Pill
+                        try {
+                            const vitalsSettings = this._extension.getSettings('org.gnome.shell.extensions.vitals');
+                            lines.push('\n[org.gnome.shell.extensions.vitals]');
+                            vitalsSettings.list_keys().forEach(k => {
+                                let val = vitalsSettings.get_value(k).print(true);
+                                lines.push(`${k}=${val}`);
+                            });
+                        } catch (e) {}
+
+                        try {
+                            const musicSettings = this._extension.getSettings('org.gnome.shell.extensions.dynamic-music-pill');
+                            lines.push('\n[org.gnome.shell.extensions.dynamic-music-pill]');
+                            musicSettings.list_keys().forEach(k => {
+                                let val = musicSettings.get_value(k).print(true);
+                                lines.push(`${k}=${val}`);
+                            });
+                        } catch (e) {}
+
                         content = lines.join('\n');
                     }
 
@@ -1295,22 +2254,6 @@ class BarEnhancedPrefs {
 
             const gtkCssFile = Gio.File.new_for_path(`${configDir}/gtk-4.0/gtk.css`);
 
-            const cleanThemeFiles = () => {
-                const filesToClean = ['gtk.css', 'gtk-dark.css', 'assets'];
-                filesToClean.forEach(fName => {
-                    const f = Gio.File.new_for_path(`${configDir}/gtk-4.0/${fName}`);
-                    if (f.query_exists(null)) {
-                        try {
-                            if (fName === 'assets') {
-                                Gio.Subprocess.new(['rm', '-rf', f.get_path()], Gio.SubprocessFlags.NONE).wait_sync(null);
-                            } else {
-                                f.delete(null);
-                            }
-                        } catch (err) {}
-                    }
-                });
-            };
-
             if (sourceDir) {
                 // Back up original user css if it exists and is not ours
                 if (gtkCssFile.query_exists(null)) {
@@ -1322,15 +2265,18 @@ class BarEnhancedPrefs {
                             const backupFile = Gio.File.new_for_path(`${configDir}/gtk-4.0/gtk_backup_user.css`);
                             gtkCssFile.copy(backupFile, Gio.FileCopyFlags.OVERWRITE, null, null);
                         }
-                    } catch (err) {}
+                    } catch (err) { }
                 }
 
-                // Clean the slate before copying
-                cleanThemeFiles();
-
-                // Copy recursively using cp
+                // Clean the slate and copy recursively asynchronously without freezing the UI
+                const script = `
+rm -f "${configDir}/gtk-4.0/gtk.css"
+rm -f "${configDir}/gtk-4.0/gtk-dark.css"
+rm -rf "${configDir}/gtk-4.0/assets"
+cp -rf "${sourceDir}/." "${configDir}/gtk-4.0/"
+`;
                 const proc = Gio.Subprocess.new(
-                    ['cp', '-rf', `${sourceDir}/.`, `${configDir}/gtk-4.0/`],
+                    ['bash', '-c', script],
                     Gio.SubprocessFlags.NONE
                 );
                 proc.wait_async(null, (p, res) => {
@@ -1348,19 +2294,31 @@ class BarEnhancedPrefs {
                                 gtkCssFile.replace_contents(bytes, null, false, Gio.FileCreateFlags.REPLACE_DESTINATION, null);
                             }
                         }
-                    } catch (e) {}
+                    } catch (e) { }
                 });
             } else {
-                // Clean the slate
-                cleanThemeFiles();
-
-                // Restore user's backup if it exists
-                const backupFile = Gio.File.new_for_path(`${configDir}/gtk-4.0/gtk_backup_user.css`);
-                if (backupFile.query_exists(null)) {
+                // Clean the slate asynchronously
+                const script = `
+rm -f "${configDir}/gtk-4.0/gtk.css"
+rm -f "${configDir}/gtk-4.0/gtk-dark.css"
+rm -rf "${configDir}/gtk-4.0/assets"
+`;
+                const proc = Gio.Subprocess.new(
+                    ['bash', '-c', script],
+                    Gio.SubprocessFlags.NONE
+                );
+                proc.wait_async(null, (p, res) => {
                     try {
-                        backupFile.move(gtkCssFile, Gio.FileCopyFlags.OVERWRITE, null, null);
-                    } catch (err) {}
-                }
+                        p.wait_finish(res);
+                        // Restore user's backup if it exists
+                        const backupFile = Gio.File.new_for_path(`${configDir}/gtk-4.0/gtk_backup_user.css`);
+                        if (backupFile.query_exists(null)) {
+                            try {
+                                backupFile.move(gtkCssFile, Gio.FileCopyFlags.OVERWRITE, null, null);
+                            } catch (err) { }
+                        }
+                    } catch (e) { }
+                });
             }
         } catch (e) {
             console.error('Error applying GTK4 theme:', e);
@@ -1453,7 +2411,7 @@ class BarEnhancedPrefs {
             this._soupSession.set_user_agent('Mozilla/5.0 (GNOME Shell; Bar-Enhanced)');
             try {
                 this._soupSession.http2 = false;
-            } catch (e) {}
+            } catch (e) { }
         }
         return this._soupSession;
     }
@@ -1544,7 +2502,7 @@ class BarEnhancedPrefs {
                     return parts[0];
                 }
             }
-        } catch (e) {}
+        } catch (e) { }
         return '45';
     }
 
@@ -1589,7 +2547,7 @@ class BarEnhancedPrefs {
     renderThemeList(container, loadingLabel, iconRow, data) {
         try {
             if (loadingLabel && loadingLabel.get_parent()) container.remove(loadingLabel);
-        } catch (e) {}
+        } catch (e) { }
 
         if (!data || !Array.isArray(data) || data.length === 0) {
             data = [
@@ -1616,7 +2574,7 @@ class BarEnhancedPrefs {
             const isInstalled = allInstalled.some(i => {
                 const cleanInstalled = i.toLowerCase().replace(/[^a-z0-9]/g, '');
                 return cleanName.includes(cleanInstalled) || cleanInstalled.includes(cleanName) ||
-                       name.toLowerCase().includes(i.toLowerCase()) || i.toLowerCase().includes(name.toLowerCase().replace(/\s+icons?$/i, ''));
+                    name.toLowerCase().includes(i.toLowerCase()) || i.toLowerCase().includes(name.toLowerCase().replace(/\s+icons?$/i, ''));
             });
 
             let typeLabelText = '';
@@ -1783,7 +2741,7 @@ class BarEnhancedPrefs {
                 let r = (parseInt(bg[0]) / 255.0).toFixed(3);
                 let g = (parseInt(bg[1]) / 255.0).toFixed(3);
                 let b = (parseInt(bg[2]) / 255.0).toFixed(3);
-                
+
                 this._settings.set_strv('bgcolor', [r, g, b]);
                 this._settings.set_strv('iscolor', [r, g, b]);
                 this._settings.set_strv('dark-bgcolor', [r, g, b]);
@@ -1873,7 +2831,7 @@ class BarEnhancedPrefs {
                 this._settings.set_strv('hscd-color', [r, g, b]);
                 this._settings.set_strv('dark-hscd-color', [r, g, b]);
                 this._settings.set_strv('light-hscd-color', [r, g, b]);
-                
+
                 this._settings.set_strv('vw-color', [r, g, b]);
                 this._settings.set_strv('dark-vw-color', [r, g, b]);
                 this._settings.set_strv('light-vw-color', [r, g, b]);
@@ -1959,5 +2917,655 @@ class BarEnhancedPrefs {
         } catch (e) {
             console.error('Error restoring GNOME defaults:', e);
         }
+    }
+
+    async openGdmCustomizerDialog(parentWindow) {
+        try {
+            const uri = 'file://' + this.path + '/bar-enhanced-gdm-app/main.js';
+            const module = await import(uri);
+            module.openGdmCenter(parentWindow, this._extension, this.path, T);
+        } catch (e) {
+            console.error("BarEnhanced: Error launching GDM Center:", e);
+            try {
+                const dialog = new Adw.MessageDialog({
+                    transient_for: parentWindow,
+                    modal: true,
+                    heading: 'Error Launching GDM Center',
+                    body: String(e) + '\n\nStack:\n' + String(e.stack || ''),
+                });
+                dialog.add_response('ok', 'OK');
+                dialog.connect('response', () => dialog.destroy());
+                dialog.present();
+            } catch (e2) {
+                console.error(e2);
+            }
+        }
+        return;
+
+        const dialog = new Adw.Window({
+            title: T('GDM Login Screen Customizer'),
+            transient_for: parentWindow,
+            modal: true,
+            default_width: 500,
+            default_height: 600,
+            resizable: true
+        });
+
+        const mainBox = new Gtk.Box({ orientation: Gtk.Orientation.VERTICAL });
+        dialog.set_content(mainBox);
+
+        const header = new Adw.HeaderBar();
+        mainBox.append(header);
+
+        // Make body scrollable
+        const scrolledWindow = new Gtk.ScrolledWindow({
+            vexpand: true,
+            hexpand: true,
+            propagate_natural_height: true
+        });
+        mainBox.append(scrolledWindow);
+
+        const clamp = new Adw.Clamp({
+            maximum_size: 460,
+            tightening_threshold: 400
+        });
+        scrolledWindow.set_child(clamp);
+
+        const list = new Gtk.Box({
+            orientation: Gtk.Orientation.VERTICAL,
+            spacing: 12,
+            margin_top: 24,
+            margin_bottom: 24,
+            margin_start: 16,
+            margin_end: 16
+        });
+        clamp.set_child(list);
+
+        const introLabel = new Gtk.Label({
+            label: `<b><span size="large">${T('Configure GDM Login & Lock Screen')}</span></b>\n<span size="small" alpha="70%">${T('Changes require administrative privileges (auth prompt).')}</span>`,
+            use_markup: true,
+            justify: Gtk.Justification.CENTER,
+            margin_bottom: 12
+        });
+        list.append(introLabel);
+
+        // Group 1: Background
+        const bgGroup = new Adw.PreferencesGroup({ title: T('Background & Layout') });
+        list.append(bgGroup);
+
+        const wpRow = new Adw.ActionRow({
+            title: T('Login Screen Background'),
+            subtitle: T('Not configured (GNOME Default)')
+        });
+        bgGroup.add(wpRow);
+
+        let selectedWallpaperPath = '';
+
+        const selectWpBtn = new Gtk.Button({
+            label: T('Select Image...'),
+            valign: Gtk.Align.CENTER,
+            css_classes: ['pill']
+        });
+        selectWpBtn.connect('clicked', () => {
+            const fileDialog = new Gtk.FileDialog({
+                title: T('Select Login Background Wallpaper'),
+                filters: this.createImageFilter()
+            });
+            fileDialog.open(dialog, null, (obj, res) => {
+                try {
+                    const file = obj.open_finish(res);
+                    if (file) {
+                        selectedWallpaperPath = file.get_path();
+                        wpRow.set_subtitle(selectedWallpaperPath);
+                    }
+                } catch (e) {
+                    console.error('Error selecting file:', e);
+                }
+            });
+        });
+        wpRow.add_suffix(selectWpBtn);
+
+        const useDesktopRow = new Adw.ActionRow({
+            title: T('Use Desktop Wallpaper'),
+            subtitle: T('Automatically apply your active desktop wallpaper to login screen')
+        });
+        bgGroup.add(useDesktopRow);
+
+        const useDesktopBtn = new Gtk.Button({
+            label: T('Sync Wallpaper'),
+            valign: Gtk.Align.CENTER,
+            css_classes: ['pill']
+        });
+        useDesktopBtn.connect('clicked', () => {
+            try {
+                const bgSettings = new Gio.Settings({ schema_id: 'org.gnome.desktop.background' });
+                let wpUri = bgSettings.get_string('picture-uri');
+                if (wpUri.startsWith('file://')) {
+                    selectedWallpaperPath = wpUri.substring(7);
+                    wpRow.set_subtitle(selectedWallpaperPath);
+                } else if (wpUri.startsWith('/')) {
+                    selectedWallpaperPath = wpUri;
+                    wpRow.set_subtitle(selectedWallpaperPath);
+                } else {
+                    wpRow.set_subtitle(T('Unsupported image type or empty'));
+                }
+            } catch (e) {
+                console.error('Error getting desktop wallpaper:', e);
+            }
+        });
+        useDesktopRow.add_suffix(useDesktopBtn);
+
+        // Group 2: Password dialog box transparency and color
+        const lockGroup = new Adw.PreferencesGroup({ title: T('Password Dialog Card Customization') });
+        list.append(lockGroup);
+
+        const customAuthBoxRow = new Adw.SwitchRow({
+            title: T('Enable Custom Password Box Style'),
+            subtitle: T('Make GDM password entry box transparent with custom color')
+        });
+        lockGroup.add(customAuthBoxRow);
+
+        const authBoxColorRow = new Adw.ActionRow({
+            title: T('Password Box Color'),
+            subtitle: T('Choose custom background color for the password box')
+        });
+        lockGroup.add(authBoxColorRow);
+
+        const colorDialog = new Gtk.ColorDialog();
+        const colorBtn = new Gtk.ColorDialogButton({
+            dialog: colorDialog,
+            valign: Gtk.Align.CENTER
+        });
+        const defaultColor = new Gdk.RGBA();
+        defaultColor.parse('rgba(0,0,0,0.5)');
+        colorBtn.set_rgba(defaultColor);
+        authBoxColorRow.add_suffix(colorBtn);
+
+        const authBoxOpacityRow = new Adw.ActionRow({
+            title: T('Password Box Opacity'),
+            subtitle: T('Control transparency level (0% to 100%)')
+        });
+        lockGroup.add(authBoxOpacityRow);
+
+        const opacityScale = new Gtk.Scale({
+            orientation: Gtk.Orientation.HORIZONTAL,
+            adjustment: new Gtk.Adjustment({ lower: 0, upper: 100, step_increment: 1, page_increment: 10, value: 50 }),
+            valign: Gtk.Align.CENTER,
+            hexpand: true,
+            draw_value: true
+        });
+        opacityScale.set_size_request(150, -1);
+        authBoxOpacityRow.add_suffix(opacityScale);
+
+        // Connect switch row to sensitivity of customization options
+        customAuthBoxRow.connect('notify::active', () => {
+            let active = customAuthBoxRow.get_active();
+            authBoxColorRow.set_sensitive(active);
+            authBoxOpacityRow.set_sensitive(active);
+        });
+        authBoxColorRow.set_sensitive(false);
+        authBoxOpacityRow.set_sensitive(false);
+
+        // Group 3: Interface Tweaks
+        const shellGroup = new Adw.PreferencesGroup({ title: T('GDM Interface Tweaks') });
+        list.append(shellGroup);
+
+        const showSecondsRow = new Adw.SwitchRow({
+            title: T('Show Clock Seconds'),
+            subtitle: T('Display seconds in GDM top bar clock')
+        });
+        shellGroup.add(showSecondsRow);
+
+        const showDateRow = new Adw.SwitchRow({
+            title: T('Show Clock Date'),
+            subtitle: T('Display date in GDM top bar clock')
+        });
+        showDateRow.set_active(true);
+        shellGroup.add(showDateRow);
+
+        const disableButtonsRow = new Adw.SwitchRow({
+            title: T('Hide Power & Restart Buttons'),
+            subtitle: T('Prevent powering down from lock/login screen')
+        });
+        shellGroup.add(disableButtonsRow);
+
+        const disableUserListRow = new Adw.SwitchRow({
+            title: T('Disable User List'),
+            subtitle: T('Hide the user list on the login screen')
+        });
+        shellGroup.add(disableUserListRow);
+
+        // Group 4: Welcome Message & Logo
+        const bannerGroup = new Adw.PreferencesGroup({ title: T('Welcome Message & Logo') });
+        list.append(bannerGroup);
+
+        const welcomeRow = new Adw.SwitchRow({
+            title: T('Enable Welcome Message'),
+            subtitle: T('Show a banner message on the login screen')
+        });
+        bannerGroup.add(welcomeRow);
+
+        const welcomeTextRow = new Adw.ActionRow({
+            title: T('Message Text'),
+            subtitle: T('Text to display as welcome message')
+        });
+        const welcomeEntry = new Gtk.Entry({
+            valign: Gtk.Align.CENTER,
+            hexpand: true,
+            max_width_chars: 30
+        });
+        welcomeTextRow.add_suffix(welcomeEntry);
+        bannerGroup.add(welcomeTextRow);
+
+        // Bind visibility/sensitivity
+        welcomeRow.connect('notify::active', () => {
+            welcomeTextRow.set_sensitive(welcomeRow.get_active());
+        });
+        welcomeTextRow.set_sensitive(false);
+
+        const logoRow = new Adw.ActionRow({
+            title: T('Login Screen Logo'),
+            subtitle: T('Not configured')
+        });
+        bannerGroup.add(logoRow);
+
+        let selectedLogoPath = '';
+
+        const selectLogoBtn = new Gtk.Button({
+            label: T('Select Logo...'),
+            valign: Gtk.Align.CENTER,
+            css_classes: ['pill']
+        });
+        selectLogoBtn.connect('clicked', () => {
+            const fileDialog = new Gtk.FileDialog({
+                title: T('Select Login Screen Logo'),
+                filters: this.createImageFilter()
+            });
+            fileDialog.open(dialog, null, (obj, res) => {
+                try {
+                    const file = obj.open_finish(res);
+                    if (file) {
+                        selectedLogoPath = file.get_path();
+                        logoRow.set_subtitle(selectedLogoPath);
+                    }
+                } catch (e) {
+                    console.error('Error selecting file:', e);
+                }
+            });
+        });
+        logoRow.add_suffix(selectLogoBtn);
+
+        const clearLogoBtn = new Gtk.Button({
+            icon_name: 'edit-clear-symbolic',
+            valign: Gtk.Align.CENTER,
+            css_classes: ['flat', 'circular']
+        });
+        clearLogoBtn.connect('clicked', () => {
+            selectedLogoPath = '';
+            logoRow.set_subtitle(T('Not configured'));
+        });
+        logoRow.add_suffix(clearLogoBtn);
+
+        // Group 4: Buttons
+        const actionBox = new Gtk.Box({
+            orientation: Gtk.Orientation.VERTICAL,
+            spacing: 12,
+            margin_top: 16
+        });
+        list.append(actionBox);
+
+        const advBtn = new Gtk.Button({
+            label: T('Open Advanced GDM Center'),
+            css_classes: ['pill']
+        });
+        advBtn.connect('clicked', async () => {
+            try {
+                const uri = 'file://' + this.path + '/bar-enhanced-gdm-app/main.js';
+                const module = await import(uri);
+                module.openGdmCenter(window, this._settings, this.path, T);
+            } catch (e) {
+                console.error("BarEnhanced: Error launching Advanced GDM Center:", e);
+            }
+        });
+        actionBox.append(advBtn);
+
+        const applyBtn = new Gtk.Button({
+            label: T('Apply Changes to GDM'),
+            css_classes: ['pill', 'suggested-action']
+        });
+        actionBox.append(applyBtn);
+
+        const resetBtn = new Gtk.Button({
+            label: T('Restore GNOME Default GDM'),
+            css_classes: ['pill', 'destructive-action']
+        });
+        actionBox.append(resetBtn);
+
+        const statusLabel = new Gtk.Label({
+            label: '',
+            use_markup: true,
+            halign: Gtk.Align.CENTER,
+            margin_top: 8
+        });
+        actionBox.append(statusLabel);
+
+        // Load existing GDM Customizer settings if configured
+        let gdmFile = Gio.File.new_for_path('/etc/dconf/db/gdm.d/01-bar-enhanced');
+        if (gdmFile.query_exists(null)) {
+            try {
+                let [, contents] = gdmFile.load_contents(null);
+                let text = new TextDecoder().decode(contents);
+
+                // Parse wallpaper picture-uri and original path
+                let origMatch = text.match(/# original-path='(.+)'/);
+                let wpMatch = text.match(/picture-uri='file:\/\/(.+)'/);
+
+                if (origMatch && origMatch[1]) {
+                    selectedWallpaperPath = origMatch[1];
+                    wpRow.set_subtitle(selectedWallpaperPath);
+                } else if (wpMatch && wpMatch[1]) {
+                    selectedWallpaperPath = wpMatch[1];
+                    wpRow.set_subtitle(selectedWallpaperPath);
+                }
+
+                // Parse clock-show-seconds
+                let secondsMatch = text.match(/clock-show-seconds=(true|false)/);
+                if (secondsMatch && secondsMatch[1]) {
+                    showSecondsRow.set_active(secondsMatch[1] === 'true');
+                }
+
+                // Parse clock-show-date
+                let dateMatch = text.match(/clock-show-date=(true|false)/);
+                if (dateMatch && dateMatch[1]) {
+                    showDateRow.set_active(dateMatch[1] === 'true');
+                }
+
+                // Parse disable-restart-buttons
+                let disableMatch = text.match(/disable-restart-buttons=(true|false)/);
+                if (disableMatch && disableMatch[1]) {
+                    disableButtonsRow.set_active(disableMatch[1] === 'true');
+                }
+
+                // Parse disable-user-list
+                let disableUserListMatch = text.match(/disable-user-list=(true|false)/);
+                if (disableUserListMatch && disableUserListMatch[1]) {
+                    disableUserListRow.set_active(disableUserListMatch[1] === 'true');
+                }
+
+                // Parse banner message
+                let bannerEnableMatch = text.match(/banner-message-enable=(true|false)/);
+                if (bannerEnableMatch && bannerEnableMatch[1]) {
+                    welcomeRow.set_active(bannerEnableMatch[1] === 'true');
+                    welcomeTextRow.set_sensitive(bannerEnableMatch[1] === 'true');
+                }
+
+                let bannerTextMatch = text.match(/banner-message-text='(.*?)'/);
+                if (bannerTextMatch && bannerTextMatch[1]) {
+                    welcomeEntry.set_text(bannerTextMatch[1]);
+                }
+
+                // Parse original logo path
+                let origLogoMatch = text.match(/# original-logo-path='(.*?)'/);
+                if (origLogoMatch && origLogoMatch[1]) {
+                    selectedLogoPath = origLogoMatch[1];
+                    logoRow.set_subtitle(selectedLogoPath);
+                }
+            } catch (e) {
+                console.error('BarEnhanced: Error loading GDM configuration file:', e);
+            }
+        }
+
+        // Load GDM theme custom styles if present
+        let cssFile = Gio.File.new_for_path('/usr/share/themes/BarEnhancedGdm/gnome-shell/gnome-shell.css');
+        if (cssFile.query_exists(null)) {
+            customAuthBoxRow.set_active(true);
+            authBoxColorRow.set_sensitive(true);
+            authBoxOpacityRow.set_sensitive(true);
+            try {
+                let [, contents] = cssFile.load_contents(null);
+                let text = new TextDecoder().decode(contents);
+                let rgbaMatch = text.match(/rgba\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*([\d.]+)\s*\)/);
+                if (rgbaMatch) {
+                    let r = parseInt(rgbaMatch[1]) / 255.0;
+                    let g = parseInt(rgbaMatch[2]) / 255.0;
+                    let b = parseInt(rgbaMatch[3]) / 255.0;
+                    let a = parseFloat(rgbaMatch[4]);
+
+                    let rgba = new Gdk.RGBA();
+                    rgba.red = r;
+                    rgba.green = g;
+                    rgba.blue = b;
+                    rgba.alpha = 1.0;
+                    colorBtn.set_rgba(rgba);
+
+                    opacityScale.set_value(Math.round(a * 100.0));
+                }
+            } catch (e) {
+                console.error('BarEnhanced: Error loading GDM CSS custom styles:', e);
+            }
+        }
+
+        applyBtn.connect('clicked', () => {
+            if (!selectedWallpaperPath) {
+                statusLabel.set_label(`<span color="red">⚠️ ${T('Please select a wallpaper or sync active background.')}</span>`);
+                return;
+            }
+
+            statusLabel.set_label(`⏳ <b>${T('Authenticating and applying settings...')}</b>`);
+            applyBtn.set_sensitive(false);
+            resetBtn.set_sensitive(false);
+
+            const wallPath = selectedWallpaperPath;
+            const safeWallPath = wallPath.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+            const seconds = showSecondsRow.get_active() ? 'true' : 'false';
+            const date = showDateRow.get_active() ? 'true' : 'false';
+            const disableButtons = disableButtonsRow.get_active() ? 'true' : 'false';
+            const disableUserList = disableUserListRow.get_active() ? 'true' : 'false';
+            const welcomeEnable = welcomeRow.get_active() ? 'true' : 'false';
+            const welcomeText = welcomeEntry.get_text().replace(/\\/g, '\\\\').replace(/'/g, "'\\''");
+            const safeLogoPath = selectedLogoPath.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+
+            let themeScript = '';
+            let dconfThemeKey = '';
+
+            let customStyleContent = '';
+            try {
+                let userRuntimeDir = GLib.get_user_runtime_dir();
+                let pathsToTry = [
+                    `${userRuntimeDir}/io.github.mrvanguardia.barEnhanced/bar-enhanced.css`,
+                    `${userRuntimeDir}/io.github.mrvanguardia.barEnhanced/stylesheet.css`,
+                    `${GLib.get_home_dir()}/.local/share/gnome-shell/extensions/bar-enhanced@mrvanguardia/stylesheet.css`
+                ];
+                let localStyleFile = null;
+                for (let path of pathsToTry) {
+                    let f = Gio.File.new_for_path(path);
+                    if (f.query_exists(null)) {
+                        localStyleFile = f;
+                        break;
+                    }
+                }
+                if (localStyleFile && localStyleFile.query_exists(null)) {
+                    let [, contents] = localStyleFile.load_contents(null);
+                    customStyleContent = new TextDecoder().decode(contents);
+                }
+            } catch (e) {
+                console.error('BarEnhanced: Error reading local stylesheet for GDM theme:', e);
+            }
+
+            let authBoxCss = '';
+            if (customAuthBoxRow.get_active()) {
+                let rgba = colorBtn.get_rgba();
+                let r = Math.round(rgba.red * 255);
+                let g = Math.round(rgba.green * 255);
+                let b = Math.round(rgba.blue * 255);
+                let a = (opacityScale.get_value() / 100.0).toFixed(2);
+                authBoxCss = `
+.login-dialog {
+    background-color: rgba(${r}, ${g}, ${b}, ${a}) !important;
+    -st-background-blur: true;
+}
+`;
+            }
+
+            themeScript = `
+mkdir -p /usr/share/themes/BarEnhancedGdm/gnome-shell
+cat << 'EOF' > /usr/share/themes/BarEnhancedGdm/gnome-shell/gnome-shell.css
+@import url("resource:///org/gnome/shell/theme/gnome-shell.css");
+
+${authBoxCss}
+
+${customStyleContent}
+EOF
+chmod 755 /usr/share/themes/BarEnhancedGdm
+chmod 755 /usr/share/themes/BarEnhancedGdm/gnome-shell
+chmod 644 /usr/share/themes/BarEnhancedGdm/gnome-shell/gnome-shell.css
+`;
+            dconfThemeKey = "shell-theme='BarEnhancedGdm'";
+
+            const script = `
+${themeScript}
+
+# Copy background to a globally readable location for GDM
+mkdir -p /usr/share/backgrounds
+WALLPAPER_DEST="/usr/share/backgrounds/bar-enhanced-gdm-bg"
+if [ -f "${safeWallPath}" ]; then
+    cp "${safeWallPath}" "$WALLPAPER_DEST"
+    chmod 644 "$WALLPAPER_DEST"
+fi
+
+# Copy logo to a globally readable location for GDM
+LOGO_DEST="/usr/share/backgrounds/bar-enhanced-gdm-logo"
+if [ -n "${safeLogoPath}" ] && [ -f "${safeLogoPath}" ]; then
+    cp "${safeLogoPath}" "$LOGO_DEST"
+    chmod 644 "$LOGO_DEST"
+    LOGO_DCONF="logo='file://$LOGO_DEST'"
+else
+    rm -f "$LOGO_DEST"
+    LOGO_DCONF="logo=''"
+fi
+
+if [ ! -f /etc/dconf/profile/gdm ]; then
+mkdir -p /etc/dconf/profile
+cat << 'EOF' > /etc/dconf/profile/gdm
+user-db:user
+system-db:gdm
+file-db:/usr/share/gdm/greeter-dconf-defaults
+EOF
+fi
+
+mkdir -p /etc/dconf/db/gdm.d
+cat << 'EOF' > /etc/dconf/db/gdm.d/01-bar-enhanced
+[org/gnome/desktop/background]
+# original-path='${wallPath}'
+picture-uri='file:///usr/share/backgrounds/bar-enhanced-gdm-bg'
+picture-uri-dark='file:///usr/share/backgrounds/bar-enhanced-gdm-bg'
+picture-options='zoom'
+
+[org/gnome/desktop/interface]
+clock-show-seconds=${seconds}
+clock-show-date=${date}
+${dconfThemeKey}
+
+[org/gnome/login-screen]
+disable-restart-buttons=${disableButtons}
+disable-user-list=${disableUserList}
+banner-message-enable=${welcomeEnable}
+banner-message-text='${welcomeText}'
+${LOGO_DCONF}
+# original-logo-path='${selectedLogoPath}'
+EOF
+dconf update
+`;
+
+            try {
+                let proc = Gio.Subprocess.new(
+                    ['pkexec', 'bash', '-c', script],
+                    Gio.SubprocessFlags.NONE
+                );
+                proc.wait_async(null, (obj, res) => {
+                    try {
+                        obj.wait_finish(res);
+                        const status = obj.get_exit_status();
+                        if (status === 0) {
+                            statusLabel.set_label(`<span color="green">✅ <b>${T('GDM customized successfully!')}</b></span>`);
+                        } else {
+                            statusLabel.set_label(`<span color="red">❌ ${T('Authentication failed or declined.')}</span>`);
+                        }
+                    } catch (e) {
+                        statusLabel.set_label(`<span color="red">❌ ${T('Error running customized GDM profile.')}</span>`);
+                    }
+                    applyBtn.set_sensitive(true);
+                    resetBtn.set_sensitive(true);
+                });
+            } catch (e) {
+                console.error(e);
+                statusLabel.set_label(`<span color="red">❌ ${T('Execution failed.')}</span>`);
+                applyBtn.set_sensitive(true);
+                resetBtn.set_sensitive(true);
+            }
+        });
+
+        resetBtn.connect('clicked', () => {
+            statusLabel.set_label(`⏳ <b>${T('Authenticating and restoring GNOME defaults...')}</b>`);
+            applyBtn.set_sensitive(false);
+            resetBtn.set_sensitive(false);
+
+            const script = `
+rm -rf /usr/share/themes/BarEnhancedGdm
+rm -f /usr/share/backgrounds/bar-enhanced-gdm-bg
+rm -f /usr/share/backgrounds/bar-enhanced-gdm-logo
+rm -f /etc/dconf/db/gdm.d/01-bar-enhanced
+dconf update
+`;
+
+            try {
+                let proc = Gio.Subprocess.new(
+                    ['pkexec', 'bash', '-c', script],
+                    Gio.SubprocessFlags.NONE
+                );
+                proc.wait_async(null, (obj, res) => {
+                    try {
+                        obj.wait_finish(res);
+                        const status = obj.get_exit_status();
+                        if (status === 0) {
+                            wpRow.set_subtitle(T('Not configured (GNOME Default)'));
+                            selectedWallpaperPath = '';
+                            showSecondsRow.set_active(false);
+                            showDateRow.set_active(true);
+                            disableButtonsRow.set_active(false);
+                            customAuthBoxRow.set_active(false);
+                            statusLabel.set_label(`<span color="green">✅ <b>${T('GDM restored to default successfully!')}</b></span>`);
+                        } else {
+                            statusLabel.set_label(`<span color="red">❌ ${T('Authentication failed or declined.')}</span>`);
+                        }
+                    } catch (e) {
+                        statusLabel.set_label(`<span color="red">❌ ${T('Error restoring default GDM profile.')}</span>`);
+                    }
+                    applyBtn.set_sensitive(true);
+                    resetBtn.set_sensitive(true);
+                });
+            } catch (e) {
+                console.error(e);
+                statusLabel.set_label(`<span color="red">❌ ${T('Execution failed.')}</span>`);
+                applyBtn.set_sensitive(true);
+                resetBtn.set_sensitive(true);
+            }
+        });
+
+
+        dialog.present();
+
+
+    }
+
+    createImageFilter() {
+        const filter = new Gtk.FileFilter();
+        filter.set_name(T('Images'));
+        filter.add_mime_type('image/png');
+        filter.add_mime_type('image/jpeg');
+        filter.add_mime_type('image/webp');
+        const list = new Gio.ListStore({ item_type: Gtk.FileFilter });
+        list.append(filter);
+        return list;
     }
 }

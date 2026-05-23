@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+    <enum id="dnd-option-enum">
+        <value nick="always" value="0" />
+        <value nick="urgent" value="1" />
+        <value nick="never" value="2" />
+    </enum>
+
+    <enum id="icon-size-enum">
+        <value nick="small" value="0" />
+        <value nick="medium" value="1" />
+        <value nick="large" value="2" />
+    </enum>
+
+    <schema id="org.gnome.shell.extensions.notification-icons"
+        path="/org/gnome/shell/extensions/notification-icons/">
+
+        <key name="colored-icons" type="b">
+            <default>false</default>
+            <summary>Show colored icons instead of symbolic icons</summary>
+            <description>When enabled, notification icons will be displayed in their original colors. When disabled, they will be displayed as monochrome symbolic icons.</description>
+        </key>
+
+        <key name="notification-count" type="b">
+            <default>false</default>
+            <summary>Display the number of unread notifications</summary>
+            <description>When enabled, a notification count badge is displayed on the bottom-right corner of the icon. When disabled, the badge is hidden.</description>
+        </key>
+
+        <key name="hide-count-when-one" type="b">
+            <default>false</default>
+            <summary>Hide the badge when there is exactly one notification</summary>
+            <description>When enabled, the notification count badge is hidden if there is only one notification.</description>
+        </key>
+
+        <key name="right-side" type="b">
+            <default>false</default>
+            <summary>Show icons on the right side of the clock</summary>
+            <description>When enabled, notification icons will appear to the right of the clock in the top panel. When disabled, they will appear to the left.</description>
+        </key>
+
+        <key name="dnd-mode" type="i">
+            <default>0</default>
+            <summary>Do Not Disturb mode behavior</summary>
+            <description>Controls when notification icons are shown when Do Not Disturb mode is active. Options: Always (0), Urgent Only (1), Never (2).</description>
+        </key>
+
+        <key name="icon-size" type="i">
+            <default>1</default>
+            <summary>Size of notification icons</summary>
+            <description>Controls the size of notification icons in the top panel. Options: Small 16px (0), Medium 18px (1), Large 20px (2).</description>
+        </key>
+
+    </schema>
+</schemalist>
