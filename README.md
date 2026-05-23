@@ -222,9 +222,9 @@ This program is free software: you can redistribute it and/or modify it under th
 
 ## 📄 Additional documentation
 
-- [👥 Contributors](COLABORADORES.md)
-- [📢 Third-party notice](AVISO_DE_TERCEROS.md)
-- [📋 Theme Vanguard Gold](Temas%20Vanguard%20Gold.txt)
+- [👥 Contributors](CONTRIBUTORS.md)
+- [📢 Third-party notice](THIRD_PARTY_NOTICES.md)
+- [📋 Theme Vanguard Gold](Vanguard%20Gold%20Theme.txt)
 
 ---
 *Love the project? Give it a ⭐ on [GitHub](https://github.com/MrVanguardia/Bar-Enhanced) and share your rice!*
