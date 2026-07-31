@@ -193,6 +193,7 @@ export class MusicController {
         this._settings.connectObject('changed::enable-lyrics', () => {
             if (!this._settings.get_boolean('enable-lyrics')) {
                 if (this._pill) this._pill.setLyric(null);
+                if (this._hydroMediaRef) this._hydroMediaRef.setLyric(null);
                 this._stopLyricsTimer();
                 this._fetchedLyricsData = null;
                 this._fetchedTrackKey = null;
@@ -1119,11 +1120,13 @@ export class MusicController {
 
                 if (!active || lrc.content === "" || !activeBus.includes(lrc.sender)) {
                     if (this._pill) this._pill.setLyric(null);
+                    if (this._hydroMediaRef) this._hydroMediaRef.setLyric(null);
                     this._dbusLyricActive = false;
                 } else {
                     this._dbusLyricActive = true;
                     this._stopLyricsTimer();
                     if (this._pill) this._pill.setLyric(lrc);
+                    if (this._hydroMediaRef) this._hydroMediaRef.setLyric(lrc);
                 }
             } catch (e) {
                 log(`[DynamicMusicPill] Lyric error: ${e}`);
@@ -1247,6 +1250,7 @@ export class MusicController {
 
         if (this._stalePositionCount > 15) {
             if (this._pill) this._pill.setLyric(null);
+            if (this._hydroMediaRef) this._hydroMediaRef.setLyric(null);
             return;
         }
 
@@ -1276,6 +1280,7 @@ export class MusicController {
                 time: durationSec,
             };
             this._pill.setLyric(lrc);
+            if (this._hydroMediaRef) this._hydroMediaRef.setLyric(lrc);
         }
     }
 
@@ -1405,7 +1410,7 @@ export class MusicController {
                 if (this._artCache.has(cacheKey)) {
                     let cached = this._artCache.get(cacheKey);
                     if (cached === 'failed') {
-                        isFailed = true;
+                        isFailed = true; // Restored to prevent network spam
                         artUrl = null;
                     } else {
                         let cachedIsFile = typeof cached === 'string' && cached.startsWith('file://');
@@ -1550,13 +1555,18 @@ export class MusicController {
                                         let isImage = contentType && contentType.startsWith('image/');
                                         
                                         let isValidImage = false;
-                                        if (statusCode === 200 && bytes && bytes.get_size() >= 4 && isImage) {
+                                        if (statusCode === 200 && bytes && bytes.get_size() >= 4) {
                                             let data = bytes.toArray();
-                                            if ((data[0] === 0x89 && data[1] === 0x50 && data[2] === 0x4E && data[3] === 0x47) || // PNG
-                                                (data[0] === 0xFF && data[1] === 0xD8 && data[2] === 0xFF) || // JPEG
+                                            // More lenient image detection
+                                            if (isImage || 
+                                                (data[0] === 0x89 && data[1] === 0x50 && data[2] === 0x4E && data[3] === 0x47) || // PNG
+                                                (data[0] === 0xFF && data[1] === 0xD8) || // JPEG
                                                 (data[0] === 0x47 && data[1] === 0x49 && data[2] === 0x46) || // GIF
                                                 (data[0] === 0x52 && data[1] === 0x49 && data[2] === 0x46 && data[3] === 0x46) || // WEBP/RIFF
-                                                (data[0] === 0x42 && data[1] === 0x4D)) { // BMP
+                                                (data[0] === 0x42 && data[1] === 0x4D) || // BMP
+                                                (data[0] === 0x3C && data[1] === 0x3F && data[2] === 0x78 && data[3] === 0x6D) || // XML/SVG (<?xm)
+                                                (data[0] === 0x3C && data[1] === 0x73 && data[2] === 0x76 && data[3] === 0x67)    // SVG (<svg)
+                                            ) { 
                                                 isValidImage = true;
                                             }
                                         }
@@ -1600,6 +1610,25 @@ export class MusicController {
                                 log('[Dynamic Music Pill] Soup session error: ' + e.message);
                                 this._artCacheSet(cacheKey, 'failed');
                             }
+                        } else if (!isValidCachedFile && currentArt.startsWith('data:image/')) {
+                            try {
+                                let parts = currentArt.split(',');
+                                if (parts.length === 2) {
+                                    let mimeMatch = parts[0].match(/data:(image\/[a-zA-Z+]+);base64/);
+                                    if (mimeMatch) {
+                                        let base64Data = parts[1];
+                                        let bytes = GLib.base64_decode(base64Data);
+                                        if (bytes) {
+                                            let hash = GLib.compute_checksum_for_string(GLib.ChecksumType.MD5, currentArt.substring(0, 200) + bytes.length, -1);
+                                            let cachedPath = GLib.build_filenamev([this._ownArtCacheDir, 'data_' + hash + '.img']);
+                                            let file = Gio.File.new_for_path(cachedPath);
+                                            file.replace_contents(bytes, null, false, Gio.FileCreateFlags.REPLACE_DESTINATION, null);
+                                            artUrl = file.get_uri();
+                                            this._artCacheSet(cacheKey, artUrl);
+                                        }
+                                    }
+                                }
+                            } catch(e) {}
                         } else if (!isValidCachedFile) {
                             // Do not attempt to download unknown schemes like data:
                             this._artCacheSet(cacheKey, currentArt);
@@ -1650,6 +1679,37 @@ export class MusicController {
                         if (file.query_exists(null)) {
                             artUrl = file.get_uri();
                         }
+                    }
+                    if (!artUrl) {
+                        try {
+                            let hashStr = (title || 'Unknown') + '|' + (artist || 'Unknown');
+                            let hash = GLib.compute_checksum_for_string(GLib.ChecksumType.MD5, hashStr, -1);
+                            let cacheDir = GLib.build_filenamev([GLib.get_user_cache_dir(), 'dynamic-music-pill', 'art']);
+                            GLib.mkdir_with_parents(cacheDir, 0o755);
+                            let svgPath = GLib.build_filenamev([cacheDir, 'fallback_' + hash + '.svg']);
+                            let file = Gio.File.new_for_path(svgPath);
+                            
+                            if (!file.query_exists(null)) {
+                                // Generate a deterministic color based on the title string
+                                let charSum = 0;
+                                for (let i = 0; i < hashStr.length; i++) charSum += hashStr.charCodeAt(i);
+                                let hue1 = charSum % 360;
+                                let hue2 = (hue1 + 60) % 360;
+                                
+                                let svgContent = `<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+                                <defs>
+                                <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" style="stop-color:hsl(${hue1}, 80%, 45%);stop-opacity:1" />
+                                <stop offset="100%" style="stop-color:hsl(${hue2}, 80%, 25%);stop-opacity:1" />
+                                </linearGradient>
+                                </defs>
+                                <rect width="512" height="512" fill="url(#grad)"/>
+                                <path fill="#ffffff" fill-opacity="0.6" d="M256,128 C185.3,128 128,185.3 128,256 C128,326.7 185.3,384 256,384 C326.7,384 384,326.7 384,256 C384,185.3 326.7,128 256,128 Z M256,352 C203,352 160,309 160,256 C160,203 203,160 256,160 C309,160 352,203 352,256 C352,309 309,352 256,352 Z M256,224 C238.3,224 224,238.3 224,256 C224,273.7 238.3,288 256,288 C273.7,288 288,273.7 288,256 C288,238.3 273.7,224 256,224 Z"/>
+                                </svg>`;
+                                file.replace_contents(svgContent, null, false, Gio.FileCreateFlags.REPLACE_DESTINATION, null);
+                            }
+                            artUrl = file.get_uri();
+                        } catch(e) {}
                     }
                 }
 
@@ -1705,6 +1765,7 @@ export class MusicController {
 
                     if (currentTitle && this._fetchedTrackKey !== currentTrackKey) {
                         this._pill.setLyric(null);
+                        if (this._hydroMediaRef) this._hydroMediaRef.setLyric(null);
                         this._fetchNetworkLyrics(active);
                     } else if (this._fetchedLyricsData && active.PlaybackStatus === 'Playing') {
                         this._startLyricsTimer();
@@ -1721,6 +1782,9 @@ export class MusicController {
                 }
 
                 this._pill.updateDisplay(title, artist, finalDisplayArt, active.PlaybackStatus, active._busName, isSkipActive, active);
+                if (this._hydroMediaRef) {
+                    this._hydroMediaRef.updateDisplay(title, artist, finalDisplayArt, active.PlaybackStatus, active._busName, isSkipActive, active);
+                }
             } else {
                 this._stopLyricsTimer();
                 this._fetchedTrackKey = null;
@@ -1729,6 +1793,9 @@ export class MusicController {
                 this._lastLyricIndex = -1;
                 this._lastPositionSync = 0;
                 this._pill.updateDisplay(null, null, null, 'Stopped', null, false);
+                if (this._hydroMediaRef) {
+                    this._hydroMediaRef.updateDisplay(null, null, null, 'Stopped', null, false);
+                }
             }
         } catch (e) {
             log(`[Dynamic Music Pill] _updateUI error: ${e.message}`);

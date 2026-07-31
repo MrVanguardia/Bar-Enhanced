@@ -407,6 +407,15 @@ export const MusicPill = GObject.registerClass(
             if (this._colorAnimId) { GLib.Source.remove(this._colorAnimId); this._colorAnimId = null; }
             if (this._artDebounceTimer) { GLib.Source.remove(this._artDebounceTimer); this._artDebounceTimer = null; }
             if (this._hideGraceTimer) { GLib.Source.remove(this._hideGraceTimer); this._hideGraceTimer = null; }
+            
+            if (this._settings.get_boolean('immersive-music-theme')) {
+                let ext = Main.extensionManager.lookup('bar-enhanced@mrvanguardia');
+                if (ext && ext.stateObj) {
+                    ext.stateObj.immersiveColorOverride = null;
+                    try { ext.stateObj.reloadStylesheet(); } catch(e) {}
+                }
+            }
+
             if (this._hoverTimeout) { GLib.Source.remove(this._hoverTimeout); this._hoverTimeout = null; }
             if (this._singleClickTimerId) { GLib.Source.remove(this._singleClickTimerId); this._singleClickTimerId = null; }
             if (this._idleDimId) { GLib.Source.remove(this._idleDimId); this._idleDimId = null; }
@@ -1096,6 +1105,14 @@ export const MusicPill = GObject.registerClass(
                             try { this._interfaceSettings.set_string('accent-color', this._originalAccent || 'blue'); } catch (e) { }
                         }
 
+                        if (this._settings.get_boolean('immersive-music-theme')) {
+                            let ext = Main.extensionManager.lookup('bar-enhanced@mrvanguardia');
+                            if (ext && ext.stateObj) {
+                                ext.stateObj.immersiveColorOverride = null;
+                                try { ext.stateObj.reloadStylesheet(); } catch(e) {}
+                            }
+                        }
+
                         let targetW = this._isSidePanel ? this._body.width : 0;
                         let targetH = this._isSidePanel ? 0 : this._body.height;
 
@@ -1318,7 +1335,21 @@ export const MusicPill = GObject.registerClass(
                 let b = Math.floor(startB + (targetB - startB) * t);
                 this._currentBorderOp = startBorderOp + (targetBorderOp - startBorderOp) * t;
                 this._applyStyle(r, g, b);
-                if (count >= steps) { this._displayedColor = { r: targetR, g: targetG, b: targetB }; this._currentBorderOp = targetBorderOp; this._colorAnimId = null; return GLib.SOURCE_REMOVE; }
+                if (count >= steps) { 
+                    this._displayedColor = { r: targetR, g: targetG, b: targetB }; 
+                    this._currentBorderOp = targetBorderOp; 
+                    this._colorAnimId = null; 
+                    
+                    if (this._settings.get_boolean('immersive-music-theme')) {
+                        let ext = Main.extensionManager.lookup('bar-enhanced@mrvanguardia');
+                        if (ext && ext.stateObj) {
+                            ext.stateObj.immersiveColorOverride = this._displayedColor;
+                            try { ext.stateObj.updateImmersiveColors(); } catch(e) {}
+                        }
+                    }
+                    
+                    return GLib.SOURCE_REMOVE; 
+                }
                 return GLib.SOURCE_CONTINUE;
             });
         }

@@ -27,7 +27,6 @@ import GdkPixbuf from 'gi://GdkPixbuf';
 import Meta from 'gi://Meta';
 import Clutter from 'gi://Clutter';
 import GLib from 'gi://GLib';
-import Shell from 'gi://Shell';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as MessageTray from 'resource:///org/gnome/shell/ui/messageTray.js';
 import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
@@ -42,6 +41,8 @@ import { DockManager } from './dash-to-dock/docking.js';
 import { MusicController } from './dynamic-music-pill/controller.js';
 import { VitalsMenuButton } from './vitals/extension.js';
 import { BluetoothBatteryButton } from './bluetooth-battery.js';
+import { HydroWidgetsManager } from './hydro-widgets.js';
+import { WallpaperManager } from './wallpaper-manager.js';
 
 const ES_MAP = {
     'Bar Enhanced': 'Bar Enhanced',
@@ -52,6 +53,9 @@ const ES_MAP = {
     'Focus Glow: OFF': 'Brillo de Foco: NO',
     'Pywal Sync: ON': 'Pywal Sinc: SI',
     'Pywal Sync: OFF': 'Pywal Sinc: NO',
+    'Immersive Music': 'Modo Inmersivo',
+    'Immersive Music: ON': 'Modo Inmersivo: SI',
+    'Immersive Music: OFF': 'Modo Inmersivo: NO',
     'Floating': 'Flotante',
     'Islands': 'Islas',
     'Mainland': 'Continental',
@@ -98,7 +102,7 @@ class ConnectManager {
             sig: signal
         });
         // Remove obj on destroy except following that don't have destroy signal
-        if (!(obj instanceof Gio.Settings || obj instanceof LayoutManager.LayoutManager || obj instanceof Meta.WorkspaceManager | obj instanceof Meta.Display)) {
+        if (!(obj instanceof Gio.Settings || obj instanceof LayoutManager.LayoutManager || obj instanceof Meta.WorkspaceManager || obj instanceof Meta.Display)) {
             let destroyId = obj.connect('destroy', () => {
                 this.removeObject(obj);
             });
@@ -144,6 +148,7 @@ const BarEnhancedDashboard = GObject.registerClass(
         _init(obar) {
             super._init(0.5, 'Bar Enhanced Dashboard');
             this.obar = obar;
+            this._settingsSignals = [];
 
             // Custom Symbolic paint-palette/color icon representing aesthetics
             let icon = new St.Icon({
@@ -223,7 +228,7 @@ const BarEnhancedDashboard = GObject.registerClass(
                 });
             };
 
-            this.obar._settings.connect('changed::bartype', updateActiveLayoutHighlight);
+            this._settingsSignals.push(this.obar._settings.connect('changed::bartype', updateActiveLayoutHighlight));
             updateActiveLayoutHighlight();
 
             // Section: Live Toggles
@@ -256,7 +261,7 @@ const BarEnhancedDashboard = GObject.registerClass(
                 this.obar._settings.set_boolean('focus-glow', active);
             });
 
-            this.obar._settings.connect('changed::focus-glow', updateFocusGlowBtn);
+            this._settingsSignals.push(this.obar._settings.connect('changed::focus-glow', updateFocusGlowBtn));
             updateFocusGlowBtn();
             widgetBox.add_child(focusGlowBtn);
 
@@ -286,12 +291,51 @@ const BarEnhancedDashboard = GObject.registerClass(
                 }
             });
 
-            this.obar._settings.connect('changed::pywal-sync', updatePywalSyncBtn);
+            this._settingsSignals.push(this.obar._settings.connect('changed::pywal-sync', updatePywalSyncBtn));
             updatePywalSyncBtn();
             widgetBox.add_child(pywalSyncBtn);
 
+            // Immersive Music Theme Toggle
+            let immersiveMusicBtn = new St.Button({
+                label: T('Immersive Music'),
+                style_class: 'bar-enhanced-dashboard-button toggle-button',
+                x_expand: true,
+                can_focus: true
+            });
+
+            const updateImmersiveMusicBtn = () => {
+                let active = this.obar._settings.get_boolean('immersive-music-theme');
+                immersiveMusicBtn.set_label(active ? T('Immersive Music: ON') : T('Immersive Music: OFF'));
+                if (active) {
+                    immersiveMusicBtn.add_style_class_name('active');
+                } else {
+                    immersiveMusicBtn.remove_style_class_name('active');
+                }
+            };
+
+            immersiveMusicBtn.connect('clicked', () => {
+                let active = !this.obar._settings.get_boolean('immersive-music-theme');
+                this.obar._settings.set_boolean('immersive-music-theme', active);
+                if (!active) {
+                    this.obar.immersiveColorOverride = null;
+                    try { this.obar.updateImmersiveColors(); } catch(e) {}
+                }
+            });
+
+            this._settingsSignals.push(this.obar._settings.connect('changed::immersive-music-theme', updateImmersiveMusicBtn));
+            updateImmersiveMusicBtn();
+            widgetBox.add_child(immersiveMusicBtn);
+
             // Add whole box to the menu
             this.menu.box.add_child(widgetBox);
+        }
+
+        destroy() {
+            if (this._settingsSignals && this.obar && this.obar._settings) {
+                this._settingsSignals.forEach(id => this.obar._settings.disconnect(id));
+                this._settingsSignals = null;
+            }
+            super.destroy();
         }
     });
 
@@ -379,7 +423,7 @@ class TopbarNotification extends St.BoxLayout {
         if (!this._icons.has(sourceId)) {
             const icon = this._createIcon(source);
             this._icons.set(sourceId, icon);
-            this.add_child(icon._widget);
+            this._renderIcons();
         }
     }
     _onSourceRemoved(tray, source) {
@@ -387,9 +431,60 @@ class TopbarNotification extends St.BoxLayout {
         const sourceId = this._getSourceId(source);
         const icon = this._icons.get(sourceId);
         if (icon) {
-            this.remove_child(icon._widget);
             this._destroyIcon(icon);
             this._icons.delete(sourceId);
+            this._renderIcons();
+        }
+    }
+    _renderIcons() {
+        this.remove_all_children();
+        let iconsArray = Array.from(this._icons.values());
+        let totalCount = iconsArray.length;
+        let maxVisible = 5;
+        let overlapThreshold = 3;
+        
+        let visibleIcons = iconsArray.slice(0, maxVisible);
+        let isStacked = totalCount > overlapThreshold;
+        
+        // Use RTL trick to make the left-most icon render ON TOP of the right ones
+        if (isStacked) {
+            this.set_text_direction(Clutter.TextDirection.RTL);
+            // In RTL, adding elements normally puts the first element on the RIGHT.
+            // So we add them in reverse order.
+            // Last element added goes to the LEFT and renders ON TOP.
+            visibleIcons.reverse();
+        } else {
+            this.set_text_direction(Clutter.TextDirection.LTR);
+        }
+        
+        visibleIcons.forEach((icon, index) => {
+            icon._widget.remove_style_class_name('stacked-notification-icon');
+            if (icon._redDot) {
+                icon._widget.remove_child(icon._redDot);
+                icon._redDot.destroy();
+                icon._redDot = null;
+            }
+            
+            // In our reversed array, index 0 is actually the last icon.
+            // We want negative margin to overlap.
+            if (isStacked && index < visibleIcons.length - 1) {
+                icon._widget.add_style_class_name('stacked-notification-icon');
+            }
+            
+            this.add_child(icon._widget);
+        });
+
+        // Add the red dot to the newest (left-most) icon, which is the last in our reversed array
+        if (isStacked && totalCount > maxVisible) {
+            let firstIcon = visibleIcons[visibleIcons.length - 1]; // The originally first icon
+            if (firstIcon) {
+                firstIcon._redDot = new St.Widget({
+                    style_class: 'notification-overflow-dot',
+                    x_align: Clutter.ActorAlign.END, // In RTL, END is Left
+                    y_align: Clutter.ActorAlign.START
+                });
+                firstIcon._widget.add_child(firstIcon._redDot);
+            }
         }
     }
     _createIcon(source) {
@@ -459,7 +554,16 @@ class TopbarNotification extends St.BoxLayout {
         this._icons.forEach(icon => this._destroyIcon(icon));
         this._icons.clear();
         const sources = Main.messageTray.getSources();
-        sources.forEach(source => this._onSourceAdded(null, source));
+        sources.forEach(source => {
+            if (!source) return;
+            const sourceId = this._getSourceId(source);
+            if (!this._shouldShowInDND(source)) return;
+            if (!this._icons.has(sourceId)) {
+                const icon = this._createIcon(source);
+                this._icons.set(sourceId, icon);
+            }
+        });
+        this._renderIcons();
     }
     _destroyIcon(icon) {
         if (icon._signal) icon._source.disconnect(icon._signal);
@@ -498,14 +602,26 @@ export default class BarEnhanced extends Extension {
         this._hcSettings = null;
         this._connections = null;
         this._injections = [];
+        this._windowBlurSignals = null;
+        this._windowBlurBackgrounds = null;
     }
 
     // Generate a color palette from desktop background image
     getPaletteFromImage(pictureUri) {
-        let pictureFile = Gio.File.new_for_uri(pictureUri);
+        if (!pictureUri || typeof pictureUri !== 'string') {
+            return [null, null];
+        }
 
-        // Load the image into a pixbuf
-        let pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_size(pictureFile.get_path(), 1000, -1);
+        let pictureFile = Gio.File.new_for_uri(pictureUri);
+        let path = pictureFile.get_path();
+
+        if (!path) {
+            return [null, null];
+        }
+
+        try {
+            // Load the image into a pixbuf
+            let pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_size(path, 1000, -1);
         let nChannels = pixbuf.n_channels;
 
         // Get the width, height and pixel count of the image
@@ -550,6 +666,10 @@ export default class BarEnhanced extends Extension {
         // log('palette12 sorted ', palette12, 'count12 sorted ', count12);
 
         return [palette12, count12];
+        } catch (e) {
+            log('BarEnhanced: Error in getPaletteFromImage: ' + e);
+            return [null, null];
+        }
     }
 
     backgroundPalette() {
@@ -686,6 +806,13 @@ export default class BarEnhanced extends Extension {
 
         // Load stylesheet
         this.loadStylesheet();
+    }
+
+    updateImmersiveColors() {
+        StyleSheets.reloadStyle(this, this);
+        if (this.hydroWidgetsManager) {
+            this.hydroWidgetsManager.applyMonetColors();
+        }
     }
 
     // Add or remove 'openmenu' class
@@ -987,6 +1114,8 @@ export default class BarEnhanced extends Extension {
 
         // Update styles on Dark/Light mode change
         if (callbk_param == 'color-scheme') {
+            if (this._blockModeChange)
+                return;
             this.onModeChange();
             return;
         }
@@ -1050,7 +1179,7 @@ export default class BarEnhanced extends Extension {
 
         // GTK Apps styles
         let gtkKeys = ['apply-gtk', 'headerbar-hint', 'hbar-gtk3only', 'sidebar-hint', 'sbar-gradient', 'card-hint', 'view-hint', 'window-hint', 'winbradius', 'corner-radius',
-            'winbcolor', 'winbalpha', 'winbwidth', 'traffic-light', 'menu-radius', 'gtk-transparency', 'gtk-popover', 'mscolor', 'msalpha', 'hscd-color', 'vw-color', 'gtk-shadow', 'enable-gtk-window-custom'];
+            'traffic-light', 'menu-radius', 'gtk-popover', 'mscolor', 'msalpha', 'hscd-color', 'gtk-shadow'];
         if (gtkKeys.includes(key)) {
             // log('Call saveGtkCss from extension for key: ', key);
             this.gtkCSS = true;
@@ -1468,6 +1597,16 @@ export default class BarEnhanced extends Extension {
     // Connect multiple signals to ensure detecting background-change in all Gnome versions
     connectPrimaryBGChanged() {
         const pMonitorIdx = Main.layoutManager.primaryIndex;
+        // Disconnect previous signals to prevent duplication
+        try {
+            if (Main.layoutManager._bgManagers[pMonitorIdx]) {
+                this._connections.disconnect(Main.layoutManager._bgManagers[pMonitorIdx], 'changed');
+            }
+            this._connections.disconnect(this._bgSettings, 'changed::picture-uri');
+            this._connections.disconnect(this._bgSettings, 'changed::picture-uri-dark');
+            this._connections.disconnect(this._intSettings, 'changed::color-scheme');
+        } catch(e) {}
+
         this._connections.connect(Main.layoutManager._bgManagers[pMonitorIdx], 'changed', this.updateBguri.bind(this));
         this._connections.connect(this._bgSettings, 'changed::picture-uri', this.updateBguri.bind(this));
         this._connections.connect(this._bgSettings, 'changed::picture-uri-dark', this.updateBguri.bind(this));
@@ -1813,6 +1952,12 @@ export default class BarEnhanced extends Extension {
         // this.bgalpha = this._settings.get_double('bgalpha');
         this._settings.set_boolean('import-export', false);
         this._settings.set_boolean('pause-reload', false);
+        if (this._settings.get_boolean('enable-gtk-window-custom'))
+            this._settings.set_boolean('enable-gtk-window-custom', false);
+        if (this._settings.get_double('winbwidth') !== 0)
+            this._settings.set_double('winbwidth', 0);
+        if (this._settings.get_double('winbalpha') !== 0)
+            this._settings.set_double('winbalpha', 0);
 
         let panelMonitor = this.getPanelMonitor()[0];
         this._settings.set_int('monitor-height', panelMonitor.height);
@@ -1823,9 +1968,6 @@ export default class BarEnhanced extends Extension {
             this.updatePanelStyle(settings, key);
             if (key === 'neon' || key === 'focus-glow') {
                 this._onFocusWindowChanged();
-            }
-            if (key === 'enable-gtk-window-custom' || key === 'gtk-transparency') {
-                this.updateWindowsBlur();
             }
         });
 
@@ -1838,7 +1980,6 @@ export default class BarEnhanced extends Extension {
             [global.display, 'window-entered-monitor', this.setWindowMaxBar.bind(this), 'window-entered-monitor'],
             [global.display, 'window-left-monitor', this.setWindowMaxBar.bind(this), 'window-left-monitor'],
             [global.display, 'notify::focus-window', this._onFocusWindowChanged.bind(this), 'focus-window'],
-            [global.display, 'window-created', this.updateWindowsBlur.bind(this), 'window-created'],
             [Main.layoutManager, 'startup-complete', this.postStartup.bind(this)],
             // [ Main.sessionMode, 'updated', this.updatePanelStyle.bind(this), 'session-mode-updated' ],
         ];
@@ -1960,6 +2101,17 @@ export default class BarEnhanced extends Extension {
         } catch (e) {
             log('BarEnhanced: Failed to initialize Pywal file monitor: ', e);
         }
+
+        // Connect palette changes to HydroWidgets
+        this._paletteSettingsIds = [
+            this._settings.connect('changed::palette1', () => {
+                if (this.hydroWidgetsManager) this.hydroWidgetsManager.applyMonetColors();
+            }),
+            this._settings.connect('changed::palette2', () => {
+                if (this.hydroWidgetsManager) this.hydroWidgetsManager.applyMonetColors();
+            })
+        ];
+
         // Cause stylesheet to save and reload on Enable (also creates gtk css)
         StyleSheets.reloadStyle(this, this);
         // Add Bar Enhanced Flatpak Overrides
@@ -2014,11 +2166,11 @@ export default class BarEnhanced extends Extension {
                 this._syncWithSystemAccent();
             });
         }
-        this._settings.connect('changed::system-accent-sync', () => {
+        this._systemAccentSyncSettingId = this._settings.connect('changed::system-accent-sync', () => {
             this._syncWithSystemAccent();
         });
         this._syncWithSystemAccent();
-        this.updateWindowsBlur();
+        // this.updateWindowsBlur();
 
         this.loadDashToDockStylesheet();
 
@@ -2033,11 +2185,20 @@ export default class BarEnhanced extends Extension {
 
         // Dynamic Music Pill
         this._musicPillEnabled = this._settings.get_boolean('music-pill-enabled');
-        if (this._musicPillEnabled) this._enableMusicPill();
+        this._hydroMediaEnabled = this._settings.get_boolean('hydro-media-enabled');
+        
+        if (this._musicPillEnabled || this._hydroMediaEnabled) this._enableMusicPill();
+        
         this._musicPillSettingId = this._settings.connect('changed::music-pill-enabled', () => {
             this._musicPillEnabled = this._settings.get_boolean('music-pill-enabled');
             if (this._musicPillEnabled) this._enableMusicPill();
             else this._disableMusicPill();
+        });
+        
+        this._hydroMediaSettingId = this._settings.connect('changed::hydro-media-enabled', () => {
+            this._hydroMediaEnabled = this._settings.get_boolean('hydro-media-enabled');
+            if (this._hydroMediaEnabled) this._enableMusicPill();
+            else if (!this._musicPillEnabled) this._disableMusicPill();
         });
 
         // Vitals
@@ -2069,6 +2230,15 @@ export default class BarEnhanced extends Extension {
             else if (!enabled && this._topbarNotification) this._disableNotifIcons();
         });
 
+        // Hydro-Widgets
+        this._hydroWidgetsEnabled = this._settings.get_boolean('hydro-widgets-enabled');
+        if (this._hydroWidgetsEnabled) this._enableHydroWidgets();
+        this._hydroWidgetsSettingId = this._settings.connect('changed::hydro-widgets-enabled', () => {
+            this._hydroWidgetsEnabled = this._settings.get_boolean('hydro-widgets-enabled');
+            if (this._hydroWidgetsEnabled) this._enableHydroWidgets();
+            else this._disableHydroWidgets();
+        });
+
         // Privacy Indicators Accent Color
         this._privacyAccentEnabled = this._settings.get_boolean('privacy-accent-enabled');
         if (this._privacyAccentEnabled) this._enablePrivacyAccent();
@@ -2077,6 +2247,14 @@ export default class BarEnhanced extends Extension {
             if (enabled) this._enablePrivacyAccent();
             else this._disablePrivacyAccent();
         });
+
+        // Dynamic Wallpaper Manager
+        try {
+            this.wallpaperManager = new WallpaperManager(this);
+            this.wallpaperManager.enable();
+        } catch (e) {
+            log('BarEnhanced: Error instantiating WallpaperManager: ' + e);
+        }
     }
 
     _enableNotifIcons() {
@@ -2189,17 +2367,28 @@ export default class BarEnhanced extends Extension {
             } catch (e) {
                 log('BarEnhanced: Error instantiating MusicController: ', e);
             }
+        } else {
+            // Ensure the pill is created/shown if it was hidden
+            this.musicController._createPill();
         }
     }
 
-    _disableMusicPill() {
+    _disableMusicPill(force = false) {
         if (this.musicController) {
-            try {
-                this.musicController.disable();
-            } catch (e) {
-                log('BarEnhanced: Error destroying MusicController: ', e);
+            // We do not destroy the music controller if hydro-media is still enabled, unless forced
+            if (force || !this._settings.get_boolean('hydro-media-enabled')) {
+                try {
+                    this.musicController.disable();
+                } catch (e) {
+                    log('BarEnhanced: Error destroying MusicController: ', e);
+                }
+                this.musicController = null;
+            } else {
+                // Just hide the pill
+                if (this.musicController._pill) {
+                    this.musicController._pill._ensureHidden();
+                }
             }
-            this.musicController = null;
         }
     }
 
@@ -2248,6 +2437,28 @@ export default class BarEnhanced extends Extension {
         }
     }
 
+    _enableHydroWidgets() {
+        if (!this.hydroWidgetsManager) {
+            try {
+                this.hydroWidgetsManager = new HydroWidgetsManager(this);
+                this.hydroWidgetsManager.enable();
+            } catch (e) {
+                log('BarEnhanced: Error instantiating HydroWidgetsManager: ', e);
+            }
+        }
+    }
+
+    _disableHydroWidgets() {
+        if (this.hydroWidgetsManager) {
+            try {
+                this.hydroWidgetsManager.disable();
+            } catch (e) {
+                log('BarEnhanced: Error destroying HydroWidgetsManager: ', e);
+            }
+            this.hydroWidgetsManager = null;
+        }
+    }
+
     _updateUiGroupClass(add, className) {
         try {
             if (add) {
@@ -2272,10 +2483,29 @@ export default class BarEnhanced extends Extension {
         this._updateUiGroupClass(sRec, 'screen-recording-indicator-accent-color');
         this._updateUiGroupClass(blur, 'screen-sharing-recording-indicators-blur');
         this._updateUiGroupClass(neutral, 'neutral-color');
+
+        // wallpaperManager is now managed once in enable() / disable()
     }
 
     disable() {
         this.disabling = true;
+
+        if (this._paletteSettingsIds) {
+            this._paletteSettingsIds.forEach(id => this._settings.disconnect(id));
+            this._paletteSettingsIds = null;
+        }
+
+        if (this.wallpaperManager) {
+            this.wallpaperManager.disable();
+            this.wallpaperManager = null;
+        }
+
+        // Hydro-Widgets cleanup
+        if (this._hydroWidgetsSettingId) {
+            this._settings.disconnect(this._hydroWidgetsSettingId);
+            this._hydroWidgetsSettingId = null;
+        }
+        this._disableHydroWidgets();
 
         // Notification Icons cleanup
         if (this._notifIconsSettingId) {
@@ -2310,7 +2540,11 @@ export default class BarEnhanced extends Extension {
             this._settings.disconnect(this._musicPillSettingId);
             this._musicPillSettingId = null;
         }
-        this._disableMusicPill();
+        if (this._hydroMediaSettingId) {
+            this._settings.disconnect(this._hydroMediaSettingId);
+            this._hydroMediaSettingId = null;
+        }
+        this._disableMusicPill(true);
 
         if (this._vitalsSettingId) {
             this._settings.disconnect(this._vitalsSettingId);
@@ -2342,6 +2576,11 @@ export default class BarEnhanced extends Extension {
         if (this._showDashboardId > 0) {
             this._settings.disconnect(this._showDashboardId);
             this._showDashboardId = 0;
+        }
+
+        if (this._systemAccentSyncSettingId) {
+            this._settings.disconnect(this._systemAccentSyncSettingId);
+            this._systemAccentSyncSettingId = null;
         }
 
         if (this._settingsChangedId) {
@@ -2408,7 +2647,7 @@ export default class BarEnhanced extends Extension {
         this.msgLists = [];
         this.msgListIds = [];
 
-        this._removeInjection(Calendar.Calendar.prototype, this._injections, "_rebuildCalendar");
+        this._removeInjection(Main.panel.statusArea.dateMenu._calendar, this._injections, "_rebuildCalendar");
         this._injections = [];
 
         // Remove style class from Panel and PanelBox
@@ -2434,15 +2673,6 @@ export default class BarEnhanced extends Extension {
         // Clear/Restore Gtk css and Flatpak override
         StyleSheets.saveGtkCss(this, 'disable');
         StyleSheets.saveFlatpakOverrides(this, 'disable');
-
-        // Clear window blur
-        let winActors = global.get_window_actors();
-        for (let actor of winActors) {
-            let effect = actor.get_effect('bar-enhanced-blur');
-            if (effect) {
-                actor.remove_effect(effect);
-            }
-        }
 
         this.main = null;
         this._settings = null;
@@ -2698,6 +2928,11 @@ export default class BarEnhanced extends Extension {
         }
     }
 
+    updateWindowsBlur() {
+        // Disabled: GTK Window custom styling is disabled to prevent menu/context corruption
+        return;
+    }
+
     _updateDashboardVisibility() {
         if (!this._settings) return;
         let show = this._settings.get_boolean('show-dashboard');
@@ -2714,40 +2949,4 @@ export default class BarEnhanced extends Extension {
         }
     }
 
-    updateWindowsBlur() {
-        if (!this._settings) return;
-        const active = this._settings.get_boolean('enable-gtk-window-custom');
-        const transparency = this._settings.get_double('gtk-transparency');
-        const winAlpha = active ? Math.max(0.45, transparency) : 1.0;
-
-        let winActors = global.get_window_actors();
-        for (let actor of winActors) {
-            let metaWindow = actor.get_meta_window();
-            if (!metaWindow || metaWindow.get_window_type() !== Meta.WindowType.NORMAL)
-                continue;
-
-            let effect = actor.get_effect('bar-enhanced-blur');
-            if (active && winAlpha < 1.0) {
-                actor.set_opacity(Math.round(255 * winAlpha));
-                if (!effect) {
-                    try {
-                        let newEffect = new Shell.BlurEffect({
-                            brightness: 0.85,
-                            sigma: 30
-                        });
-                        newEffect.set_mode(Shell.BlurMode.BACKGROUND);
-                        actor.add_effect_with_name('bar-enhanced-blur', newEffect);
-                    } catch (e) {
-                        log('Bar Enhanced: Error adding blur effect to window actor', e);
-                    }
-                }
-            } else {
-                actor.set_opacity(255);
-                if (effect) {
-                    actor.remove_effect(effect);
-                }
-            }
-        }
-    }
 }
-

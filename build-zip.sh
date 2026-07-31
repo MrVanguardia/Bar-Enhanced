@@ -14,7 +14,11 @@ zip -rq "../$ZIP_NAME" . \
     -x "*.po" \
     -x "*.pot" \
     -x "*/po/*" \
+    -x "*/po" \
+    -x "*/*/po/*" \
+    -x "*/*/po" \
     -x "*POTFILES.in" \
+    -x "*/*POTFILES.in" \
     -x "schemas/gschemas.compiled" \
     -x "*.md" \
     -x "LICENSE" \

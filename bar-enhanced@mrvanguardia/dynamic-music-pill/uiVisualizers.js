@@ -13,7 +13,7 @@ const CavaVisualizer = GObject.registerClass(
             super._init({ y_expand: true, x_align: Clutter.ActorAlign.FILL, y_align: Clutter.ActorAlign.FILL });
             this._settings = settings;
             this._isPopup = isPopup;
-            this._barCount = this._isPopup ? (this._settings.get_int('popup-visualizer-bars') || 10) : (this._settings.get_int('visualizer-bars') || 10);
+            this._barCount = this._isPopup ? this._safeGetInt('popup-visualizer-bars', 10) : this._safeGetInt('visualizer-bars', 10);
 
             this._prevHeights = new Array(this._barCount).fill(1);
             this._peakValues = new Array(this._barCount).fill(0);
@@ -35,9 +35,14 @@ const CavaVisualizer = GObject.registerClass(
             });
         }
 
+        _safeGetInt(key, def) {
+            if (!this._settings) return def;
+            try { return this._settings.get_int(key); } catch(e) { return def; }
+        }
+
         _updateBarCount() {
-            this._barCount = this._isPopup ? (this._settings.get_int('popup-visualizer-bars') || 10) : (this._settings.get_int('visualizer-bars') || 10);
-            let bw = this._isPopup ? (this._settings.get_int('popup-visualizer-bar-width') || 2) : (this._settings.get_int('visualizer-bar-width') || 2);
+            this._barCount = this._isPopup ? this._safeGetInt('popup-visualizer-bars', 10) : this._safeGetInt('visualizer-bars', 10);
+            let bw = this._isPopup ? this._safeGetInt('popup-visualizer-bar-width', 2) : this._safeGetInt('visualizer-bar-width', 2);
             this._prevHeights = new Array(this._barCount).fill(1);
             this._peakValues = new Array(this._barCount).fill(0);
             this.set_width(this._barCount * (bw + 2) - 2);
@@ -136,7 +141,7 @@ const CavaVisualizer = GObject.registerClass(
             cr.setOperator(Cairo.Operator.CLEAR);
             cr.paint();
             cr.setOperator(Cairo.Operator.OVER);
-            let barWidth = this._isPopup ? (this._settings.get_int('popup-visualizer-bar-width') || 2) : (this._settings.get_int('visualizer-bar-width') || 2);
+            let barWidth = this._isPopup ? this._safeGetInt('popup-visualizer-bar-width', 2) : this._safeGetInt('visualizer-bar-width', 2);
             let gap = 2;
             let offsetX = 0;
             let centerY = Math.floor(height / 2);
@@ -188,11 +193,16 @@ const SimulatedVisualizer = GObject.registerClass(
             });
         }
 
+        _safeGetInt(key, def) {
+            if (!this._settings) return def;
+            try { return this._settings.get_int(key); } catch(e) { return def; }
+        }
+
         _updateBarCount() {
             this.destroy_all_children();
             this._bars = [];
-            let count = this._isPopup ? (this._settings.get_int('popup-visualizer-bars') || 10) : (this._settings.get_int('visualizer-bars') || 4);
-            let barWidth = this._isPopup ? (this._settings.get_int('popup-visualizer-bar-width') || 2) : (this._settings.get_int('visualizer-bar-width') || 2);
+            let count = this._isPopup ? this._safeGetInt('popup-visualizer-bars', 10) : this._safeGetInt('visualizer-bars', 4);
+            let barWidth = this._isPopup ? this._safeGetInt('popup-visualizer-bar-width', 2) : this._safeGetInt('visualizer-bar-width', 2);
 
             for (let i = 0; i < count; i++) {
                 let bar = new St.Widget({ style_class: 'visualizer-bar', y_expand: true, y_align: Clutter.ActorAlign.FILL });
@@ -261,7 +271,7 @@ const SimulatedVisualizer = GObject.registerClass(
 
         _updateBarsCss() {
             let opacity = this._isPlaying ? 1.0 : 0.4;
-            let barWidth = this._isPopup ? (this._settings.get_int('popup-visualizer-bar-width') || 2) : (this._settings.get_int('visualizer-bar-width') || 2);
+            let barWidth = this._isPopup ? this._safeGetInt('popup-visualizer-bar-width', 2) : this._safeGetInt('visualizer-bar-width', 2);
             let bRad = barWidth >= 4 ? 2 : (barWidth > 1 ? 1 : 0);
             let css = `background-color: rgba(${this._color}, ${opacity}); border-radius: ${bRad}px;`;
             this._bars.forEach(bar => { bar.set_style(css); });
@@ -316,8 +326,13 @@ export const WaveformVisualizer = GObject.registerClass(
             this._updateSize();
         }
 
+        _safeGetInt(key, def) {
+            if (!this._settings) return def;
+            try { return this._settings.get_int(key); } catch(e) { return def; }
+        }
+
         _updateSize() {
-            let h = this._isPopup ? (this._settings.get_int('popup-visualizer-height') || 80) : (this._settings.get_int('visualizer-height') || 24);
+            let h = this._isPopup ? this._safeGetInt('popup-visualizer-height', 80) : this._safeGetInt('visualizer-height', 24);
             if (this._maxHeight && !this._isPopup) h = Math.min(h, this._maxHeight);
 
             this.set_height(h);

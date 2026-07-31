@@ -1,6 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <schemalist gettext-domain="bar-enhanced">
   <schema id="org.gnome.shell.extensions.bar-enhanced" path="/org/gnome/shell/extensions/barEnhanced/">
+    <key type="b" name="hydro-widgets-enabled">
+      <default>false</default>
+      <summary>Enable Hydro-Widgets</summary>
+      <description>Enable or disable floating Hydro-Widgets.</description>
+    </key>
     <key type="s" name="bartype">
       <default>"Floating"</default>
       <summary>Type of Top Bar</summary>
@@ -1521,10 +1526,166 @@
       <summary>Enable Dynamic Music Pill</summary>
       <description>Shows the dynamic music pill for media control</description>
     </key>
+    <key name="immersive-music-theme" type="b">
+      <default>false</default>
+      <summary>Change entire extension theme to match playing music</summary>
+      <description>Change entire extension theme to match playing music</description>
+    </key>
     <key name="dash-to-dock-enabled" type="b">
       <default>true</default>
       <summary>Enable Dash to Dock</summary>
       <description>Enables the dash to dock module</description>
+    </key>
+    <key type="b" name="hydro-clock-enabled">
+      <default>true</default>
+      <summary>Enable Clock Widget</summary>
+    </key>
+    <key type="d" name="hydro-clock-x">
+      <default>100.0</default>
+      <summary>Clock X Position</summary>
+    </key>
+    <key type="d" name="hydro-clock-y">
+      <default>100.0</default>
+      <summary>Clock Y Position</summary>
+    </key>
+    <key type="d" name="hydro-clock-size">
+      <default>220.0</default>
+      <summary>Clock Size</summary>
+    </key>
+    <key type="s" name="hydro-clock-shape">
+      <default>"scallop"</default>
+      <summary>Clock Shape</summary>
+    </key>
+    <key type="s" name="hydro-clock-style">
+      <default>"analog"</default>
+      <summary>Clock Style</summary>
+    </key>
+    <key type="b" name="hydro-weather-enabled">
+      <default>false</default>
+      <summary>Enable Weather Widget</summary>
+    </key>
+    <key type="d" name="hydro-weather-x">
+      <default>400.0</default>
+      <summary>Weather X Position</summary>
+    </key>
+    <key type="d" name="hydro-weather-y">
+      <default>100.0</default>
+      <summary>Weather Y Position</summary>
+    </key>
+    <key type="d" name="hydro-weather-size">
+      <default>220.0</default>
+      <summary>Weather Size</summary>
+    </key>
+    <key type="s" name="hydro-weather-shape">
+      <default>"leaf"</default>
+      <summary>Weather Shape</summary>
+    </key>
+    <key type="s" name="hydro-weather-style">
+      <default>"simple"</default>
+      <summary>Weather Style</summary>
+    </key>
+    <key type="b" name="hydro-use-custom-colors">
+      <default>false</default>
+      <summary>Use Custom Colors</summary>
+    </key>
+    <key type="s" name="hydro-custom-bg">
+      <default>"#f1f0ee"</default>
+      <summary>Custom Background Color</summary>
+    </key>
+    <key type="s" name="hydro-custom-fg1">
+      <default>"#4a4542"</default>
+      <summary>Custom Foreground Color 1</summary>
+    </key>
+    <key type="s" name="hydro-custom-fg2">
+      <default>"#a13835"</default>
+      <summary>Custom Foreground Color 2</summary>
+    </key>
+    <key type="b" name="hydro-wallpaper-enabled">
+      <default>false</default>
+      <summary>Enable Custom Wallpaper</summary>
+    </key>
+    <key type="s" name="hydro-wallpaper-uri">
+      <default>""</default>
+      <summary>Wallpaper URI</summary>
+    </key>
+    <key type="s" name="hydro-wallpaper-type">
+      <default>"none"</default>
+      <summary>Wallpaper Type (static, video, none)</summary>
+    </key>
+    <!-- Hydro Calendar Widget -->
+    <key type="b" name="hydro-calendar-enabled">
+      <default>false</default>
+      <summary>Enable Calendar Widget</summary>
+    </key>
+    <key type="d" name="hydro-calendar-x">
+      <default>100.0</default>
+      <summary>Calendar X Position</summary>
+    </key>
+    <key type="d" name="hydro-calendar-y">
+      <default>300.0</default>
+      <summary>Calendar Y Position</summary>
+    </key>
+    <key type="d" name="hydro-calendar-size">
+      <default>220.0</default>
+      <summary>Calendar Size</summary>
+    </key>
+    <key type="s" name="hydro-calendar-shape">
+      <default>"squircle"</default>
+      <summary>Calendar Shape</summary>
+    </key>
+    <key type="s" name="hydro-calendar-style">
+      <default>"simple"</default>
+      <summary>Calendar Style</summary>
+    </key>
+    <!-- Hydro Battery Widget -->
+    <key type="b" name="hydro-battery-enabled">
+      <default>false</default>
+      <summary>Enable Battery Widget</summary>
+    </key>
+    <key type="d" name="hydro-battery-x">
+      <default>400.0</default>
+      <summary>Battery X Position</summary>
+    </key>
+    <key type="d" name="hydro-battery-y">
+      <default>300.0</default>
+      <summary>Battery Y Position</summary>
+    </key>
+    <key type="d" name="hydro-battery-size">
+      <default>220.0</default>
+      <summary>Battery Size</summary>
+    </key>
+    <key type="s" name="hydro-battery-shape">
+      <default>"squircle"</default>
+      <summary>Battery Shape</summary>
+    </key>
+    <key type="s" name="hydro-battery-style">
+      <default>"simple"</default>
+      <summary>Battery Style</summary>
+    </key>
+    <!-- Hydro Media Widget -->
+    <key type="b" name="hydro-media-enabled">
+      <default>false</default>
+      <summary>Enable Media Widget</summary>
+    </key>
+    <key type="d" name="hydro-media-x">
+      <default>700.0</default>
+      <summary>Media X Position</summary>
+    </key>
+    <key type="d" name="hydro-media-y">
+      <default>300.0</default>
+      <summary>Media Y Position</summary>
+    </key>
+    <key type="d" name="hydro-media-size">
+      <default>220.0</default>
+      <summary>Media Size</summary>
+    </key>
+    <key type="s" name="hydro-media-shape">
+      <default>"squircle"</default>
+      <summary>Media Shape</summary>
+    </key>
+    <key type="s" name="hydro-media-style">
+      <default>"simple"</default>
+      <summary>Media Style</summary>
     </key>
   </schema>
 </schemalist>

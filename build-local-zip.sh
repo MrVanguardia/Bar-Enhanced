@@ -17,7 +17,11 @@ zip -rq "../$ZIP_NAME" . \
     -x "*.po" \
     -x "*.pot" \
     -x "*/po/*" \
+    -x "*/po" \
+    -x "*/*/po/*" \
+    -x "*/*/po" \
     -x "*POTFILES.in" \
+    -x "*/*POTFILES.in" \
     -x "*.md" \
     -x "LICENSE" \
     -x "*.sh" \

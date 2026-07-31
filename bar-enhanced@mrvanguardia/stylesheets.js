@@ -174,6 +174,8 @@ function saveCheckboxSVG(type, obar, Me) {
 
 // Create Gtk Stylesheet string
 function createGtkCss(obar, gtk4) {
+    const mixColor = (base, tint, amount) => parseRGB(base + (tint - base) * amount);
+
     // Add hint of Accent color to Headerbar and Sidebar
     let hBarHint = obar._settings.get_int('headerbar-hint') / 100;
     let hBarGtk3Only = obar._settings.get_boolean('hbar-gtk3only');
@@ -188,7 +190,6 @@ function createGtkCss(obar, gtk4) {
     let vHintBd = vHint * 2 / 3;
     let wHintBd = wHint * 2 / 3;
     let enableGtkWindowCustom = obar._settings.get_boolean('enable-gtk-window-custom');
-    let gtkTransparency = enableGtkWindowCustom ? obar._settings.get_double('gtk-transparency') : 1.0;
     let trafficLightButtons = obar._settings.get_boolean('traffic-light');
     let popoverMenu = obar._settings.get_boolean('gtk-popover');
     let winBAlpha = obar._settings.get_double('winbalpha');
@@ -207,14 +208,14 @@ function createGtkCss(obar, gtk4) {
     let baseVBlue = colorScheme == 'prefer-dark' ? 42 : 245;
 
     let hscdColor = obar._settings.get_strv('hscd-color');
-    const hscdRed = enableGtkWindowCustom ? parseInt(parseFloat(hscdColor[0]) * 255) : baseBgRed;
-    const hscdGreen = enableGtkWindowCustom ? parseInt(parseFloat(hscdColor[1]) * 255) : baseBgGreen;
-    const hscdBlue = enableGtkWindowCustom ? parseInt(parseFloat(hscdColor[2]) * 255) : baseBgBlue;
+    const rawHscdRed = parseInt(parseFloat(hscdColor[0]) * 255);
+    const rawHscdGreen = parseInt(parseFloat(hscdColor[1]) * 255);
+    const rawHscdBlue = parseInt(parseFloat(hscdColor[2]) * 255);
 
     let vwColor = obar._settings.get_strv('vw-color');
-    const vwRed = enableGtkWindowCustom ? parseInt(parseFloat(vwColor[0]) * 255) : baseVRed;
-    const vwGreen = enableGtkWindowCustom ? parseInt(parseFloat(vwColor[1]) * 255) : baseVGreen;
-    const vwBlue = enableGtkWindowCustom ? parseInt(parseFloat(vwColor[2]) * 255) : baseVBlue;
+    const rawVwRed = parseInt(parseFloat(vwColor[0]) * 255);
+    const rawVwGreen = parseInt(parseFloat(vwColor[1]) * 255);
+    const rawVwBlue = parseInt(parseFloat(vwColor[2]) * 255);
 
     let winBColor = obar._settings.get_strv('winbcolor');
     const winBRed = parseInt(parseFloat(winBColor[0]) * 255);
@@ -250,6 +251,19 @@ function createGtkCss(obar, gtk4) {
         // sgrRed = sgrGreen = sgrBlue = 242; // Gradient end color for Sidebar
     }
 
+    const headerGlassMix = colorScheme == 'prefer-dark' ? 0.18 : 0.10;
+    const viewGlassMix = colorScheme == 'prefer-dark' ? 0.16 : 0.09;
+    const windowGlassMix = colorScheme == 'prefer-dark' ? 0.14 : 0.08;
+    const hscdRed = enableGtkWindowCustom ? mixColor(bgRed, rawHscdRed, headerGlassMix) : baseBgRed;
+    const hscdGreen = enableGtkWindowCustom ? mixColor(bgGreen, rawHscdGreen, headerGlassMix) : baseBgGreen;
+    const hscdBlue = enableGtkWindowCustom ? mixColor(bgBlue, rawHscdBlue, headerGlassMix) : baseBgBlue;
+    const vwRed = enableGtkWindowCustom ? mixColor(vRed, rawVwRed, viewGlassMix) : baseVRed;
+    const vwGreen = enableGtkWindowCustom ? mixColor(vGreen, rawVwGreen, viewGlassMix) : baseVGreen;
+    const vwBlue = enableGtkWindowCustom ? mixColor(vBlue, rawVwBlue, viewGlassMix) : baseVBlue;
+    const glassWindowRed = enableGtkWindowCustom ? mixColor(wRed, rawVwRed, windowGlassMix) : wRed;
+    const glassWindowGreen = enableGtkWindowCustom ? mixColor(wGreen, rawVwGreen, windowGlassMix) : wGreen;
+    const glassWindowBlue = enableGtkWindowCustom ? mixColor(wBlue, rawVwBlue, windowGlassMix) : wBlue;
+
     // Headerbar BG and Backdrop
     const hbgRed = enableGtkWindowCustom ? hscdRed : parseRGB(hBarHint * hscdRed + (1 - hBarHint) * bgRed);
     const hbgGreen = enableGtkWindowCustom ? hscdGreen : parseRGB(hBarHint * hscdGreen + (1 - hBarHint) * bgGreen);
@@ -258,36 +272,66 @@ function createGtkCss(obar, gtk4) {
     const hbdGreen = enableGtkWindowCustom ? hscdGreen : parseRGB(hBarHintBd * hscdGreen + (1 - hBarHintBd) * bgGreen);
     const hbdBlue = enableGtkWindowCustom ? hscdBlue : parseRGB(hBarHintBd * hscdBlue + (1 - hBarHintBd) * bgBlue);
     // Sidebar BG and Backdrop
-    const sbgRed = enableGtkWindowCustom ? hscdRed : parseRGB(sBarHint * hscdRed + (1 - sBarHint) * bgRed);
-    const sbgGreen = enableGtkWindowCustom ? hscdGreen : parseRGB(sBarHint * hscdGreen + (1 - sBarHint) * bgGreen);
-    const sbgBlue = enableGtkWindowCustom ? hscdBlue : parseRGB(sBarHint * hscdBlue + (1 - sBarHint) * bgBlue);
-    const sbdRed = enableGtkWindowCustom ? hscdRed : parseRGB(sBarHintBd * hscdRed + (1 - sBarHintBd) * bgRed);
-    const sbdGreen = enableGtkWindowCustom ? hscdGreen : parseRGB(sBarHintBd * hscdGreen + (1 - sBarHintBd) * bgGreen);
-    const sbdBlue = enableGtkWindowCustom ? hscdBlue : parseRGB(sBarHintBd * hscdBlue + (1 - sBarHintBd) * bgBlue);
+    const sbgRed = enableGtkWindowCustom ? mixColor(bgRed, rawVwRed, colorScheme == 'prefer-dark' ? 0.18 : 0.11) : parseRGB(sBarHint * hscdRed + (1 - sBarHint) * bgRed);
+    const sbgGreen = enableGtkWindowCustom ? mixColor(bgGreen, rawVwGreen, colorScheme == 'prefer-dark' ? 0.18 : 0.11) : parseRGB(sBarHint * hscdGreen + (1 - sBarHint) * bgGreen);
+    const sbgBlue = enableGtkWindowCustom ? mixColor(bgBlue, rawVwBlue, colorScheme == 'prefer-dark' ? 0.18 : 0.11) : parseRGB(sBarHint * hscdBlue + (1 - sBarHint) * bgBlue);
+    const sbdRed = enableGtkWindowCustom ? mixColor(bgRed, rawVwRed, colorScheme == 'prefer-dark' ? 0.14 : 0.08) : parseRGB(sBarHintBd * hscdRed + (1 - sBarHintBd) * bgRed);
+    const sbdGreen = enableGtkWindowCustom ? mixColor(bgGreen, rawVwGreen, colorScheme == 'prefer-dark' ? 0.14 : 0.08) : parseRGB(sBarHintBd * hscdGreen + (1 - sBarHintBd) * bgGreen);
+    const sbdBlue = enableGtkWindowCustom ? mixColor(bgBlue, rawVwBlue, colorScheme == 'prefer-dark' ? 0.14 : 0.08) : parseRGB(sBarHintBd * hscdBlue + (1 - sBarHintBd) * bgBlue);
     // Card/Dialog BG and Backdrop
-    const cbgRed = enableGtkWindowCustom ? hscdRed : parseRGB(cdHint * hscdRed + (1 - cdHint) * cdRed);
-    const cbgGreen = enableGtkWindowCustom ? hscdGreen : parseRGB(cdHint * hscdGreen + (1 - cdHint) * cdGreen);
-    const cbgBlue = enableGtkWindowCustom ? hscdBlue : parseRGB(cdHint * hscdBlue + (1 - cdHint) * cdBlue);
-    const cbdRed = enableGtkWindowCustom ? hscdRed : parseRGB(cdHintBd * hscdRed + (1 - cdHintBd) * cdRed);
-    const cbdGreen = enableGtkWindowCustom ? hscdGreen : parseRGB(cdHintBd * hscdGreen + (1 - cbdGreen) * cdGreen);
-    const cbdBlue = enableGtkWindowCustom ? hscdBlue : parseRGB(cdHintBd * hscdBlue + (1 - cbdBlue) * cdBlue);
+    const cbgRed = enableGtkWindowCustom ? mixColor(cdRed, rawVwRed, colorScheme == 'prefer-dark' ? 0.16 : 0.10) : parseRGB(cdHint * hscdRed + (1 - cdHint) * cdRed);
+    const cbgGreen = enableGtkWindowCustom ? mixColor(cdGreen, rawVwGreen, colorScheme == 'prefer-dark' ? 0.16 : 0.10) : parseRGB(cdHint * hscdGreen + (1 - cdHint) * cdGreen);
+    const cbgBlue = enableGtkWindowCustom ? mixColor(cdBlue, rawVwBlue, colorScheme == 'prefer-dark' ? 0.16 : 0.10) : parseRGB(cdHint * hscdBlue + (1 - cdHint) * cdBlue);
+    const cbdRed = enableGtkWindowCustom ? mixColor(cdRed, rawVwRed, colorScheme == 'prefer-dark' ? 0.12 : 0.07) : parseRGB(cdHintBd * hscdRed + (1 - cdHintBd) * cdRed);
+    const cbdGreen = enableGtkWindowCustom ? mixColor(cdGreen, rawVwGreen, colorScheme == 'prefer-dark' ? 0.12 : 0.07) : parseRGB(cdHintBd * hscdGreen + (1 - cdHintBd) * cdGreen);
+    const cbdBlue = enableGtkWindowCustom ? mixColor(cdBlue, rawVwBlue, colorScheme == 'prefer-dark' ? 0.12 : 0.07) : parseRGB(cdHintBd * hscdBlue + (1 - cdHintBd) * cdBlue);
     // View/Content-Pane BG and Backdrop
-    const vbgRed = enableGtkWindowCustom ? vwRed : parseRGB(vHint * vwRed + (1 - vHint) * vRed);
-    const vbgGreen = enableGtkWindowCustom ? vwGreen : parseRGB(vHint * vwGreen + (1 - vHint) * vGreen);
-    const vbgBlue = enableGtkWindowCustom ? vwBlue : parseRGB(vHint * vwBlue + (1 - vHint) * vBlue);
-    const vbdRed = enableGtkWindowCustom ? vwRed : parseRGB(vHintBd * vwRed + (1 - vHintBd) * vRed);
-    const vbdGreen = enableGtkWindowCustom ? vwGreen : parseRGB(vHintBd * vwGreen + (1 - vHintBd) * vGreen);
-    const vbdBlue = enableGtkWindowCustom ? vwBlue : parseRGB(vHintBd * vwBlue + (1 - vHintBd) * vBlue);
+    const vbgRed = enableGtkWindowCustom ? mixColor(vRed, rawVwRed, colorScheme == 'prefer-dark' ? 0.18 : 0.12) : parseRGB(vHint * vwRed + (1 - vHint) * vRed);
+    const vbgGreen = enableGtkWindowCustom ? mixColor(vGreen, rawVwGreen, colorScheme == 'prefer-dark' ? 0.18 : 0.12) : parseRGB(vHint * vwGreen + (1 - vHint) * vGreen);
+    const vbgBlue = enableGtkWindowCustom ? mixColor(vBlue, rawVwBlue, colorScheme == 'prefer-dark' ? 0.18 : 0.12) : parseRGB(vHint * vwBlue + (1 - vHint) * vBlue);
+    const vbdRed = enableGtkWindowCustom ? mixColor(vRed, rawVwRed, colorScheme == 'prefer-dark' ? 0.14 : 0.08) : parseRGB(vHintBd * vwRed + (1 - vHintBd) * vRed);
+    const vbdGreen = enableGtkWindowCustom ? mixColor(vGreen, rawVwGreen, colorScheme == 'prefer-dark' ? 0.14 : 0.08) : parseRGB(vHintBd * vwGreen + (1 - vHintBd) * vGreen);
+    const vbdBlue = enableGtkWindowCustom ? mixColor(vBlue, rawVwBlue, colorScheme == 'prefer-dark' ? 0.14 : 0.08) : parseRGB(vHintBd * vwBlue + (1 - vHintBd) * vBlue);
     // Window BG and Backdrop
-    const wbgRed = enableGtkWindowCustom ? vwRed : parseRGB(wHint * vwRed + (1 - wHint) * wRed);
-    const wbgGreen = enableGtkWindowCustom ? vwGreen : parseRGB(wHint * vwGreen + (1 - wHint) * wGreen);
-    const wbgBlue = enableGtkWindowCustom ? vwBlue : parseRGB(wHint * vwBlue + (1 - wHint) * wBlue);
-    const wbdRed = enableGtkWindowCustom ? vwRed : parseRGB(wHintBd * vwRed + (1 - wHintBd) * wRed);
-    const wbdGreen = enableGtkWindowCustom ? vwGreen : parseRGB(wHintBd * vwGreen + (1 - wHintBd) * wGreen);
-    const wbdBlue = enableGtkWindowCustom ? vwBlue : parseRGB(wHintBd * vwBlue + (1 - wHintBd) * wBlue);
+    const wbgRed = enableGtkWindowCustom ? glassWindowRed : parseRGB(wHint * vwRed + (1 - wHint) * wRed);
+    const wbgGreen = enableGtkWindowCustom ? glassWindowGreen : parseRGB(wHint * vwGreen + (1 - wHint) * wGreen);
+    const wbgBlue = enableGtkWindowCustom ? glassWindowBlue : parseRGB(wHint * vwBlue + (1 - wHint) * wBlue);
+    const wbdRed = enableGtkWindowCustom ? glassWindowRed : parseRGB(wHintBd * vwRed + (1 - wHintBd) * wRed);
+    const wbdGreen = enableGtkWindowCustom ? glassWindowGreen : parseRGB(wHintBd * vwGreen + (1 - wHintBd) * wGreen);
+    const wbdBlue = enableGtkWindowCustom ? glassWindowBlue : parseRGB(wHintBd * vwBlue + (1 - wHintBd) * wBlue);
     // View and Window Alpha (Clamped to prevent invisible windows)
-    const winAlpha = Math.max(0.45, gtkTransparency);
-    const viewAlpha = winAlpha == 1 ? 1 : winAlpha / 2;
+    const winAlpha = enableGtkWindowCustom
+        ? (colorScheme == 'prefer-dark' ? 0.11 : 0.08)
+        : 1.0;
+    // Keep the shell blur visible, but avoid flooding the whole app with translucency.
+    const winBackdropAlpha = enableGtkWindowCustom
+        ? (colorScheme == 'prefer-dark' ? 0.08 : 0.06)
+        : 1.0;
+    // GTK content surfaces stay translucent enough to reveal blur, but controls remain crisp.
+    const viewAlpha = enableGtkWindowCustom
+        ? (colorScheme == 'prefer-dark' ? 0.38 : 0.26)
+        : 1.0;
+    const viewBackdropAlpha = enableGtkWindowCustom
+        ? (colorScheme == 'prefer-dark' ? 0.28 : 0.18)
+        : 1.0;
+    const headerAlpha = enableGtkWindowCustom
+        ? (colorScheme == 'prefer-dark' ? 0.34 : 0.22)
+        : 1.0;
+    const headerBackdropAlpha = enableGtkWindowCustom
+        ? (colorScheme == 'prefer-dark' ? 0.24 : 0.16)
+        : 1.0;
+    const sidebarAlpha = enableGtkWindowCustom
+        ? (colorScheme == 'prefer-dark' ? 0.36 : 0.24)
+        : viewAlpha;
+    const sidebarBackdropAlpha = enableGtkWindowCustom
+        ? (colorScheme == 'prefer-dark' ? 0.26 : 0.18)
+        : viewBackdropAlpha;
+    const cardAlpha = enableGtkWindowCustom
+        ? (colorScheme == 'prefer-dark' ? 0.72 : 0.58)
+        : viewAlpha;
+    const cardBackdropAlpha = enableGtkWindowCustom
+        ? (colorScheme == 'prefer-dark' ? 0.60 : 0.48)
+        : viewBackdropAlpha;
     // Headerbar Buttons BG and Backdrop
     const hbbgRed = parseRGB(hBarHint * hscdRed + (1 - hBarHint) * hbRed);
     const hbbgGreen = parseRGB(hBarHint * hscdGreen + (1 - hBarHint) * hbGreen);
@@ -427,7 +471,7 @@ function createGtkCss(obar, gtk4) {
     /* This file is autogenerated. Do not edit. */
 
     @define-color window_bg_color rgba(${wbgRed}, ${wbgGreen}, ${wbgBlue}, ${winAlpha});
-    @define-color window_backdrop_color rgb(${wbdRed}, ${wbdGreen}, ${wbdBlue});
+    @define-color window_backdrop_color rgba(${wbdRed}, ${wbdGreen}, ${wbdBlue}, ${winBackdropAlpha});
     @define-color window_fg_color rgb(${wfgRed}, ${wfgGreen}, ${wfgBlue});
     window, window.csd, .background, .background.csd {
         background-color: @window_bg_color;
@@ -437,18 +481,22 @@ function createGtkCss(obar, gtk4) {
     }
 
     @define-color view_bg_color rgba(${vbgRed}, ${vbgGreen}, ${vbgBlue}, ${viewAlpha});
-    @define-color view_backdrop_color rgb(${vbdRed}, ${vbdGreen}, ${vbdBlue});
+    @define-color view_backdrop_color rgba(${vbdRed}, ${vbdGreen}, ${vbdBlue}, ${viewBackdropAlpha});
     @define-color view_fg_color rgb(${vfgRed}, ${vfgGreen}, ${vfgBlue});
-    .content-pane, .content-pane.view, .view,
+    .content-pane, .content-pane.view, .view, .background.view,
     navigationview, .navigation-view, .adw-navigation-view,
-    splitview, .sidebar, list, stack, clamp,
-    .preferences, .window-content {
+    splitview, leaflet, flap, tabview, tabbox, overlaysplitview,
+    .sidebar, list, stack, clamp, scrolledwindow, viewport,
+    .preferences, .window-content, .pane, .content, .toolbarview,
+    .navigation-page, .preferences-page, .preferences-window {
         background-color: @view_bg_color;
     }
-    .content-pane:backdrop, .content-pane.view:backdrop, .view:backdrop,
+    .content-pane:backdrop, .content-pane.view:backdrop, .view:backdrop, .background.view:backdrop,
     navigationview:backdrop, .navigation-view:backdrop, .adw-navigation-view:backdrop,
-    splitview:backdrop, .sidebar:backdrop, list:backdrop, stack:backdrop, clamp:backdrop,
-    .preferences:backdrop, .window-content:backdrop {
+    splitview:backdrop, leaflet:backdrop, flap:backdrop, tabview:backdrop, tabbox:backdrop, overlaysplitview:backdrop,
+    .sidebar:backdrop, list:backdrop, stack:backdrop, clamp:backdrop, scrolledwindow:backdrop, viewport:backdrop,
+    .preferences:backdrop, .window-content:backdrop, .pane:backdrop, .content:backdrop,
+    .toolbarview:backdrop, .navigation-page:backdrop, .preferences-page:backdrop, .preferences-window:backdrop {
         background-color: @view_backdrop_color;
     }
 
@@ -648,12 +696,12 @@ function createGtkCss(obar, gtk4) {
         `;
     }
 
-    if (hBarHint &&
+    if ((enableGtkWindowCustom || hBarHint) &&
         (!hBarGtk3Only || (hBarGtk3Only && !gtk4))) {
 
         gtkstring += `
-        @define-color headerbar_bg_color rgb(${hbgRed}, ${hbgGreen}, ${hbgBlue});
-        @define-color headerbar_backdrop_color rgb(${hbdRed}, ${hbdGreen}, ${hbdBlue});
+        @define-color headerbar_bg_color rgba(${hbgRed}, ${hbgGreen}, ${hbgBlue}, ${headerAlpha});
+        @define-color headerbar_backdrop_color rgba(${hbdRed}, ${hbdGreen}, ${hbdBlue}, ${headerBackdropAlpha});
         @define-color headerbar_fg_color rgba(${hfgRed}, ${hfgGreen}, ${hfgBlue}, 0.9);
 
         headerbar,
@@ -741,7 +789,7 @@ function createGtkCss(obar, gtk4) {
         }
     }
 
-    if (sBarHint) {
+    if (enableGtkWindowCustom || sBarHint) {
         let sbGradStyle =
             `background-image: linear-gradient(
             ${sBarGradient}, @sidebar_bg_color, rgba(${vbgRed},${vbgGreen},${vbgBlue},${viewAlpha})
@@ -752,12 +800,12 @@ function createGtkCss(obar, gtk4) {
         );`
 
         gtkstring += `
-        @define-color sidebar_bg_color rgba(${sbgRed}, ${sbgGreen}, ${sbgBlue}, ${viewAlpha});
-        @define-color sidebar_backdrop_color rgb(${sbdRed}, ${sbdGreen}, ${sbdBlue});
+        @define-color sidebar_bg_color rgba(${sbgRed}, ${sbgGreen}, ${sbgBlue}, ${sidebarAlpha});
+        @define-color sidebar_backdrop_color rgba(${sbdRed}, ${sbdGreen}, ${sbdBlue}, ${sidebarBackdropAlpha});
         @define-color sidebar_fg_color rgba(${sfgRed}, ${sfgGreen}, ${sfgBlue}, 0.9);
 
-        @define-color secondary_sidebar_bg_color rgba(${sbgRed}, ${sbgGreen}, ${sbgBlue}, ${0.9 * viewAlpha});
-        @define-color secondary_sidebar_backdrop_color rgb(${sbdRed}, ${sbdGreen}, ${sbdBlue});
+        @define-color secondary_sidebar_bg_color rgba(${sbgRed}, ${sbgGreen}, ${sbgBlue}, ${0.9 * sidebarAlpha});
+        @define-color secondary_sidebar_backdrop_color rgba(${sbdRed}, ${sbdGreen}, ${sbdBlue}, ${Math.max(0.2, sidebarBackdropAlpha)});
         @define-color secondary_sidebar_fg_color rgba(${sfgRed}, ${sfgGreen}, ${sfgBlue}, 0.9);
 
         .sidebar,
@@ -802,15 +850,45 @@ function createGtkCss(obar, gtk4) {
         }
     }
 
-    if (cdHint) {
+    if (enableGtkWindowCustom || cdHint) {
         gtkstring += `
-        @define-color card_bg_color rgba(${cbgRed}, ${cbgGreen}, ${cbgBlue}, ${viewAlpha});
-        @define-color card_backdrop_color rgb(${cbdRed}, ${cbdGreen}, ${cbdBlue});
+        @define-color card_bg_color rgba(${cbgRed}, ${cbgGreen}, ${cbgBlue}, ${cardAlpha});
+        @define-color card_backdrop_color rgba(${cbdRed}, ${cbdGreen}, ${cbdBlue}, ${cardBackdropAlpha});
         @define-color card_fg_color rgba(${cfgRed}, ${cfgGreen}, ${cfgBlue}, 0.9);
 
-        @define-color dialog_bg_color rgba(${cbgRed}, ${cbgGreen}, ${cbgBlue}, ${viewAlpha});
-        @define-color dialog_backdrop_color rgb(${cbdRed}, ${cbdGreen}, ${cbdBlue});
+        @define-color dialog_bg_color rgba(${cbgRed}, ${cbgGreen}, ${cbgBlue}, ${cardAlpha});
+        @define-color dialog_backdrop_color rgba(${cbdRed}, ${cbdGreen}, ${cbdBlue}, ${cardBackdropAlpha});
         @define-color dialog_fg_color rgba(${cfgRed}, ${cfgGreen}, ${cfgBlue}, 0.9);
+        `;
+    }
+
+    if (enableGtkWindowCustom) {
+        gtkstring += `
+        button,
+        entry,
+        spinbutton,
+        dropdown,
+        combobox,
+        menubutton,
+        searchbar > revealer > box,
+        toolbarview > box,
+        .card,
+        .boxed-list,
+        row,
+        listview row,
+        columnview row,
+        treeview.view,
+        textview,
+        textview > text,
+        scrolledwindow.frame {
+            background-image: none;
+            background-color: rgba(${cbgRed}, ${cbgGreen}, ${cbgBlue}, ${Math.min(0.88, cardAlpha + 0.12)});
+        }
+        row:selected,
+        listview row:selected,
+        columnview row:selected {
+            background-color: rgba(${accRed}, ${accGreen}, ${accBlue}, 0.28);
+        }
         `;
     }
 
@@ -953,54 +1031,22 @@ function createGtkCss(obar, gtk4) {
 
 // Save Gtk stylesheet to user config dir
 export function saveGtkCss(obar, caller) {
-    const importExport = obar._settings.get_boolean('import-export');
-    const pauseStyleReload = obar._settings.get_boolean('pause-reload');
-    if (importExport || pauseStyleReload)
-        return;
-
-    if (caller !== 'disable') {
-        if (obar._saveGtkCssTimeoutId) {
-            GLib.Source.remove(obar._saveGtkCssTimeoutId);
-            obar._saveGtkCssTimeoutId = null;
-        }
-        obar._saveGtkCssTimeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 400, () => {
-            obar._saveGtkCssTimeoutId = null;
-            if (obar && obar._settings) {
-                runSaveGtkCss(obar, caller);
-            }
-            return GLib.SOURCE_REMOVE;
-        });
-    } else {
-        if (obar._saveGtkCssTimeoutId) {
-            GLib.Source.remove(obar._saveGtkCssTimeoutId);
-            obar._saveGtkCssTimeoutId = null;
-        }
-        runSaveGtkCss(obar, caller);
-    }
+    // The user requested to completely remove GTK window customization because it was causing black blocks and visual bugs.
+    // We will now only perform cleanup of the old injected CSS files.
+    runCleanupGtkCss();
 }
 
-async function runSaveGtkCss(obar, caller) {
-    const applyGtk = obar._settings.get_boolean('apply-gtk');
+async function runCleanupGtkCss() {
     const configDir = GLib.get_user_config_dir();
     const gtk3Dir = Gio.File.new_for_path(`${configDir}/gtk-3.0`);
     const gtk4Dir = Gio.File.new_for_path(`${configDir}/gtk-4.0`);
-    [gtk3Dir, gtk4Dir].forEach(async (dir, idx) => {
-        // if (DEBUG) log(dir.get_path() +'\n' + gtkstring);
-
-        // Create dir if missing
-        if (!dir.query_exists(null)) {
-            try {
-                const file = Gio.File.new_for_path(dir.get_path());
-                file.make_directory_with_parents(null);
-            } catch (e) {
-                if (DEBUG) log('Error creating gtk config directory: ' + e);
-            }
-        }
-
+    
+    [gtk3Dir, gtk4Dir].forEach(async (dir) => {
         let file = Gio.File.new_for_path(dir.get_path() + '/gtk.css');
         let backup = Gio.File.new_for_path(dir.get_path() + '/gtk_backup_byBarEnhanced.css');
         const isGtk = file.query_exists(null);
         const isBackupBarEnhanced = backup.query_exists(null);
+        
         let isGtkBarEnhanced = false;
         if (isGtk) {
             try {
@@ -1008,74 +1054,24 @@ async function runSaveGtkCss(obar, caller) {
                 if (contents) {
                     const decoder = new TextDecoder('utf-8');
                     const contentsString = decoder.decode(contents);
-                    const contentsHeader = contentsString.split('\n')[1];
-                    if (contentsHeader)
-                        isGtkBarEnhanced = contentsHeader.includes('/*** Bar Enhanced GTK CSS ***/');
+                    isGtkBarEnhanced = contentsString.includes('/*** Bar Enhanced GTK CSS ***/');
                 }
-            }
-            catch (e) {
-                if (DEBUG) log('Error reading gtk.css: ' + e);
+            } catch (e) {
+                // Ignore
             }
         }
 
-        // Disable extension or turn off Gtk app style
-        if (caller == 'disable' || !applyGtk) {
-            if (isGtkBarEnhanced && isBackupBarEnhanced) {
-                try { // Restore backup
-                    backup.move_async(file, Gio.FileCopyFlags.OVERWRITE, null, null, null, null);
-                }
-                catch (e) {
-                    if (DEBUG) log('Error restoring gtk.css from backup: ' + e);
-                }
+        if (isGtkBarEnhanced && isBackupBarEnhanced) {
+            try { // Restore backup
+                backup.move_async(file, Gio.FileCopyFlags.OVERWRITE, null, null, null, null);
+            } catch (e) {
+                // Ignore
             }
-            else if (isGtkBarEnhanced) {
-                try {
-                    file.delete_async(null, null, null);
-                }
-                catch (e) {
-                    if (DEBUG) log('Error deleting BarEnhanced gtk.css: ' + e);
-                }
-            }
-        }
-        // Turn On Gtk: Backup if existing (non-barEnhanced) gtk.css and create new BarEnhanced gtk.css
-        else if (applyGtk) {
-            if (isGtk && !isGtkBarEnhanced) {
-                try {
-                    await file.move_async(backup, Gio.FileCopyFlags.OVERWRITE, null, null, null, null);
-                }
-                catch (e) {
-                    if (DEBUG) log('Error backing up gtk.css: ' + e);
-                }
-            }
-
-            // Create stylesheet string and save to css file
-            let gtkstring = createGtkCss(obar, idx);
-            let bytearray = new TextEncoder().encode(gtkstring);
-            try {
-                file.replace_async(null, false, Gio.FileCreateFlags.NONE, GLib.PRIORITY_DEFAULT, null, (obj, res) => {
-                    let stream = obj.replace_finish(res);
-                    stream.write_bytes_async(bytearray, GLib.PRIORITY_DEFAULT, null, (w_obj, w_res) => {
-                        stream.close(null);
-
-                        if (caller !== 'disable') {
-                            try {
-                                let intSettings = new Gio.Settings({ schema_id: 'org.gnome.desktop.interface' });
-                                let currentScheme = intSettings.get_string('color-scheme');
-                                let tempScheme = currentScheme === 'prefer-dark' ? 'default' : 'prefer-dark';
-                                intSettings.set_string('color-scheme', tempScheme);
-                                GLib.timeout_add(GLib.PRIORITY_DEFAULT, 50, () => {
-                                    intSettings.set_string('color-scheme', currentScheme);
-                                    return GLib.SOURCE_REMOVE;
-                                });
-                            } catch (e) {
-                                if (DEBUG) log('BarEnhanced: Error triggering GTK CSS theme reload:', e);
-                            }
-                        }
-                    });
-                });
-            }
-            catch (e) {
-                if (DEBUG) log("Failed to write gtk.css file: " + dir.get_path() + e);
+        } else if (isGtkBarEnhanced) {
+            try { // Delete the corrupted injected file
+                file.delete_async(null, null, null);
+            } catch (e) {
+                // Ignore
             }
         }
     });
@@ -1254,6 +1250,36 @@ function getStylesheet(obar, Me) {
     let warningColor = obar._settings.get_strv('warning-color');
     let successColor = obar._settings.get_strv('success-color');
     let destructColor = obar._settings.get_strv('destruct-color');
+
+    if (obar.immersiveColorOverride) {
+        let ic = obar.immersiveColorOverride;
+        let icStr = [(ic.r/255).toString(), (ic.g/255).toString(), (ic.b/255).toString()];
+        bgcolor = icStr;
+        bgcolor2 = icStr;
+        islandsColor = icStr;
+        borderColor = icStr;
+        mbgColor = icStr;
+        smbgColor = icStr;
+        msColor = icStr;
+        hColor = icStr;
+        mhColor = icStr;
+        qtileBorderColor = icStr;
+        bgcolorWMax = icStr;
+        dbgColor = icStr;
+        
+        let brightness = (ic.r * 299 + ic.g * 587 + ic.b * 114) / 1000;
+        if (brightness > 160) {
+            fgcolor = ['0', '0', '0'];
+            mfgColor = ['0', '0', '0'];
+            autofgBar = false;
+            autofgMenu = false;
+        } else {
+            fgcolor = ['1', '1', '1'];
+            mfgColor = ['1', '1', '1'];
+            autofgBar = false;
+            autofgMenu = false;
+        }
+    }
 
     // Gnome default colors
     // destructive Dark: c01c28 (192,28,40)    Light: e01b24 (224,27,36)
@@ -4111,6 +4137,31 @@ function getStylesheet(obar, Me) {
             margin-top: 8px;
         }
 
+        .stacked-notification-icon {
+            margin-right: -12px;
+        }
+
+        @keyframes notif-blink {
+            0% { opacity: 1.0; }
+            50% { opacity: 0.1; }
+            100% { opacity: 1.0; }
+        }
+
+        .notification-overflow-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 4px;
+            background-color: #ff3333;
+            margin-right: 0px;
+            margin-left: -2px;
+            margin-top: -2px;
+            box-shadow: 0 0 4px rgba(0,0,0,0.8);
+            animation-name: notif-blink;
+            animation-duration: 1.5s;
+            animation-iteration-count: infinite;
+        }
+
+
         /* Privacy Indicators Accent Color */
         .privacy-indicators-accent-color .privacy-indicator {
             color: rgba(${accRed}, ${accGreen}, ${accBlue}, 1.0) !important;
@@ -4496,6 +4547,55 @@ function getStylesheet(obar, Me) {
         .bar-enhanced-bt-progress-bg { height: 8px; width: 60px; background-color: rgba(${mfgred},${mfggreen},${mfgblue},0.2); border-radius: 4px; }
         .bar-enhanced-bt-progress-fill { height: 8px; background-color: rgba(46, 204, 113, 1.0); border-radius: 4px; }
         .bar-enhanced-bt-battery-text { font-size: 0.9em; color: rgba(${mfgred},${mfggreen},${mfgblue},0.8); width: 35px; text-align: right; }
+        `;
+
+        // Pixel Widgets (Android 15/16 Style)
+        stylesheet += `
+        .pixel-widget-box {
+            background-color: rgba(${mbgred},${mbggreen},${mbgblue},${mbgAlpha}) !important;
+            border: 1px solid rgba(${mbred},${mbgreen},${mbblue},${borderAlpha}) !important;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+            transition-duration: 200ms !important;
+            ${mbgAlpha < 1.0 ? '-st-background-blur: true;' : ''}
+        }
+        .pixel-widget-box:hover {
+            background-color: rgba(${mbgred},${mbggreen},${mbgblue},${Math.min(1.0, mbgAlpha + 0.1)}) !important;
+        }
+        .pixel-widget-medium {
+            border-radius: 28px !important;
+            padding: 16px !important;
+            margin: 8px !important;
+        }
+        .pixel-widget-capsule {
+            border-radius: 32px !important;
+            padding: 20px !important;
+            margin: 8px !important;
+        }
+        .pixel-widget-title {
+            font-size: 14pt !important;
+            font-weight: bold !important;
+            color: rgba(${mfgred},${mfggreen},${mfgblue},1.0) !important;
+        }
+        .pixel-widget-subtitle {
+            font-size: 11pt !important;
+            font-weight: normal !important;
+            color: rgba(${mfgred},${mfggreen},${mfgblue},0.7) !important;
+        }
+        .pixel-widget-time {
+            font-size: 28pt !important;
+            font-weight: 300 !important;
+            color: rgba(${mfgred},${mfggreen},${mfgblue},1.0) !important;
+            text-shadow: none !important;
+        }
+        .pixel-widget-temperature {
+            font-size: 26pt !important;
+            font-weight: 300 !important;
+            color: rgba(${mfgred},${mfggreen},${mfgblue},1.0) !important;
+        }
+        .pixel-widget-icon {
+            icon-size: 32px;
+            color: rgba(${mfgred},${mfggreen},${mfgblue},1.0) !important;
+        }
         `;
 
     return stylesheet;

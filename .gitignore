@@ -1,2 +1,5 @@
 *.zip
 .DS_Store
+graphify-out/
+.vscode/
+test-*.js
