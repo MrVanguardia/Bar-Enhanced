@@ -612,28 +612,43 @@ export default class BarEnhanced extends Extension {
             return [null, null];
         }
 
-        let pictureFile = Gio.File.new_for_uri(pictureUri);
+        let pictureFile;
+        try {
+            pictureFile = GLib.uri_parse_scheme(pictureUri)
+                ? Gio.File.new_for_uri(pictureUri)
+                : Gio.File.new_for_path(pictureUri);
+        } catch (e) {
+            log('BarEnhanced: Invalid background URI: ' + pictureUri);
+            return [null, null];
+        }
         let path = pictureFile.get_path();
 
-        if (!path) {
+        if (!path || !pictureFile.query_exists(null)) {
+            log('BarEnhanced: Background image is not a readable local file: ' + pictureUri);
             return [null, null];
         }
 
         try {
-            // Load the image into a pixbuf
-            let pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_size(path, 1000, -1);
+        // Limit both dimensions. Loading at a fixed width with an unlimited
+        // height made panoramas and tall wallpapers allocate huge JS pixel
+        // arrays in the Shell process, delaying or preventing a live palette
+        // update.
+        let pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(path, 1000, 1000, true);
         let nChannels = pixbuf.n_channels;
 
         // Get the width, height and pixel count of the image
         let width = pixbuf.get_width();
         let height = pixbuf.get_height();
         let pixelCount = width * height;
-        let offset = 1;
+        // Quantization does not need every source pixel. Keep extraction
+        // responsive even for a full 1000x1000 thumbnail.
+        const offset = Math.max(1, Math.floor(pixelCount / 120000));
 
         // Get the pixel data as an array of bytes
         let pixels = pixbuf.get_pixels();
 
         let pixelArray = [];
+        let colorfulPixelArray = [];
         // Loop through the pixels and get the rgba values
         for (let i = 0, index, r, g, b, a; i < pixelCount; i = i + offset) {
             index = i * nChannels;
@@ -649,6 +664,10 @@ export default class BarEnhanced extends Extension {
             if (typeof a === 'undefined' || a >= 125) {
                 if (!(r > 250 && g > 250 && b > 250) && !(r < 5 && g < 5 && b < 5)) {
                     pixelArray.push([r, g, b]);
+                    // If an image contains actual colour, neutral pixels should
+                    // not dominate every extracted palette slot.
+                    if (Math.max(r, g, b) - Math.min(r, g, b) >= 18)
+                        colorfulPixelArray.push([r, g, b]);
                     // pixelArray.push(Material.argbFromRgb(r, g, b));
                 }
             }
@@ -656,16 +675,25 @@ export default class BarEnhanced extends Extension {
         // log('pixelCount, pixelarray len ', pixelCount, pixelArray.length);
 
         // Generate color palette of 12 colors using Quantize to possibly get all colors for color-button
-        const cmap12 = Quantize.quantize(pixelArray, 12);
+        const sourcePixels = colorfulPixelArray.length >= 500
+            ? colorfulPixelArray
+            : pixelArray;
+        const cmap12 = Quantize.quantize(sourcePixels, 12);
         const palette12 = cmap12 ? cmap12.palette() : null;
         const count12 = cmap12 ? cmap12.colorCounts() : null;
 
-        // Sort palette12 and count12 arrays by count descending
-        palette12?.sort((a, b) => count12[palette12.indexOf(b)] - count12[palette12.indexOf(a)]);
-        count12?.sort((a, b) => b - a);
+        if (!palette12?.length || !count12?.length)
+            return [null, null];
+
+        // Keep each count associated with its original colour while sorting.
+        // Sorting the two arrays independently previously desynchronized them.
+        const ranked = palette12.map((color, index) => ({
+            color,
+            count: count12[index] || 0,
+        })).sort((a, b) => b.count - a.count);
         // log('palette12 sorted ', palette12, 'count12 sorted ', count12);
 
-        return [palette12, count12];
+        return [ranked.map(item => item.color), ranked.map(item => item.count)];
         } catch (e) {
             log('BarEnhanced: Error in getPaletteFromImage: ' + e);
             return [null, null];
@@ -685,7 +713,7 @@ export default class BarEnhanced extends Extension {
             darklight = (i == 0) ? 'dark' : 'light';
             pictureUri = uriArr[i];
 
-            if (pictureUri.endsWith('.xml') || pictureUri.endsWith('.XML'))
+            if (!pictureUri || pictureUri.endsWith('.xml') || pictureUri.endsWith('.XML'))
                 continue;
 
             // Generate palette only once if both URI are same
@@ -694,6 +722,11 @@ export default class BarEnhanced extends Extension {
             }
 
             // Save palette and counts to settings
+            if (!palette12?.length || !count12?.length) {
+                log('BarEnhanced: Palette extraction produced no usable colours for ' + pictureUri);
+                continue;
+            }
+
             let paletteIdx = 1;
             palette12?.forEach(color => {
                 // Save palette to dark/light settings
@@ -752,7 +785,11 @@ export default class BarEnhanced extends Extension {
         else object[name] = injection[name];
     }
 
-    unloadStylesheet() {
+    unloadStylesheet(invalidatePendingReload = true) {
+        if (invalidatePendingReload) {
+            this._styleReloadQueued = false;
+            this._styleReloadGeneration = (this._styleReloadGeneration || 0) + 1;
+        }
         if (this._reloadStyleTimeoutId) {
             GLib.Source.remove(this._reloadStyleTimeoutId);
             this._reloadStyleTimeoutId = null;
@@ -802,7 +839,9 @@ export default class BarEnhanced extends Extension {
 
     reloadStylesheet() {
         // Unload stylesheet
-        this.unloadStylesheet();
+        // This is a normal hot reload, not a disable. Do not invalidate a
+        // style write that is still finishing or a queued user change.
+        this.unloadStylesheet(false);
 
         // Load stylesheet
         this.loadStylesheet();
@@ -1147,6 +1186,10 @@ export default class BarEnhanced extends Extension {
             else {
                 this._settings.set_double('bgalpha', 0.9);
             }
+            // Some controls change bartype directly, without toggling
+            // trigger-reload as Preferences does. Apply the new layout in the
+            // Shell immediately instead of leaving the old CSS in place.
+            StyleSheets.reloadStyle(this, this);
         }
 
         // Overview style
@@ -1286,7 +1329,7 @@ export default class BarEnhanced extends Extension {
         let margin = this._settings.get_double('margin');
         let setBottomMargin = this._settings.get_boolean('set-bottom-margin');
         let bottomMargin = this._settings.get_double('bottom-margin');
-        if (position == 'Bottom' || key == 'position' || key == 'monitors-changed') {
+        if (position == 'Bottom' || key == 'position' || key == 'bartype' || key == 'monitors-changed') {
             // If WMax is On then ignore 'margin' changes (do not set position) else set position
             if (!(this.wmax && (key == 'margin' || key == 'bottom-margin')))
                 this.setPanelBoxPosition(position, height, margin, setBottomMargin, bottomMargin, borderWidth, bartype);
@@ -1523,6 +1566,12 @@ export default class BarEnhanced extends Extension {
             return;
 
         // Timeout to allow other extensions to move panel to another monitor
+        // Coalesce rapid fullscreen notifications so an older callback cannot
+        // reload styles after a newer fullscreen state (or after disable).
+        if (this.onFullScrTimeoutId) {
+            clearTimeout(this.onFullScrTimeoutId);
+            this.onFullScrTimeoutId = null;
+        }
         this.onFullScrTimeoutId =
             setTimeout(() => {
                 // Check if panelBox is on the monitor which is in fullscreen
@@ -1553,44 +1602,44 @@ export default class BarEnhanced extends Extension {
 
     updateBguri(obj, signal) {
         // log('update bguri called for signal ', signal);
-        // If the function is triggered multiple times in succession, ignore till timeout
+        // Coalesce rapid GNOME background notifications without dropping the
+        // most recent update.
         if (this.updatingBguri) {
-            // log('update bguri already in progress');
+            this._pendingBguriUpdate = true;
             return;
         }
         this.updatingBguri = true;
-        this.updatingBguriId = setTimeout(() => {
-            this.updatingBguri = false;
-            this.updatingBguriId = null;
-        }, 5000);
-        // log('==== Going ahead with bguri ====');
         let colorScheme = this._intSettings.get_string('color-scheme');
         if (colorScheme != this.colorScheme) {
             this.colorScheme = colorScheme;
-            return;
         }
 
         this.updateBguriId = setTimeout(() => {
-            let bguriDark = this._bgSettings.get_string('picture-uri-dark');
-            let bguriLight = this._bgSettings.get_string('picture-uri');
-            this._settings.set_string('dark-bguri', bguriDark);
-            this._settings.set_string('light-bguri', bguriLight);
+            try {
+                let bguriDark = this._bgSettings.get_string('picture-uri-dark');
+                let bguriLight = this._bgSettings.get_string('picture-uri');
+                this._settings.set_string('dark-bguri', bguriDark);
+                this._settings.set_string('light-bguri', bguriLight);
 
-            let bguriOld = this._settings.get_string('bguri');
-            let bguriNew;
-            if (colorScheme == 'prefer-dark')
-                bguriNew = bguriDark;
-            else
-                bguriNew = bguriLight;
-            this._settings.set_string('bguri', bguriNew);
+                let bguriOld = this._settings.get_string('bguri');
+                let bguriNew;
+                if (colorScheme == 'prefer-dark')
+                    bguriNew = bguriDark;
+                else
+                    bguriNew = bguriLight;
+                this._settings.set_string('bguri', bguriNew);
 
-            // Gnome45+: if bgnd changed with right click on image file,
-            // filepath (bguri) remains same, so manually call updatePanelStyle
-            if (bguriOld == bguriNew) {
-                // log('bguriOld == bguriNew - calling updatePanelStyle for bguri');
-                this.updatePanelStyle(this._settings, 'bguri');
+                // GNOME may emit a background change without changing its URI.
+                if (bguriOld == bguriNew)
+                    this.updatePanelStyle(this._settings, 'bguri');
+            } finally {
+                this.updateBguriId = null;
+                this.updatingBguri = false;
+                if (this._pendingBguriUpdate) {
+                    this._pendingBguriUpdate = false;
+                    this.updateBguri();
+                }
             }
-            this.updateBguriId = null;
         }, 200);
     }
 
@@ -1599,15 +1648,20 @@ export default class BarEnhanced extends Extension {
         const pMonitorIdx = Main.layoutManager.primaryIndex;
         // Disconnect previous signals to prevent duplication
         try {
-            if (Main.layoutManager._bgManagers[pMonitorIdx]) {
-                this._connections.disconnect(Main.layoutManager._bgManagers[pMonitorIdx], 'changed');
+            if (this._primaryBgManager) {
+                this._connections.disconnect(this._primaryBgManager, 'changed');
+                this._primaryBgManager = null;
             }
             this._connections.disconnect(this._bgSettings, 'changed::picture-uri');
             this._connections.disconnect(this._bgSettings, 'changed::picture-uri-dark');
             this._connections.disconnect(this._intSettings, 'changed::color-scheme');
         } catch(e) {}
 
-        this._connections.connect(Main.layoutManager._bgManagers[pMonitorIdx], 'changed', this.updateBguri.bind(this));
+        const bgManager = Main.layoutManager._bgManagers?.[pMonitorIdx];
+        if (bgManager) {
+            this._connections.connect(bgManager, 'changed', this.updateBguri.bind(this));
+            this._primaryBgManager = bgManager;
+        }
         this._connections.connect(this._bgSettings, 'changed::picture-uri', this.updateBguri.bind(this));
         this._connections.connect(this._bgSettings, 'changed::picture-uri-dark', this.updateBguri.bind(this));
         this._connections.connect(this._intSettings, 'changed::color-scheme', this.updatePanelStyle.bind(this), 'color-scheme');
@@ -1935,9 +1989,15 @@ export default class BarEnhanced extends Extension {
         this.styleUnloaded = false;
         this.updatingBguri = false;
         this.updatingBguriId = null;
+        this._pendingBguriUpdate = false;
         this.updateBguriId = null;
         this.postStartupId = null;
         this.disabling = false;
+        this._styleReloadInFlight = false;
+        this._styleReloadQueued = false;
+        this._styleReloadGeneration = 0;
+        this._pywalResumeTimer = null;
+        this._primaryBgManager = null;
 
         // Settings for desktop background image (set bg-uri as per color scheme)
         this._bgSettings = new Gio.Settings({ schema_id: 'org.gnome.desktop.background' });
@@ -2025,17 +2085,13 @@ export default class BarEnhanced extends Extension {
             this.connectPrimaryBGChanged();
             this.bgMgrTimeOutId = null;
         }, 2000);
-        // Set initial bguri as per color-scheme
-        const bguri = this._settings.get_string('bguri');
-        if (bguri == '')
-            this.updateBguri();
-        else {
-            // If mode was changed (by script/extension) while BarEnhanced was disabled (screen-lock),
-            // detect mode-change and update styles
-            let obarScheme = this._settings.get_string('color-scheme');
-            if (obarScheme != this.colorScheme)
-                this.onModeChange();
-        }
+        // Always refresh the current background on enable. A cached bguri used
+        // to skip palette extraction entirely after a disable/enable cycle.
+        this.updateBguri();
+        // If mode was changed while BarEnhanced was disabled, update styles too.
+        let obarScheme = this._settings.get_string('color-scheme');
+        if (obarScheme != this.colorScheme)
+            this.onModeChange();
 
         // Update calendar style on Calendar rebuild through fn injection
         const obar = this;
@@ -2108,6 +2164,9 @@ export default class BarEnhanced extends Extension {
                 if (this.hydroWidgetsManager) this.hydroWidgetsManager.applyMonetColors();
             }),
             this._settings.connect('changed::palette2', () => {
+                if (this.hydroWidgetsManager) this.hydroWidgetsManager.applyMonetColors();
+            }),
+            this._settings.connect('changed::palette3', () => {
                 if (this.hydroWidgetsManager) this.hydroWidgetsManager.applyMonetColors();
             })
         ];
@@ -2306,7 +2365,11 @@ export default class BarEnhanced extends Extension {
         if (!dateMenu || !dateMenu._clockDisplay) return;
         const rightSide = this._niSettings.get_boolean('right-side');
         const container = dateMenu.get_first_child();
-        container.remove_child(this._topbarNotification);
+        try {
+            container.remove_child(this._topbarNotification);
+        } catch (e) {
+            // The date-menu container can be rebuilt while a preference changes.
+        }
         if (rightSide) container.insert_child_above(this._topbarNotification, dateMenu._clockDisplay);
         else container.insert_child_below(this._topbarNotification, dateMenu._clockDisplay);
     }
@@ -2561,8 +2624,14 @@ export default class BarEnhanced extends Extension {
         }
         this._interfaceSettings = null;
 
-        if (this._walMonitor && this._walMonitorId > 0) {
-            this._walMonitor.disconnect(this._walMonitorId);
+        if (this._walMonitor) {
+            if (this._walMonitorId > 0) {
+                try {
+                    this._walMonitor.disconnect(this._walMonitorId);
+                } catch (e) {
+                    log(`BarEnhanced: Failed to disconnect Pywal monitor: ${e.message}`);
+                }
+            }
             this._walMonitor.cancel();
             this._walMonitor = null;
             this._walMonitorId = 0;
@@ -2610,6 +2679,8 @@ export default class BarEnhanced extends Extension {
             clearTimeout(this.updateBguriId);
             this.updateBguriId = null;
         }
+        this.updatingBguri = false;
+        this._pendingBguriUpdate = false;
         if (this.bgMgrTimeOutId > 0) {
             clearTimeout(this.bgMgrTimeOutId);
             this.bgMgrTimeOutId = null;
@@ -2621,6 +2692,10 @@ export default class BarEnhanced extends Extension {
         if (this.postStartupId > 0) {
             clearTimeout(this.postStartupId);
             this.postStartupId = null;
+        }
+        if (this._pywalResumeTimer) {
+            GLib.Source.remove(this._pywalResumeTimer);
+            this._pywalResumeTimer = null;
         }
         if (this.enableStyleTimeoutId > 0) {
             clearTimeout(this.enableStyleTimeoutId);
@@ -2905,7 +2980,12 @@ export default class BarEnhanced extends Extension {
                 this._settings.set_boolean('apply-gtk', true);
 
                 // Wait 150ms and trigger a full CSS compilation and reload!
-                GLib.timeout_add(GLib.PRIORITY_DEFAULT, 150, () => {
+                if (this._pywalResumeTimer)
+                    GLib.Source.remove(this._pywalResumeTimer);
+                this._pywalResumeTimer = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 150, () => {
+                    this._pywalResumeTimer = null;
+                    if (!this._settings)
+                        return GLib.SOURCE_REMOVE;
                     this._settings.set_boolean('pause-reload', false);
                     this._settings.set_boolean('trigger-reload', !this._settings.get_boolean('trigger-reload'));
                     return GLib.SOURCE_REMOVE;

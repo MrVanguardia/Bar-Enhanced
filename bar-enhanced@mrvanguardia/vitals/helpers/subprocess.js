@@ -14,6 +14,10 @@ export function SubProcess(command) {
 
 SubProcess.prototype.read = function(delimiter = '') {
     return new Promise((resolve, reject) => {
+        if (!this.stdout) {
+            reject(new Error('Subprocess output is no longer available'));
+            return;
+        }
         this.stdout.read_bytes_async(512, GLib.PRIORITY_LOW, null, function(stdout, res) {
             try {
                 let read_bytes = stdout.read_bytes_finish(res).get_data();
@@ -47,8 +51,16 @@ SubProcess.prototype.read = function(delimiter = '') {
 
 SubProcess.prototype.terminate = function() {
     const SIGINT = 2;
-    this.sub_process.send_signal(SIGINT);
+    if (!this.sub_process)
+        return;
+    try {
+        if (!this.sub_process.get_if_exited())
+            this.sub_process.send_signal(SIGINT);
+    } catch (e) {
+        // A child may exit between get_if_exited() and send_signal().
+    }
     this.sub_process = null;
-    this.stdout.close_async(GLib.PRIORITY_LOW, null, null);
+    if (this.stdout)
+        this.stdout.close_async(GLib.PRIORITY_LOW, null, null);
     this.stdout = null;
 };

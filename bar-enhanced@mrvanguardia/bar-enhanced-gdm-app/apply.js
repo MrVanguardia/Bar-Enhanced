@@ -24,6 +24,76 @@ function getRgbaColor(colorStr, opacityPercent) {
     return `rgba(0, 0, 0, ${opacity})`;
 }
 
+// Values emitted into the privileged shell script must never be interpolated
+// inside double quotes: file names may legally contain $, backticks, or spaces.
+function shellQuote(value) {
+    return `'${String(value ?? '').replace(/[\r\n]/g, '').replace(/'/g, "'\\''")}'`;
+}
+
+// Dconf values are written into a literal here-document. Escape them as
+// GVariant strings so a custom font/theme name cannot corrupt the whole GDM
+// database (or make a later compile fail after files were already installed).
+function dconfString(value) {
+    return String(value ?? '')
+        .replace(/\\/g, '\\\\')
+        .replace(/'/g, "\\'")
+        .replace(/[\r\n]/g, ' ');
+}
+
+function localPath(value) {
+    if (!value?.startsWith('file://'))
+        return value || '';
+
+    try {
+        return Gio.File.new_for_uri(value).get_path() || '';
+    } catch (e) {
+        log(`BarEnhanced: Invalid local file URI: ${e.message}`);
+        return '';
+    }
+}
+
+// GDM does not receive Bar Enhanced's runtime style classes. Keep a small,
+// class-free panel rule as a reliable base even if the live session stylesheet
+// has not been written yet or a Shell version changes one of its selectors.
+function getGdmPanelFallback(extension) {
+    try {
+        const settings = extension.getSettings('org.gnome.shell.extensions.bar-enhanced');
+        // Bar Enhanced stores its colour settings as normalized 0..1 values;
+        // GDM CSS expects 0..255 channels. Without this conversion every
+        // palette-derived GDM bar looked nearly black/grey.
+        const clamp = (value, maximum = 255) => Math.max(0, Math.min(maximum, Number(value) || 0));
+        const rgb = key => settings.get_strv(key).map(value => Math.round(clamp(value, 1) * 255));
+        const alpha = key => clamp(settings.get_double(key), 1);
+        const [bgR, bgG, bgB] = rgb('bgcolor');
+        const [fgR, fgG, fgB] = rgb('fgcolor');
+        const [borderR, borderG, borderB] = rgb('bcolor');
+        const type = settings.get_string('bartype');
+        const isFloating = ['Floating', 'Islands', 'Trilands'].includes(type);
+        const margin = Math.max(0, settings.get_double('margin'));
+        const radius = Math.max(0, settings.get_double('bradius'));
+        const height = Math.max(1, settings.get_double('height'));
+        const borderWidth = Math.max(0, settings.get_double('bwidth'));
+
+        return `
+/* GDM fallback for Bar Enhanced's top bar. */
+#panel {
+  background-color: rgba(${bgR}, ${bgG}, ${bgB}, ${alpha('bgalpha')}) !important;
+  color: rgba(${fgR}, ${fgG}, ${fgB}, ${alpha('fgalpha')}) !important;
+  height: ${height}px !important;
+  border: ${borderWidth}px solid rgba(${borderR}, ${borderG}, ${borderB}, ${alpha('balpha')}) !important;
+  ${isFloating ? `margin: ${margin}px !important; border-radius: ${radius}px !important;` : ''}
+}
+#panel .panel-button, #panel .panel-button StLabel, #panel .panel-button StIcon {
+  color: rgba(${fgR}, ${fgG}, ${fgB}, ${alpha('fgalpha')}) !important;
+  -icon-color: rgba(${fgR}, ${fgG}, ${fgB}, ${alpha('fgalpha')}) !important;
+}
+`;
+    } catch (e) {
+        log(`BarEnhanced: Could not generate GDM panel fallback: ${e.message}`);
+        return '';
+    }
+}
+
 function getCss(appearance, topBar, misc, extensionPath, extension) {
     let css = "\n\n/* 'Bar Enhanced GDM' Custom CSS */\n";
 
@@ -208,7 +278,7 @@ function getCss(appearance, topBar, misc, extensionPath, extension) {
         }
     }
 
-    return css + userTopBarStyle;
+    return css + userTopBarStyle + getGdmPanelFallback(extension);
 }
 
 export function generateDconfScript(extension) {
@@ -235,7 +305,7 @@ export function generateDconfScript(extension) {
         hasAccentColor = s.settings_schema.list_keys().includes('accent-color');
     } catch (e) {}
 
-    let accentColorLine = hasAccentColor ? `accent-color='${appearance.get_string('accent-color')}'` : '';
+    let accentColorLine = hasAccentColor ? `accent-color='${dconfString(appearance.get_string('accent-color'))}'` : '';
 
     let hasUserTheme = true;
     let userThemeDconf = '';
@@ -253,17 +323,17 @@ name='BarEnhancedGdm'
     let dconf = `[org/gnome/desktop/interface]
 ${accentColorLine}
 color-scheme='${appearance.get_boolean('light-mode') ? 'prefer-light' : 'prefer-dark'}'
-cursor-theme='${appearance.get_string('cursor-theme')}'
+cursor-theme='${dconfString(appearance.get_string('cursor-theme'))}'
 cursor-size=${pointing.get_int('cursor-size')}
-icon-theme='${appearance.get_string('icon-theme')}'
+icon-theme='${dconfString(appearance.get_string('icon-theme'))}'
 clock-show-date=${topBar.get_boolean('show-date')}
 clock-show-seconds=${topBar.get_boolean('show-seconds')}
 clock-show-weekday=${topBar.get_boolean('show-weekday')}
-clock-format='${topBar.get_string('time-format')}'
+clock-format='${dconfString(topBar.get_string('time-format'))}'
 show-battery-percentage=${topBar.get_boolean('show-battery-percentage')}
-font-name='${fonts.get_string('font')}'
-font-antialiasing='${fonts.get_string('antialiasing')}'
-font-hinting='${fonts.get_string('hinting')}'
+font-name='${dconfString(fonts.get_string('font'))}'
+font-antialiasing='${dconfString(fonts.get_string('antialiasing'))}'
+font-hinting='${dconfString(fonts.get_string('hinting'))}'
 text-scaling-factor=${formatDouble(fonts.get_double('scaling-factor'))}
 shell-theme='BarEnhancedGdm'
 
@@ -276,13 +346,13 @@ picture-options='zoom'
 always-show-universal-access-status=${a11y.get_boolean('always-show-accessibility-menu')}
 
 [org/gnome/desktop/sound]
-theme-name='${sound.get_string('theme')}'
+theme-name='${dconfString(sound.get_string('theme'))}'
 event-sounds=${sound.get_boolean('event-sounds')}
 input-feedback-sounds=${sound.get_boolean('feedback-sounds')}
 allow-volume-above-100-percent=${sound.get_boolean('over-amplification')}
 
 [org/gnome/desktop/peripherals/mouse]
-accel-profile='${mouse.get_string('pointer-acceleration')}'
+accel-profile='${dconfString(mouse.get_string('pointer-acceleration'))}'
 natural-scroll=${mouse.get_boolean('natural-scrolling')}
 speed=${formatDouble(mouse.get_double('speed'))}
 
@@ -295,7 +365,7 @@ disable-while-typing=${touchpad.get_boolean('disable-while-typing')}
 send-events='${!touchpad.get_boolean('enable') ? 'disabled' : (touchpad.get_boolean('disable-on-external-mouse') ? 'disabled-on-external-mouse' : 'enabled')}'
 
 [org/gnome/settings-daemon/plugins/power]
-power-button-action='${power.get_string('power-button-action')}'
+power-button-action='${dconfString(power.get_string('power-button-action'))}'
 power-saver-profile-on-low-battery=${power.get_boolean('auto-power-saver')}
 idle-dim=${power.get_boolean('dim-screen')}
 sleep-inactive-ac-type='${power.get_boolean('suspend-on-ac') ? 'suspend' : 'nothing'}'
@@ -316,40 +386,57 @@ night-light-schedule-to=${formatDouble(nightLight.get_int('end-hour') + nightLig
 [org/gnome/login-screen]
 logo='${misc.get_boolean('enable-logo') && misc.get_string('logo') ? 'file:///usr/share/backgrounds/bar-enhanced-gdm-logo' : ''}'
 banner-message-enable=${misc.get_boolean('enable-welcome-message')}
-banner-message-text='${misc.get_string('welcome-message').replace(/'/g, "\\'")}'
+banner-message-text='${dconfString(misc.get_string('welcome-message'))}'
 disable-restart-buttons=${misc.get_boolean('disable-restart-buttons')}
 disable-user-list=${misc.get_boolean('disable-user-list')}
 ${userThemeDconf}`;
 
     let customCss = getCss(appearance, topBar, misc, extension.path, extension);
     let rawBgImage = appearance.get_string('background-image');
-    let safeBgPath = rawBgImage.startsWith('file://') ? decodeURIComponent(rawBgImage.substring(7)) : rawBgImage;
-    let bgImage = safeBgPath.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+    let bgImage = shellQuote(localPath(rawBgImage));
     let bgType = appearance.get_string('background-type');
     let blurBg = appearance.get_boolean('blur-background');
     let blurBgValue = appearance.get_int('blur-background-value');
 
     let rawLogoImage = misc.get_string('logo');
-    let safeLogoPath = rawLogoImage.startsWith('file://') ? decodeURIComponent(rawLogoImage.substring(7)) : rawLogoImage;
-    let logoImage = safeLogoPath.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+    let logoImage = shellQuote(localPath(rawLogoImage));
     let enableLogo = misc.get_boolean('enable-logo');
 
     return `#!/bin/bash
+set -eu
+TEMP_DIR=$(mktemp -d)
+trap 'rm -rf "$TEMP_DIR"' EXIT
+# GDM needs the system copy of User Themes to load the generated shell theme.
+# Do this check before changing dconf so a missing dependency cannot leave a
+# partially-applied login-screen configuration behind.  Installing packages
+# automatically from a privileged settings action is intentionally avoided.
+UT_DIR="/usr/share/gnome-shell/extensions/user-theme@gnome-shell-extensions.gcampax.github.com"
+UT_META="$UT_DIR/metadata.json"
+if [ ! -f "$UT_META" ]; then
+    echo "Bar Enhanced GDM requires the system User Themes extension." >&2
+    echo "Install the distribution package that provides user-theme, then apply again." >&2
+    exit 1
+fi
 # Write settings
-cat << 'EOF' > /tmp/95-gdm-settings
+cat << 'EOF' > "$TEMP_DIR/95-gdm-settings"
 ${dconf}
 EOF
 
 # Profile configuration
-cat << 'EOF' > /tmp/gdm-profile
+cat << 'EOF' > "$TEMP_DIR/gdm-profile"
 user-db:user
 system-db:gdm
 file-db:/usr/share/gdm/greeter-dconf-defaults
 EOF
 
 # Install settings to GDM database (99- prefix ensures it overrides all other system profiles)
-install -Dm644 /tmp/95-gdm-settings -T /etc/dconf/db/gdm.d/99-bar-enhanced-gdm
-install -Dm644 /tmp/gdm-profile -T /etc/dconf/profile/gdm
+install -Dm644 "$TEMP_DIR/95-gdm-settings" -T /etc/dconf/db/gdm.d/99-bar-enhanced-gdm
+# Preserve a pre-existing GDM profile exactly once so Restore can return the
+# machine to the state it had before Bar Enhanced was applied.
+if [ -f /etc/dconf/profile/gdm ] && [ ! -f /etc/dconf/profile/gdm.bar-enhanced-backup ]; then
+    install -Dm644 /etc/dconf/profile/gdm /etc/dconf/profile/gdm.bar-enhanced-backup
+fi
+install -Dm644 "$TEMP_DIR/gdm-profile" -T /etc/dconf/profile/gdm
 
 # Cleanup any obsolete configuration files to prevent conflicts
 rm -f /etc/dconf/db/gdm.d/95-gdm-settings
@@ -357,24 +444,12 @@ rm -f /etc/dconf/db/gdm.d/01-bar-enhanced
 # Compile GDM database directly to avoid broadcasting D-Bus signals that crash active GNOME sessions
 dconf compile /etc/dconf/db/gdm /etc/dconf/db/gdm.d
 
-# ----------------- ENSURE USER-THEME IS INSTALLED SYSTEM-WIDE -----------------
-UT_DIR="/usr/share/gnome-shell/extensions/user-theme@gnome-shell-extensions.gcampax.github.com"
-if [ ! -d "$UT_DIR" ]; then
-    echo "user-theme extension not found. Installing..."
-    if command -v dnf &>/dev/null; then
-        dnf install -y gnome-shell-extension-user-theme
-    elif command -v apt-get &>/dev/null; then
-        apt-get update && apt-get install -y gnome-shell-extension-user-theme
-    elif command -v pacman &>/dev/null; then
-        pacman -Sy --noconfirm gnome-shell-extensions
-    fi
-fi
-
 # Patch user-theme extension to support GDM mode
-UT_META="$UT_DIR/metadata.json"
-if [ -f "$UT_META" ]; then
-    python3 -c "import json; f='$UT_META'; d=json.load(open(f)); d['session-modes']=list(set(d.get('session-modes',[])+['gdm','unlock-dialog'])); json.dump(d,open(f,'w'),indent=2)"
+UT_META_BACKUP="$UT_META.bar-enhanced-backup"
+if [ ! -f "$UT_META_BACKUP" ]; then
+    install -Dm644 "$UT_META" "$UT_META_BACKUP"
 fi
+python3 -c "import json; f='$UT_META'; d=json.load(open(f)); modes=d.get('session-modes',[]); d['session-modes']=modes+[m for m in ('gdm','unlock-dialog') if m not in modes]; json.dump(d,open(f,'w'),indent=2)"
 
 # ----------------- CUSTOM THEME GENERATION -----------------
 THEME_DIR="/usr/share/themes/BarEnhancedGdm/gnome-shell"
@@ -385,7 +460,7 @@ mkdir -p "$THEME_DIR"
 mkdir -p /usr/share/backgrounds
 
 # Apply background image if present and type is image (using install -Dm644 to set correct SELinux context)
-BG_IMG="${bgImage}"
+BG_IMG=${bgImage}
 BG_TYPE="${bgType}"
 BLUR_BG="${blurBg}"
 BLUR_RADIUS="${blurBgValue}"
@@ -412,7 +487,7 @@ fi
 
 # Apply logo if enabled (using install -Dm644 to set correct SELinux context)
 ENABLE_LOGO="${enableLogo}"
-LOGO_IMG="${logoImage}"
+LOGO_IMG=${logoImage}
 if [ "$ENABLE_LOGO" = "true" ] && [ -n "$LOGO_IMG" ] && [ -f "$LOGO_IMG" ]; then
     install -Dm644 "$LOGO_IMG" /usr/share/backgrounds/bar-enhanced-gdm-logo
 else

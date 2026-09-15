@@ -45,40 +45,49 @@ const HydroSquircle = GObject.registerClass(
             this.settingsPrefix = settingsPrefix;
             this._settings = extension ? extension._settings : null;
 
-            // Make it draggable
+            // Drag through the full Shell stage. Actor-local motion stops as
+            // soon as the cursor leaves a widget, making placement unreliable.
             try {
                 this._isDragging = false;
-                let dragOffsetX = 0;
-                let dragOffsetY = 0;
+                this._dragOffsetX = 0;
+                this._dragOffsetY = 0;
+                this._dragStageId = 0;
+                this._widthRecenterId = 0;
 
                 this.connect('button-press-event', (actor, event) => {
+                    if (event.get_button() !== 1)
+                        return Clutter.EVENT_PROPAGATE;
+
+                    // Events target labels, artwork and layout boxes rather
+                    // than this outer actor.  Permit dragging from all of
+                    // that content, while leaving media controls clickable.
+                    for (let source = event.get_source(); source && source !== this; source = source.get_parent()) {
+                        if (source instanceof St.Button)
+                            return Clutter.EVENT_PROPAGATE;
+                    }
                     this._isDragging = true;
                     let [stageX, stageY] = event.get_coords();
                     let [actorX, actorY] = this.get_transformed_position();
-                    dragOffsetX = stageX - actorX;
-                    dragOffsetY = stageY - actorY;
-                    return Clutter.EVENT_PROPAGATE;
-                });
-
-                this.connect('button-release-event', (actor, event) => {
-                    if (this._isDragging) {
-                        this._isDragging = false;
-                        if (this._settings && this.settingsPrefix) {
-                            let [currentX, currentY] = this.get_position();
-                            this._settings.set_double(`${this.settingsPrefix}-x`, currentX);
-                            this._settings.set_double(`${this.settingsPrefix}-y`, currentY);
+                    this._dragOffsetX = stageX - actorX;
+                    this._dragOffsetY = stageY - actorY;
+                    this._dragStageId = global.stage.connect('captured-event', (_stage, capturedEvent) => {
+                        if (!this._isDragging)
+                            return Clutter.EVENT_PROPAGATE;
+                        const eventType = capturedEvent.type();
+                        if (eventType === Clutter.EventType.MOTION) {
+                            const [x, y] = capturedEvent.get_coords();
+                            const parent = this.get_parent();
+                            const [parentX, parentY] = parent ? parent.get_transformed_position() : [0, 0];
+                            this.set_position(x - this._dragOffsetX - parentX, y - this._dragOffsetY - parentY);
+                            return Clutter.EVENT_STOP;
                         }
-                    }
-                    return Clutter.EVENT_PROPAGATE;
-                });
-
-                this.connect('motion-event', (actor, event) => {
-                    if (this._isDragging) {
-                        let [stageX, stageY] = event.get_coords();
-                        this.set_position(stageX - dragOffsetX, stageY - dragOffsetY);
-                        return Clutter.EVENT_STOP;
-                    }
-                    return Clutter.EVENT_PROPAGATE;
+                        if (eventType === Clutter.EventType.BUTTON_RELEASE) {
+                            this._finishDrag();
+                            return Clutter.EVENT_STOP;
+                        }
+                        return Clutter.EVENT_PROPAGATE;
+                    });
+                    return Clutter.EVENT_STOP;
                 });
                 
                 // Auto-center on width changes (so dynamic width widgets grow from their center)
@@ -88,9 +97,12 @@ const HydroSquircle = GObject.registerClass(
                     if (lastWidth > 0 && currentWidth > 0 && currentWidth !== lastWidth && !this._isDragging) {
                         let diff = currentWidth - lastWidth;
                         let newX = this.x - (diff / 2);
-                        GLib.idle_add(GLib.PRIORITY_DEFAULT, () => {
+                        if (this._widthRecenterId)
+                            GLib.Source.remove(this._widthRecenterId);
+                        this._widthRecenterId = GLib.idle_add(GLib.PRIORITY_DEFAULT, () => {
+                            this._widthRecenterId = 0;
                             try {
-                                if (this.is_destroyed && this.is_destroyed()) return GLib.SOURCE_REMOVE;
+                                if (this.is_finalized && this.is_finalized()) return GLib.SOURCE_REMOVE;
                                 this.set_x(newX);
                                 if (this._settings && this.settingsPrefix) {
                                     this._settings.set_double(`${this.settingsPrefix}-x`, newX);
@@ -170,7 +182,25 @@ const HydroSquircle = GObject.registerClass(
             const size = this._settings.get_double(`${this.settingsPrefix}-size`);
             this.set_size(size, size);
             if (this._lastPrimary && this._lastBg) {
-                this.updateColors(this._lastPrimary, this._lastBg);
+                // Keep the complete Monet triplet when a live setting change
+                // reapplies a widget.  Omitting the accent here meant some
+                // variants stayed partially styled until the next palette run.
+                this.updateColors(this._lastPrimary, this._lastBg, this._lastSecondary);
+            }
+        }
+
+        _finishDrag() {
+            if (!this._isDragging)
+                return;
+            this._isDragging = false;
+            if (this._dragStageId) {
+                try { global.stage.disconnect(this._dragStageId); } catch (e) {}
+                this._dragStageId = 0;
+            }
+            if (this._settings && this.settingsPrefix) {
+                const [x, y] = this.get_position();
+                this._settings.set_double(`${this.settingsPrefix}-x`, x);
+                this._settings.set_double(`${this.settingsPrefix}-y`, y);
             }
         }
 
@@ -211,6 +241,11 @@ const HydroSquircle = GObject.registerClass(
         }
 
         destroy() {
+            this._finishDrag();
+            if (this._widthRecenterId) {
+                GLib.Source.remove(this._widthRecenterId);
+                this._widthRecenterId = 0;
+            }
             if (this._settingsSignals && this._settings) {
                 this._settingsSignals.forEach(id => this._settings.disconnect(id));
                 this._settingsSignals = null;
@@ -345,6 +380,23 @@ const HydroClockWidget = GObject.registerClass(
         }
 
         _parseColor(colorStr) {
+            if (typeof colorStr !== 'string')
+                return [1, 1, 1, 1];
+
+            const hex = colorStr.trim().match(/^#([0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/i);
+            if (hex) {
+                let value = hex[1];
+                if (value.length === 3 || value.length === 4)
+                    value = [...value].map(component => component + component).join('');
+                const hasAlpha = value.length === 8;
+                return [
+                    parseInt(value.slice(0, 2), 16) / 255,
+                    parseInt(value.slice(2, 4), 16) / 255,
+                    parseInt(value.slice(4, 6), 16) / 255,
+                    hasAlpha ? parseInt(value.slice(6, 8), 16) / 255 : 1,
+                ];
+            }
+
             let m = colorStr.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/);
             if (m) {
                 return [parseInt(m[1]) / 255, parseInt(m[2]) / 255, parseInt(m[3]) / 255, m[4] !== undefined ? parseFloat(m[4]) : 1.0];
@@ -373,6 +425,18 @@ const HydroClockWidget = GObject.registerClass(
 
             // 1. Draw Background Shape
             cr.newPath();
+            const roundedRect = (x, y, w, h, radius) => {
+                const r = Math.min(radius, w / 2, h / 2);
+                cr.moveTo(x + r, y);
+                cr.lineTo(x + w - r, y);
+                cr.arc(x + w - r, y + r, r, -Math.PI / 2, 0);
+                cr.lineTo(x + w, y + h - r);
+                cr.arc(x + w - r, y + h - r, r, 0, Math.PI / 2);
+                cr.lineTo(x + r, y + h);
+                cr.arc(x + r, y + h - r, r, Math.PI / 2, Math.PI);
+                cr.lineTo(x, y + r);
+                cr.arc(x + r, y + r, r, Math.PI, Math.PI * 1.5);
+            };
             if (shape === 'scallop') {
                 let numPetals = 12;
                 let petalDepth = R * 0.08;
@@ -384,9 +448,21 @@ const HydroClockWidget = GObject.registerClass(
                 }
             } else if (shape === 'circle') {
                 cr.arc(0, 0, R, 0, Math.PI * 2);
+            } else if (shape === 'pill') {
+                // A true horizontal capsule, rather than the old circular
+                // fallback, keeps the selected shape consistent with the
+                // rest of the Hydro widgets.
+                const height = R * 1.25;
+                roundedRect(-R, -height / 2, R * 2, height, height / 2);
+            } else if (shape === 'leaf') {
+                // Organic asymmetric leaf with the point toward the top.
+                cr.moveTo(0, -R);
+                cr.curveTo(R * 0.95, -R * 0.55, R * 1.05, R * 0.35, 0, R);
+                cr.curveTo(-R * 0.85, R * 0.30, -R * 1.05, -R * 0.48, 0, -R);
             } else {
-                // Generic circle fallback for pill/leaf in analog mode for now
-                cr.arc(0, 0, R, 0, Math.PI * 2);
+                // Squircle: a rounded square with a larger-than-standard
+                // corner radius, matching the default Hydro silhouette.
+                roundedRect(-R, -R, R * 2, R * 2, R * 0.38);
             }
             cr.closePath();
 
@@ -608,11 +684,12 @@ const HydroWeatherWidget = GObject.registerClass(
         }
 
         _updateWeather() {
+            if (!this._weatherClient)
+                return;
             let info = this._weatherClient.info;
             if ((this._weatherClient.hasLocation !== undefined && !this._weatherClient.hasLocation) || 
                 !info || (info.is_valid && !info.is_valid())) {
-                this._tempLabel.set_text('--°');
-                this._detLocation.set_text('Location Off');
+                this._setWeatherUnavailable();
                 return;
             }
 
@@ -659,11 +736,32 @@ const HydroWeatherWidget = GObject.registerClass(
             this._pxDesc.set_text(desc || 'Clear');
         }
 
+        _setWeatherUnavailable() {
+            const iconName = 'weather-severe-alert-symbolic';
+            const temperature = '--°';
+            const location = 'Ubicación no disponible';
+            const description = 'Sin datos meteorológicos';
+
+            this._weatherIcon.icon_name = iconName;
+            this._tempLabel.set_text(temperature);
+            this._detIcon.icon_name = iconName;
+            this._detLocation.set_text(location);
+            this._detTemp.set_text(temperature);
+            this._detDesc.set_text(description);
+            this._minIcon.icon_name = iconName;
+            this._minTemp.set_text(temperature);
+            this._pxIcon.icon_name = iconName;
+            this._pxTemp.set_text(temperature);
+            this._pxLocation.set_text(location);
+            this._pxDesc.set_text(description);
+        }
+
         destroy() {
-            if (this._weatherUpdateId) {
+            if (this._weatherClient && this._weatherUpdateId) {
                 this._weatherClient.disconnect(this._weatherUpdateId);
                 this._weatherUpdateId = null;
             }
+            this._weatherClient = null;
             super.destroy();
         }
 
@@ -831,22 +929,39 @@ const HydroCalendarWidget = GObject.registerClass(
         _syncSettings() {
             super._syncSettings();
             let size = this._settings ? this._settings.get_double('hydro-calendar-size') : 220;
+            const scale = size / 220.0;
+            const style = this._settings ? this._settings.get_string('hydro-calendar-style') : 'simple';
             this.set_size(Math.round(size * 1.8), size);
+            this._mainBox.style = `spacing: ${Math.max(3, Math.round(6 * scale))}px; width: 100%;`;
+            this._topRow.style = `spacing: ${Math.max(6, Math.round(12 * scale))}px;`;
+            this._weatherBox.style = `spacing: ${Math.max(3, Math.round(6 * scale))}px;`;
+            this._dateLabel.style = `font-size: ${Math.max(12, Math.round(22 * scale))}px; font-weight: 500; font-family: sans-serif;`;
+            this._tempLabel.style = `font-size: ${Math.max(12, Math.round(22 * scale))}px; font-weight: 500; font-family: sans-serif;`;
+            this._weatherIcon.icon_size = Math.max(12, Math.round(22 * scale));
+            this._eventLabel.style = `font-size: ${Math.max(10, Math.round(16 * scale))}px; font-weight: 400; opacity: 0.8;`;
+            if (style === 'card')
+                this._mainBox.x_align = Clutter.ActorAlign.CENTER;
+            else
+                this._mainBox.x_align = Clutter.ActorAlign.START;
         }
 
         updateColors(primary, background, secondary) {
-            super.updateColors(primary, background, secondary);
             let size = this._settings ? this._settings.get_double('hydro-calendar-size') : 220;
             const scale = size / 220.0;
-            // Pixel At a Glance is typically transparent without background, just text shadow for readability
-            this.style = `
-                background-color: transparent;
-                color: #ffffff;
-                text-shadow: 0px 1px 3px rgba(0,0,0,0.6);
-                border-radius: 0px;
-                box-shadow: none;
-                padding: ${Math.round(20 * scale)}px;
-            `;
+            const style = this._settings ? this._settings.get_string('hydro-calendar-style') : 'simple';
+            if (style === 'card') {
+                super.updateColors(primary, background, secondary);
+            } else {
+                // At a Glance remains legible over wallpaper without forcing a card.
+                this.style = `
+                    background-color: transparent;
+                    color: ${primary};
+                    text-shadow: 0px 1px 3px rgba(0,0,0,0.6);
+                    border-radius: 0px;
+                    box-shadow: none;
+                    padding: ${Math.round(20 * scale)}px;
+                `;
+            }
         }
     }
 );
@@ -900,7 +1015,7 @@ const HydroBatteryWidget = GObject.registerClass(
         _updateBatteries() {
             try {
                 let devices = this._upowerClient.get_devices();
-                let percentage = 100;
+                let percentage = null;
                 let isCharging = false;
                 
                 for (let i = 0; i < devices.length; i++) {
@@ -911,8 +1026,19 @@ const HydroBatteryWidget = GObject.registerClass(
                         break;
                     }
                 }
+                if (percentage === null) {
+                    this._sysLabel.set_text('--');
+                    this._sysIcon.icon_name = 'battery-missing-symbolic';
+                    this._statusText.set_text('Sin batería');
+                    return;
+                }
                 this._sysLabel.set_text(`${percentage}%`);
-                this._sysIcon.icon_name = isCharging ? 'battery-level-100-charging-symbolic' : 'battery-good-symbolic';
+                // Avoid a permanently "good" glyph: expose the actual power
+                // level so the widget remains useful at a glance.
+                const level = Math.max(0, Math.min(100, Math.round(percentage / 10) * 10));
+                this._sysIcon.icon_name = isCharging
+                    ? `battery-level-${level}-charging-symbolic`
+                    : `battery-level-${level}-symbolic`;
                 this._statusText.set_text(isCharging ? 'Cargando' : 'Batería');
             } catch (e) {}
         }
@@ -927,16 +1053,36 @@ const HydroBatteryWidget = GObject.registerClass(
         }
 
         updateColors(primary, background, secondary) {
-            super.updateColors(primary, background, secondary);
             let size = this._settings ? this._settings.get_double('hydro-battery-size') : 220;
             const scale = size / 220.0;
-            this.style = `
-                background-color: ${background};
-                color: ${primary};
-                border-radius: ${Math.round(28 * scale)}px;
-                box-shadow: 0 ${Math.round(4 * scale)}px ${Math.round(12 * scale)}px rgba(0,0,0,0.15);
-                padding: ${Math.round(20 * scale)}px;
-            `;
+            const style = this._settings ? this._settings.get_string('hydro-battery-style') : 'simple';
+            if (style === 'minimal') {
+                this.style = `
+                    background-color: transparent;
+                    color: ${primary};
+                    text-shadow: 0px 1px 3px rgba(0,0,0,0.55);
+                    border-radius: 0px;
+                    box-shadow: none;
+                    padding: ${Math.round(8 * scale)}px;
+                `;
+            } else {
+                super.updateColors(primary, background, secondary);
+            }
+        }
+
+        _syncSettings() {
+            super._syncSettings();
+            const size = this._settings ? this._settings.get_double('hydro-battery-size') : 220;
+            const scale = size / 220.0;
+            const style = this._settings ? this._settings.get_string('hydro-battery-style') : 'simple';
+            const minimal = style === 'minimal';
+            this._mainBox.vertical = !minimal;
+            this._mainBox.style = `spacing: ${Math.max(4, Math.round(8 * scale))}px; width: 100%;`;
+            this._sysLabel.style = `font-size: ${Math.max(20, Math.round((minimal ? 34 : 48) * scale))}px; font-weight: ${minimal ? 500 : 300}; font-family: sans-serif; letter-spacing: -1px;`;
+            this._sysIcon.icon_size = Math.max(14, Math.round((minimal ? 24 : 20) * scale));
+            this._statusText.style = `font-size: ${Math.max(10, Math.round(14 * scale))}px; font-weight: 500; opacity: 0.8;`;
+            this._statusText.visible = !minimal;
+            this.set_size(minimal ? Math.round(size * 1.25) : size, minimal ? Math.round(size * 0.42) : size);
         }
     }
 );
@@ -1290,6 +1436,13 @@ const HydroMediaWidget = GObject.registerClass(
             });
         }
 
+        _stopRotation() {
+            if (!this._rotationTimer)
+                return;
+            GLib.Source.remove(this._rotationTimer);
+            this._rotationTimer = null;
+        }
+
         updateDisplay(title, artist, artUrl, playbackStatus, busName, isSkipActive, player) {
             try {
                 this._isPlaying = (playbackStatus === 'Playing');
@@ -1321,7 +1474,10 @@ const HydroMediaWidget = GObject.registerClass(
                 
                 if (this._vinylVisualizer) this._vinylVisualizer.setPlaying(this._isPlaying);
                 if (this._sleekVisualizer) this._sleekVisualizer.setPlaying(this._isPlaying);
-                if (this._isPlaying) this._startRotation();
+                if (this._isPlaying && this._vinylBox.visible)
+                    this._startRotation();
+                else
+                    this._stopRotation();
 
                 if (artUrl) {
                     this._albumArt.setArt(artUrl, true);
@@ -1437,6 +1593,11 @@ const HydroMediaWidget = GObject.registerClass(
                 this.set_size(Math.round(220 * 1.8 * scale), Math.round(220 * scale));
                 this._simpleBox.show();
             }
+
+            if (style === 'vinyl' && this._isPlaying)
+                this._startRotation();
+            else
+                this._stopRotation();
         }
 
         updateColors(primary, background, secondary) {
@@ -1445,25 +1606,23 @@ const HydroMediaWidget = GObject.registerClass(
             let style = this._settings ? this._settings.get_string('hydro-media-style') : 'simple';
             const scale = size / 220.0;
             
-            let radius = 32;
+            let shape = this._settings ? this._settings.get_string('hydro-media-shape') : 'squircle';
+            let radius = this.getShapeRadius(shape, size);
             if (style === 'sleek') {
-                radius = 999; // Perfect pill shape
+                radius = '999px'; // Perfect pill shape
             }
             
             this.style = `
                 background-color: ${background};
                 color: ${primary};
-                border-radius: ${radius}px;
+                border-radius: ${radius};
                 box-shadow: 0 ${Math.round(4 * scale)}px ${Math.round(12 * scale)}px rgba(0,0,0,0.15);
                 padding: ${Math.round(20 * scale)}px;
             `;
         }
 
         destroy() {
-            if (this._rotationTimer) {
-                GLib.Source.remove(this._rotationTimer);
-                this._rotationTimer = null;
-            }
+            this._stopRotation();
             if (this.extension && this.extension.musicController && this.extension.musicController._hydroMediaRef === this) {
                 this.extension.musicController._hydroMediaRef = null;
             }
@@ -1491,26 +1650,22 @@ export class HydroWidgetsManager {
             x_expand: true,
             y_expand: true,
             visible: true,
-            width: global.display.get_monitor_geometry(Main.layoutManager.primaryIndex).width,
-            height: global.display.get_monitor_geometry(Main.layoutManager.primaryIndex).height
+            width: global.stage.width,
+            height: global.stage.height
         });
 
         // Ensure container doesn't block desktop clicks, but let children be reactive
         this.container.reactive = false;
 
-        // Add directly as a child of backgroundGroup so it is drawn on the desktop background
-        if (Main.layoutManager._backgroundGroup) {
-            Main.layoutManager._backgroundGroup.add_child(this.container);
-            // Move to the top of the background group to ensure it's above the wallpaper
-            try {
-                Main.layoutManager._backgroundGroup.set_child_above_sibling(this.container, null);
-            } catch (e) {
-                // If it fails, it's already added at the top anyway
-            }
-        } else {
-            // Fallback to uiGroup if backgroundGroup is not found
-            Main.layoutManager.uiGroup.insert_child_at_index(this.container, 0);
-        }
+        // Keep desktop widgets below normal windows. uiGroup is the Shell's
+        // overlay layer and made Hydro cover applications; backgroundGroup is
+        // the desktop layer while still receiving input on uncovered desktop.
+        this._hostGroup = Main.layoutManager._backgroundGroup || Main.layoutManager.uiGroup;
+        this._hostGroup.add_child(this.container);
+        this._monitorsChangedId = Main.layoutManager.connect('monitors-changed', () => {
+            if (this.container)
+                this.container.set_size(global.stage.width, global.stage.height);
+        });
 
         this.createWidgets();
         this.applyMonetColors();
@@ -1543,6 +1698,20 @@ export class HydroWidgetsManager {
         trackToggle('hydro-calendar-enabled', HydroCalendarWidget);
         trackToggle('hydro-battery-enabled', HydroBatteryWidget);
         trackToggle('hydro-media-enabled', HydroMediaWidget);
+
+        // Color overrides belong to the widget layer, so react immediately to
+        // every control in the preferences dialog instead of waiting for a
+        // palette extraction or a Shell restart.
+        for (const key of [
+            'hydro-use-custom-colors',
+            'hydro-custom-bg',
+            'hydro-custom-fg1',
+            'hydro-custom-fg2',
+        ]) {
+            this._settingsSignals.push(this.extension._settings.connect(`changed::${key}`, () => {
+                this.applyMonetColors();
+            }));
+        }
 
         // Connect to Overview signals to hide widgets when showing all windows
         this._overviewShowingId = Main.overview.connect('showing', () => this._onOverviewShowing());
@@ -1676,6 +1845,10 @@ export class HydroWidgetsManager {
             Main.overview.disconnect(this._overviewHiddenId);
             this._overviewHiddenId = null;
         }
+        if (this._monitorsChangedId) {
+            Main.layoutManager.disconnect(this._monitorsChangedId);
+            this._monitorsChangedId = null;
+        }
 
         this.widgets.forEach(w => w.destroy());
         this.widgets = [];
@@ -1684,5 +1857,6 @@ export class HydroWidgetsManager {
             this.container.destroy();
             this.container = null;
         }
+        this._hostGroup = null;
     }
 }

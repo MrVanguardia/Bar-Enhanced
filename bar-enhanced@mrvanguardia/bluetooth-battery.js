@@ -76,16 +76,16 @@ export var BluetoothBatteryButton = GObject.registerClass({
         this.mainBox.add_child(this.devicesBox);
 
         this._deviceSignals = [];
+        this._destroyed = false;
+        this._updateIdleId = null;
+        this._visibilityIdleId = null;
 
         try {
             this._client = new GnomeBluetooth.Client();
             this._devicesModel = this._client.get_devices();
             if (this._devicesModel) {
                 this._itemsChangedId = this._devicesModel.connect('items-changed', () => {
-                    GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
-                        this._updateDevices();
-                        return GLib.SOURCE_REMOVE;
-                    });
+                    this._queueDeviceUpdate();
                 });
             }
         } catch (e) {
@@ -99,17 +99,31 @@ export var BluetoothBatteryButton = GObject.registerClass({
         });
 
         // Defer initial device update to avoid clutter mapping/allocation pass issues
-        GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
-            this._updateDevices();
+        this._queueDeviceUpdate();
+    }
+
+    _queueDeviceUpdate() {
+        if (this._destroyed || this._updateIdleId)
+            return;
+        this._updateIdleId = GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
+            this._updateIdleId = null;
+            if (!this._destroyed)
+                this._updateDevices();
             return GLib.SOURCE_REMOVE;
         });
     }
 
     _updateDevices() {
+        if (this._destroyed)
+            return;
         // Disconnect previous signals to avoid memory leaks
         if (this._deviceSignals) {
             for (let sig of this._deviceSignals) {
-                sig.obj.disconnect(sig.id);
+                try {
+                    sig.obj.disconnect(sig.id);
+                } catch (e) {
+                    // The device can disappear while an items-changed update is queued.
+                }
             }
         }
         this._deviceSignals = [];
@@ -130,10 +144,7 @@ export var BluetoothBatteryButton = GObject.registerClass({
             let watchedProps = ['connected', 'battery-percentage', 'battery-level', 'alias'];
             for (let prop of watchedProps) {
                 let id = dev.connect('notify::' + prop, () => {
-                    GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
-                        this._updateDevices();
-                        return GLib.SOURCE_REMOVE;
-                    });
+                    this._queueDeviceUpdate();
                 });
                 this._deviceSignals.push({ obj: dev, id: id });
             }
@@ -178,18 +189,12 @@ export var BluetoothBatteryButton = GObject.registerClass({
         this.devicesBox.destroy_all_children();
 
         if (connectedDevices.length === 0) {
-            GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
-                this.hide();
-                return GLib.SOURCE_REMOVE;
-            });
+            this._queueVisibility(false);
             let noDev = new St.Label({ text: _('No connected devices'), style_class: 'bar-enhanced-bt-empty' });
             this.devicesBox.add_child(noDev);
             return;
         } else {
-            GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
-                this.show();
-                return GLib.SOURCE_REMOVE;
-            });
+            this._queueVisibility(true);
         }
 
         for (let dev of connectedDevices) {
@@ -256,14 +261,46 @@ export var BluetoothBatteryButton = GObject.registerClass({
         }
     }
 
+    _queueVisibility(visible) {
+        if (this._destroyed)
+            return;
+        if (this._visibilityIdleId) {
+            GLib.Source.remove(this._visibilityIdleId);
+            this._visibilityIdleId = null;
+        }
+        this._visibilityIdleId = GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
+            this._visibilityIdleId = null;
+            if (!this._destroyed) {
+                if (visible)
+                    this.show();
+                else
+                    this.hide();
+            }
+            return GLib.SOURCE_REMOVE;
+        });
+    }
+
     destroy() {
+        this._destroyed = true;
+        if (this._updateIdleId) {
+            GLib.Source.remove(this._updateIdleId);
+            this._updateIdleId = null;
+        }
+        if (this._visibilityIdleId) {
+            GLib.Source.remove(this._visibilityIdleId);
+            this._visibilityIdleId = null;
+        }
         if (this._backupTimeoutId) {
             GLib.Source.remove(this._backupTimeoutId);
             this._backupTimeoutId = null;
         }
         if (this._deviceSignals) {
             for (let sig of this._deviceSignals) {
-                sig.obj.disconnect(sig.id);
+                try {
+                    sig.obj.disconnect(sig.id);
+                } catch (e) {
+                    // A removed Bluetooth device may already have disposed its signals.
+                }
             }
             this._deviceSignals = [];
         }

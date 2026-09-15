@@ -38,8 +38,26 @@ const getHSP = Utils.getHSP;
 const getBgDark = Utils.getBgDark;
 const rgbToHex = Utils.rgbToHex;
 
+// Keep generated assets in the same async lifecycle as the stylesheet.  The
+// previous callback-only writes could still be running after CSS had already
+// been reloaded, so a palette change occasionally showed stale toggle or
+// calendar colours until the next reload.
+async function writeGeneratedFile(path, contents) {
+    const file = Gio.File.new_for_path(path);
+    const bytes = new TextEncoder().encode(contents);
+    let stream = null;
+    try {
+        stream = await file.replace_async(null, false, Gio.FileCreateFlags.NONE,
+            GLib.PRIORITY_DEFAULT, null);
+        await stream.write_bytes_async(bytes, GLib.PRIORITY_DEFAULT, null);
+    } finally {
+        if (stream)
+            stream.close(null);
+    }
+}
+
 // SVG for calendar event dot icon (use fg color)
-function saveCalEventSVG(obar, Me) {
+async function saveCalEventSVG(obar, Me) {
     let svg, svgpath, svgcolor;
     svg = `
     <svg width="32" height="32" xmlns="http://www.w3.org/2000/svg">
@@ -55,26 +73,17 @@ function saveCalEventSVG(obar, Me) {
 
     svg = svg.replace(`#REPLACE`, svgcolor);
 
-    let file = Gio.File.new_for_path(svgpath);
-    let bytearray = new TextEncoder().encode(svg);
-
     try {
-        file.replace_async(null, false, Gio.FileCreateFlags.NONE, GLib.PRIORITY_DEFAULT, null, (obj, res) => {
-            let stream = obj.replace_finish(res);
-            stream.write_bytes_async(bytearray, GLib.PRIORITY_DEFAULT, null, (w_obj, w_res) => {
-                w_obj.write_bytes_finish(w_res);
-                stream.close(null);
-            });
-        });
+        await writeGeneratedFile(svgpath, svg);
     }
     catch (e) {
-        if (DEBUG) log("Failed to write calendar-today.svg file: " + svgpath, e);
+        if (DEBUG) log(`Failed to write calendar-today.svg file: ${svgpath}: ${e}`);
     }
 
 }
 
 // SVG for toggle switch (toggle On)
-function saveToggleSVG(type, obar, Me) {
+async function saveToggleSVG(type, obar, Me) {
     let svg, svgpath, svgFill = '', svgStroke = '', hc = '';
     svg =
         `<svg viewBox="0 0 44 26" xmlns="http://www.w3.org/2000/svg">
@@ -94,26 +103,17 @@ function saveToggleSVG(type, obar, Me) {
     }
     svg = svg.replace(`#HIGHCONTRAST`, hc);
 
-    let file = Gio.File.new_for_path(svgpath);
-    let bytearray = new TextEncoder().encode(svg);
-
     try {
-        file.replace_async(null, false, Gio.FileCreateFlags.NONE, GLib.PRIORITY_DEFAULT, null, (obj, res) => {
-            let stream = obj.replace_finish(res);
-            stream.write_bytes_async(bytearray, GLib.PRIORITY_DEFAULT, null, (w_obj, w_res) => {
-                w_obj.write_bytes_finish(w_res);
-                stream.close(null);
-            });
-        });
+        await writeGeneratedFile(svgpath, svg);
     }
     catch (e) {
-        if (DEBUG) log("Failed to write toggle-on.svg file: " + svgpath, e);
+        if (DEBUG) log(`Failed to write toggle-on.svg file: ${svgpath}: ${e}`);
     }
 
 }
 
 // SVG for checkbox buttons (On, On-focused, Off-focused)
-function saveCheckboxSVG(type, obar, Me) {
+async function saveCheckboxSVG(type, obar, Me) {
     let svg, svgpath, svgFill = 'none', svgStroke = 'none';
     if (type == 'on') {
         svg = `
@@ -154,20 +154,11 @@ function saveCheckboxSVG(type, obar, Me) {
     svg = svg.replace(`#SVGFILL`, svgFill);
     svg = svg.replace(`#SVGSTROKE`, svgStroke);
 
-    let file = Gio.File.new_for_path(svgpath);
-    let bytearray = new TextEncoder().encode(svg);
-
     try {
-        file.replace_async(null, false, Gio.FileCreateFlags.NONE, GLib.PRIORITY_DEFAULT, null, (obj, res) => {
-            let stream = obj.replace_finish(res);
-            stream.write_bytes_async(bytearray, GLib.PRIORITY_DEFAULT, null, (w_obj, w_res) => {
-                w_obj.write_bytes_finish(w_res);
-                stream.close(null);
-            });
-        });
+        await writeGeneratedFile(svgpath, svg);
     }
     catch (e) {
-        if (DEBUG) log("Failed to write checkbox-on/off.svg file: " + svgpath, e);
+        if (DEBUG) log(`Failed to write checkbox-on/off.svg file: ${svgpath}: ${e}`);
     }
 
 }
@@ -1363,7 +1354,9 @@ function getStylesheet(obar, Me) {
     const msblue = parseInt(parseFloat(msColor[2]) * 255);
     // Save menu selection hex for use in toggle on svg
     obar.msHex = rgbToHex(msred, msgreen, msblue);
-    obar.msHex = obar.msHex + parseInt(parseFloat(msAlpha) * 255).toString(16);
+    // SVG #RRGGBBAA notation needs two alpha digits. A bare "0" for a
+    // transparent selection made the whole fill invalid on some themes.
+    obar.msHex += parseRGB(parseFloat(msAlpha) * 255).toString(16).padStart(2, '0');
 
     const darkMode = obar._intSettings.get_string('color-scheme') == 'prefer-dark';
 
@@ -4610,29 +4603,35 @@ async function writeStylesheet(obar, stylesheet) {
         let stream = await file.replace_async(null, false, Gio.FileCreateFlags.NONE, GLib.PRIORITY_DEFAULT, null);
         await stream.write_bytes_async(bytearray, GLib.PRIORITY_DEFAULT, null);
         stream.close(null);
+        return true;
     }
     catch (e) {
         if (DEBUG) log("Failed to write stylsheet file: " + stylepath, e);
+        return false;
     }
 }
 
 async function writeSVGs(obar, Me) {
     if (obar.msSVG) { // Accent color is changed
-        saveToggleSVG('on', obar, Me);
-        saveToggleSVG('on-hc', obar, Me);
-        saveCheckboxSVG('on', obar, Me);
-        saveCheckboxSVG('on-focused', obar, Me);
+        await Promise.all([
+            saveToggleSVG('on', obar, Me),
+            saveToggleSVG('on-hc', obar, Me),
+            saveCheckboxSVG('on', obar, Me),
+            saveCheckboxSVG('on-focused', obar, Me),
+        ]);
         obar.msSVG = false;
     }
 
     if (obar.mhSVG) { // Highlight color is changed
-        saveCheckboxSVG('on-focused', obar, Me);
-        saveCheckboxSVG('off-focused', obar, Me);
+        await Promise.all([
+            saveCheckboxSVG('on-focused', obar, Me),
+            saveCheckboxSVG('off-focused', obar, Me),
+        ]);
         obar.mhSVG = false;
     }
 
     if (obar.smfgSVG) { // Foreground color is changed
-        saveCalEventSVG(obar, Me);
+        await saveCalEventSVG(obar, Me);
         obar.smfgSVG = false;
     }
 }
@@ -4658,26 +4657,42 @@ export function reloadStyle(obar, Me) {
     obar._reloadStyleTimeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 50, () => {
         obar._reloadStyleTimeoutId = null;
         if (obar && obar._settings) {
-            runReloadStyle(obar, Me);
+            if (obar._styleReloadInFlight)
+                obar._styleReloadQueued = true;
+            else
+                runReloadStyle(obar, Me);
         }
         return GLib.SOURCE_REMOVE;
     });
 }
 
 async function runReloadStyle(obar, Me) {
-    // Get stylesheet string
-    let stylesheet = getStylesheet(obar, Me);
+    obar._styleReloadInFlight = true;
+    const reloadGeneration = obar._styleReloadGeneration || 0;
     try {
-        await Promise.all([writeStylesheet(obar, stylesheet), writeSVGs(obar, Me), writeGtkCss(obar)]);
+        // Get stylesheet string
+        let stylesheet = getStylesheet(obar, Me);
+        const [stylesheetWritten] = await Promise.all([
+            writeStylesheet(obar, stylesheet),
+            writeSVGs(obar, Me),
+            writeGtkCss(obar),
+        ]);
+
+        // Reload the current Shell theme directly. Depending only on a
+        // GSettings signal made hot updates unreliable on newer GNOME Shell
+        // releases, leaving visual changes pending until the next login.
+        if (!stylesheetWritten || !obar._settings || obar._styleReloadGeneration !== reloadGeneration)
+            return;
+        if (typeof obar.reloadStylesheet === 'function')
+            obar.reloadStylesheet();
     }
     catch (e) {
         if (DEBUG) log("Failed to reload stylesheet: ", e);
+    } finally {
+        obar._styleReloadInFlight = false;
+        if (obar._styleReloadQueued && obar._settings && obar._styleReloadGeneration === reloadGeneration) {
+            obar._styleReloadQueued = false;
+            reloadStyle(obar, Me);
+        }
     }
-
-    // Cause stylesheet to reload by toggling 'reloadstyle'
-    let reloadstyle = obar._settings.get_boolean('reloadstyle');
-    if (reloadstyle)
-        obar._settings.set_boolean('reloadstyle', false);
-    else
-        obar._settings.set_boolean('reloadstyle', true);
 }

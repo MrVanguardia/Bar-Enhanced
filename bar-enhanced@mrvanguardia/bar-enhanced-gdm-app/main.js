@@ -66,7 +66,13 @@ export function openGdmCenter(parentWindow, extension, extensionPath, T) {
     
     const pages = [appearancePage, loginScreenPage, fontsPage, pointingPage, powerPage, soundPage, displayPage, nightLightPage, accessibilityPage, toolsPage];
     
+    let applyInProgress = false;
     const applyAction = () => {
+        if (applyInProgress) {
+            win.add_toast(new Adw.Toast({ title: T ? T('GDM settings are already being applied.') : 'GDM settings are already being applied.' }));
+            return;
+        }
+        applyInProgress = true;
         // Show "working" toast immediately so user knows button was pressed
         let workingToast = new Adw.Toast({ title: T ? T('Applying settings... please authenticate.') : 'Applying settings... please authenticate.' });
         win.add_toast(workingToast);
@@ -78,6 +84,7 @@ export function openGdmCenter(parentWindow, extension, extensionPath, T) {
             log("BarEnhanced: Error generating GDM script:", e);
             let errToast = new Adw.Toast({ title: `❌ Script error: ${e.message || e}` });
             win.add_toast(errToast);
+            applyInProgress = false;
             return;
         }
 
@@ -93,7 +100,7 @@ export function openGdmCenter(parentWindow, extension, extensionPath, T) {
                 try {
                     p.wait_finish(res);
                     const exitStatus = p.get_exit_status();
-                    if (exitStatus === 0) {
+                    if (p.get_successful()) {
                         let successToast = new Adw.Toast({ title: T ? T('Settings applied successfully!') : '✅ Settings applied successfully!' });
                         win.add_toast(successToast);
                     } else {
@@ -104,12 +111,15 @@ export function openGdmCenter(parentWindow, extension, extensionPath, T) {
                     let errToast = new Adw.Toast({ title: `❌ Wait error: ${e.message || e}` });
                     win.add_toast(errToast);
                     log("BarEnhanced: Error waiting GDM apply process:", e);
+                } finally {
+                    applyInProgress = false;
                 }
             });
         } catch(e) {
             log("BarEnhanced: Error launching pkexec:", e);
             let errToast = new Adw.Toast({ title: `❌ Launch error: ${e.message || e}` });
             win.add_toast(errToast);
+            applyInProgress = false;
         }
     };
 
@@ -140,7 +150,7 @@ export function openGdmCenter(parentWindow, extension, extensionPath, T) {
                 // Dynamic Monitor copying logic supporting gdm and Debian-gdm dynamically
                 let userMonitorsXml = GLib.build_filenamev([GLib.get_user_config_dir(), 'monitors.xml']);
                 let script = `#!/bin/bash
-USER_MONITORS="${userMonitorsXml}"
+USER_MONITORS="$1"
 if [ -f "$USER_MONITORS" ]; then
     GDM_USER="gdm"
     if id "Debian-gdm" &>/dev/null; then
@@ -157,17 +167,8 @@ else
     exit 1
 fi
 `;
-                let file = Gio.File.new_for_path('/tmp/gdm-monitors.sh');
-                try { file.delete(null); } catch(e) {}
-                let outStream = file.replace(null, false, Gio.FileCreateFlags.NONE, null);
-                let dataStream = new Gio.DataOutputStream({ base_stream: outStream });
-                dataStream.put_string(script, null);
-                dataStream.close(null);
-                
-                file.set_attribute_uint32('unix::mode', 0o755, Gio.FileQueryInfoFlags.NONE, null);
-                
                 let proc = Gio.Subprocess.new(
-                    ['pkexec', 'bash', '/tmp/gdm-monitors.sh'],
+                    ['pkexec', 'bash', '-c', script, 'bar-enhanced-monitors', userMonitorsXml],
                     Gio.SubprocessFlags.NONE
                 );
                 
@@ -177,6 +178,8 @@ fi
                 proc.wait_async(null, (p, res) => {
                     try {
                         p.wait_finish(res);
+                        if (!p.get_successful())
+                            throw new Error(`Monitor layout exited with status ${p.get_exit_status()}`);
                         let successToast = new Adw.Toast({ title: T ? T('Monitor layout applied!') : 'Monitor layout applied!' });
                         win.add_toast(successToast);
                     } catch(e) {
@@ -199,7 +202,11 @@ fi
 rm -f /etc/dconf/db/gdm.d/99-bar-enhanced-gdm
 rm -f /etc/dconf/db/gdm.d/95-gdm-settings
 rm -f /etc/dconf/db/gdm.d/01-bar-enhanced
-rm -f /etc/dconf/profile/gdm
+if [ -f /etc/dconf/profile/gdm.bar-enhanced-backup ]; then
+    mv -f /etc/dconf/profile/gdm.bar-enhanced-backup /etc/dconf/profile/gdm
+else
+    rm -f /etc/dconf/profile/gdm
+fi
 # Remove compiled database and re-compile if there are other files in gdm.d
 rm -f /etc/dconf/db/gdm
 if [ -d /etc/dconf/db/gdm.d ]; then
@@ -208,6 +215,15 @@ fi
 
 # Remove our custom shell theme
 rm -rf /usr/share/themes/BarEnhancedGdm
+
+# Restore the packaged User Themes metadata if Bar Enhanced changed its
+# session modes for GDM. Keep a package upgrade or manual configuration from
+# being overwritten when no backup was created.
+UT_META="/usr/share/gnome-shell/extensions/user-theme@gnome-shell-extensions.gcampax.github.com/metadata.json"
+UT_META_BACKUP="$UT_META.bar-enhanced-backup"
+if [ -f "$UT_META_BACKUP" ]; then
+    mv -f "$UT_META_BACKUP" "$UT_META"
+fi
 
 # Remove copied backgrounds/logos
 rm -f /usr/share/backgrounds/bar-enhanced-gdm-bg
@@ -223,17 +239,8 @@ rm -f "$GDM_HOME/.config/monitors.xml"
 
 echo "GDM restored successfully"
 `;
-                let file = Gio.File.new_for_path('/tmp/gdm-restore.sh');
-                try { file.delete(null); } catch(e) {}
-                let outStream = file.replace(null, false, Gio.FileCreateFlags.NONE, null);
-                let dataStream = new Gio.DataOutputStream({ base_stream: outStream });
-                dataStream.put_string(script, null);
-                dataStream.close(null);
-                
-                file.set_attribute_uint32('unix::mode', 0o755, Gio.FileQueryInfoFlags.NONE, null);
-                
                 let proc = Gio.Subprocess.new(
-                    ['pkexec', 'bash', '/tmp/gdm-restore.sh'],
+                    ['pkexec', 'bash', '-c', script],
                     Gio.SubprocessFlags.NONE
                 );
                 
@@ -243,6 +250,8 @@ echo "GDM restored successfully"
                 proc.wait_async(null, (p, res) => {
                     try {
                         p.wait_finish(res);
+                        if (!p.get_successful())
+                            throw new Error(`GDM restore exited with status ${p.get_exit_status()}`);
                         let successToast = new Adw.Toast({ title: T ? T('GDM restored to system default!') : 'GDM restored to system default!' });
                         win.add_toast(successToast);
                     } catch(e) {

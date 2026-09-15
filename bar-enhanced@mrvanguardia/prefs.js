@@ -581,6 +581,7 @@ class BarEnhancedPrefs {
         this.quotes = [];
         this.colorButtons = [];
         this.paletteButtons = [];
+        this._settingsSignalIds = [];
     }
 
     fill(window) {
@@ -705,7 +706,7 @@ class BarEnhancedPrefs {
             label: T('Update Palette Data'),
             css_classes: ['pill']
         });
-        refreshBtn.connect('clicked', () => this.triggerBackgroundPalette(window));
+        refreshBtn.connect('clicked', () => this.triggerBackgroundPalette());
         btnBox.append(refreshBtn);
 
         const applyPaletteBtn = new Gtk.Button({
@@ -727,7 +728,7 @@ class BarEnhancedPrefs {
         paletteBox.append(resetPaletteBtn);
         paletteGroup.add(paletteBox);
 
-        this._settings.connect('changed::bg-change', () => {
+        this._connectSettings('changed::bg-change', () => {
             let i = 1;
             window.paletteButtons.forEach(b => {
                 const c = this._settings.get_strv('palette' + i++);
@@ -804,7 +805,7 @@ class BarEnhancedPrefs {
             this._settings.set_string('font', value);
         });
 
-        this._settings.connect('changed::font', () => {
+        this._connectSettings('changed::font', () => {
             let newFont = this._settings.get_string('font');
             fontButton.set_font(newFont);
         });
@@ -1336,10 +1337,21 @@ class BarEnhancedPrefs {
 
         window.connect('unrealize', () => {
             if (this.quoteTimeoutId) clearTimeout(this.quoteTimeoutId);
+            if (this.timeoutId) clearTimeout(this.timeoutId);
+            this._settingsSignalIds.forEach(id => {
+                try { this._settings.disconnect(id); } catch (e) {}
+            });
+            this._settingsSignalIds = [];
         });
     }
 
     // --- HELPER METHODS ---
+
+    _connectSettings(signal, callback) {
+        const id = this._settings.connect(signal, callback);
+        this._settingsSignalIds.push(id);
+        return id;
+    }
 
     createSwitch(key) {
         const sw = new Gtk.Switch({ valign: Gtk.Align.CENTER });
@@ -1395,12 +1407,12 @@ class BarEnhancedPrefs {
             this._settings.set_strv(key, vals);
             const prefix = this._settings.get_string('color-scheme') === 'prefer-dark' ? 'dark-' : 'light-';
             this._settings.set_strv(`${prefix}${key}`, vals);
-            // Connect settings to update/save/reload stylesheet
-            const menuKeys = ['menustyle', 'mfgcolor', 'mfgalpha', 'mbgcolor', 'mbgalpha', 'mbcolor', 'mbalpha', 'mhcolor', 'mscolor', 'mshcolor', 'mshalpha', 'menu-radius', 'notif-radius', 'qtoggle-radius', 'slider-height', 'qtile-border', 'font'];
-            menuKeys.forEach(k => this._settings.connect(`changed::${k}`, () => this.triggerStyleReload()));
+            // This edit already changes the live setting. Registering a new
+            // handler here for every colour click made duplicate reloads grow
+            // without bound during a preferences session.
             this.triggerStyleReload();
         });
-        this._settings.connect(`changed::${key}`, () => {
+        this._connectSettings(`changed::${key}`, () => {
             const c = this._settings.get_strv(key);
             btn.set_rgba(new Gdk.RGBA({ red: parseFloat(c[0]), green: parseFloat(c[1]), blue: parseFloat(c[2]), alpha: 1.0 }));
         });
@@ -1452,22 +1464,14 @@ class BarEnhancedPrefs {
 
     rgbToHex(r, g, b) { return "#" + (1 << 24 | r << 16 | g << 8 | b).toString(16).slice(1); }
 
-    triggerBackgroundPalette(window) {
-        window.paletteButtons.forEach(b => {
-            b.child.label = '<span bgcolor="#7d7d7d" font_size="150%">       </span>';
-            b.tooltip_text = '#7d7d7d';
-        });
+    triggerBackgroundPalette() {
+        // Keep the last known palette visible while Shell extracts the next one.
+        // A fixed 500ms repaint raced against large wallpapers and left the UI
+        // apparently grey even though the actual extraction completed later.
+        // The changed::bg-change listener refreshes these buttons only after
+        // the palette keys have been written.
         let p = this._settings.get_boolean('bgpalette');
         this._settings.set_boolean('bgpalette', !p);
-        setTimeout(() => {
-            let i = 1;
-            window.paletteButtons.forEach(b => {
-                const c = this._settings.get_strv('palette' + i++);
-                const hex = this.rgbToHex(c[0], c[1], c[2]);
-                b.child.label = `<span bgcolor="${hex}" font_size="150%">       </span>`;
-                b.tooltip_text = hex;
-            });
-        }, 500);
     }
 
     triggerAutoTheme() {
@@ -2142,7 +2146,7 @@ class BarEnhancedPrefs {
         });
         f.connect('response', (s, r) => {
             if (r == Gtk.ResponseType.ACCEPT) {
-                this.installAsset(f.get_file().get_path(), () => {
+                this.installAsset(f.get_file().get_path(), null, () => {
                     const icons = this.getInstalledAssets('icons');
                     const iconModel = new Gtk.StringList(); icons.forEach(i => iconModel.append(i));
                     iconRow.set_model(iconModel);
@@ -2157,23 +2161,36 @@ class BarEnhancedPrefs {
     }
 
     downloadAndInstall(url, name, type, callback) {
+        if (!/^https:\/\//i.test(url || '')) {
+            log('Refusing to download a theme from a non-HTTPS URL.');
+            if (callback) callback(false);
+            return;
+        }
         let ext = '.tar.gz';
         if (url.toLowerCase().includes('.zip')) ext = '.zip';
         else if (url.toLowerCase().includes('.tar.xz')) ext = '.tar.xz';
         else if (url.toLowerCase().includes('.tar.bz2')) ext = '.tar.bz2';
 
-        const tempPath = `/tmp/${name.replace(/\s+/g, '_')}${ext}`;
+        const safeName = (name || 'theme').replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 80);
+        const tempPath = GLib.build_filenamev([GLib.get_tmp_dir(), `${safeName}-${GLib.uuid_string_random()}${ext}`]);
         const proc = Gio.Subprocess.new(
-            ['curl', '-L', url, '-o', tempPath],
+            ['curl', '--fail', '--location', '--output', tempPath, url],
             Gio.SubprocessFlags.NONE
         );
 
         proc.wait_async(null, (p, res) => {
             try {
                 p.wait_finish(res);
-                this.installAsset(tempPath, type, callback);
+                if (!p.get_successful())
+                    throw new Error(`curl exited with status ${p.get_exit_status()}`);
+                this.installAsset(tempPath, type, success => {
+                    try { Gio.File.new_for_path(tempPath).delete(null); } catch (e) {}
+                    if (callback) callback(success);
+                });
             } catch (e) {
                 log('Download failed:', e);
+                try { Gio.File.new_for_path(tempPath).delete(null); } catch (deleteError) {}
+                if (callback) callback(false);
             }
         });
     }
@@ -2193,9 +2210,12 @@ class BarEnhancedPrefs {
         proc.wait_async(null, (p, res) => {
             try {
                 p.wait_finish(res);
-                if (callback) callback();
+                if (!p.get_successful())
+                    throw new Error(`Extraction exited with status ${p.get_exit_status()}`);
+                if (callback) callback(true);
             } catch (e) {
                 log('Extraction failed:', e);
+                if (callback) callback(false);
             }
         });
     }
@@ -2237,20 +2257,18 @@ class BarEnhancedPrefs {
                     } catch (err) { }
                 }
 
-                // Clean the slate and copy recursively asynchronously without freezing the UI
-                const script = `
-rm -f "${configDir}/gtk-4.0/gtk.css"
-rm -f "${configDir}/gtk-4.0/gtk-dark.css"
-rm -rf "${configDir}/gtk-4.0/assets"
-cp -rf "${sourceDir}/." "${configDir}/gtk-4.0/"
-`;
+                // Pass paths as positional arguments so a theme name can never
+                // change the shell command that copies its GTK4 assets.
+                const script = 'rm -f "$1/gtk.css" "$1/gtk-dark.css"; rm -rf "$1/assets"; cp -rf "$2/." "$1/"';
                 const proc = Gio.Subprocess.new(
-                    ['bash', '-c', script],
+                    ['bash', '-c', script, 'bar-enhanced-gtk4', configDir, sourceDir],
                     Gio.SubprocessFlags.NONE
                 );
                 proc.wait_async(null, (p, res) => {
                     try {
                         p.wait_finish(res);
+                        if (!p.get_successful())
+                            throw new Error(`GTK4 theme copy exited with status ${p.get_exit_status()}`);
                         // Add our header so we know it's injected
                         if (gtkCssFile.query_exists(null)) {
                             const [contents] = gtkCssFile.load_contents(null);
@@ -2267,18 +2285,16 @@ cp -rf "${sourceDir}/." "${configDir}/gtk-4.0/"
                 });
             } else {
                 // Clean the slate asynchronously
-                const script = `
-rm -f "${configDir}/gtk-4.0/gtk.css"
-rm -f "${configDir}/gtk-4.0/gtk-dark.css"
-rm -rf "${configDir}/gtk-4.0/assets"
-`;
+                const script = 'rm -f "$1/gtk.css" "$1/gtk-dark.css"; rm -rf "$1/assets"';
                 const proc = Gio.Subprocess.new(
-                    ['bash', '-c', script],
+                    ['bash', '-c', script, 'bar-enhanced-gtk4', configDir],
                     Gio.SubprocessFlags.NONE
                 );
                 proc.wait_async(null, (p, res) => {
                     try {
                         p.wait_finish(res);
+                        if (!p.get_successful())
+                            throw new Error(`GTK4 theme cleanup exited with status ${p.get_exit_status()}`);
                         // Restore user's backup if it exists
                         const backupFile = Gio.File.new_for_path(`${configDir}/gtk-4.0/gtk_backup_user.css`);
                         if (backupFile.query_exists(null)) {
@@ -2295,6 +2311,7 @@ rm -rf "${configDir}/gtk-4.0/assets"
     }
 
     openStoreModal(parent, iconRow) {
+        const requestState = { generation: 0, destroyed: false };
         const storeWindow = new Adw.Window({
             title: T('Theme Store'),
             modal: true,
@@ -2346,10 +2363,10 @@ rm -rf "${configDir}/gtk-4.0/assets"
             if (this.searchTimeoutId) GLib.Source.remove(this.searchTimeoutId);
 
             if (term.length === 0) {
-                this.fetchOnlineThemes(themeContainer, loadingLabel, iconRow);
+                this.fetchOnlineThemes(themeContainer, loadingLabel, iconRow, requestState);
             } else if (term.length > 2) {
                 this.searchTimeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 500, () => {
-                    this.searchOnlineThemes(themeContainer, term, iconRow);
+                    this.searchOnlineThemes(themeContainer, term, iconRow, requestState);
                     this.searchTimeoutId = null;
                     return GLib.SOURCE_REMOVE;
                 });
@@ -2359,7 +2376,7 @@ rm -rf "${configDir}/gtk-4.0/assets"
         searchBar.connect('activate', () => {
             const term = searchBar.get_text();
             if (term.length > 2) {
-                this.searchOnlineThemes(themeContainer, term, iconRow);
+                this.searchOnlineThemes(themeContainer, term, iconRow, requestState);
             }
         });
 
@@ -2369,7 +2386,15 @@ rm -rf "${configDir}/gtk-4.0/assets"
         toolbarView.set_content(mainBox);
         storeWindow.set_content(toolbarView);
 
-        this.fetchOnlineThemes(themeContainer, loadingLabel, iconRow);
+        storeWindow.connect('destroy', () => {
+            requestState.destroyed = true;
+            requestState.generation++;
+            if (this.searchTimeoutId) {
+                GLib.Source.remove(this.searchTimeoutId);
+                this.searchTimeoutId = null;
+            }
+        });
+        this.fetchOnlineThemes(themeContainer, loadingLabel, iconRow, requestState);
         storeWindow.present();
     }
 
@@ -2384,7 +2409,10 @@ rm -rf "${configDir}/gtk-4.0/assets"
         return this._soupSession;
     }
 
-    searchOnlineThemes(container, term, iconRow) {
+    searchOnlineThemes(container, term, iconRow, requestState = null) {
+        if (requestState?.destroyed)
+            return;
+        const generation = requestState ? ++requestState.generation : 0;
         let child = container.get_first_child();
         while (child) {
             let next = child.get_next_sibling();
@@ -2399,6 +2427,8 @@ rm -rf "${configDir}/gtk-4.0/assets"
         const message = Soup.Message.new_from_uri('GET', GLib.Uri.parse(url, GLib.UriFlags.NONE));
 
         this._getSoupSession().send_and_read_async(message, GLib.PRIORITY_DEFAULT, null, (s, res) => {
+            if (requestState?.destroyed || (requestState && generation !== requestState.generation))
+                return;
             try {
                 const bytes = s.send_and_read_finish(res);
                 const decoder = new TextDecoder('utf-8');
@@ -2406,7 +2436,7 @@ rm -rf "${configDir}/gtk-4.0/assets"
                 const response = JSON.parse(jsonText);
                 const rawData = response?.data;
                 const data = rawData ? (Array.isArray(rawData) ? rawData : [rawData]) : [];
-                this.renderThemeList(container, loadingLabel, iconRow, data);
+                this.renderThemeList(container, loadingLabel, iconRow, data, requestState);
             } catch (e) {
                 log('searchOnlineThemes exception:', e);
                 if (loadingLabel.get_parent()) loadingLabel.set_label(T('No results or API error.'));
@@ -2414,7 +2444,10 @@ rm -rf "${configDir}/gtk-4.0/assets"
         });
     }
 
-    fetchOnlineThemes(container, loadingLabel, iconRow) {
+    fetchOnlineThemes(container, loadingLabel, iconRow, requestState = null) {
+        if (requestState?.destroyed)
+            return;
+        const generation = requestState ? ++requestState.generation : 0;
         let child = container.get_first_child();
         while (child) {
             let next = child.get_next_sibling();
@@ -2436,6 +2469,8 @@ rm -rf "${configDir}/gtk-4.0/assets"
             const message = Soup.Message.new_from_uri('GET', GLib.Uri.parse(url, GLib.UriFlags.NONE));
 
             this._getSoupSession().send_and_read_async(message, GLib.PRIORITY_DEFAULT, null, (s, res) => {
+                if (requestState?.destroyed || (requestState && generation !== requestState.generation))
+                    return;
                 try {
                     const bytes = s.send_and_read_finish(res);
                     const decoder = new TextDecoder('utf-8');
@@ -2453,7 +2488,7 @@ rm -rf "${configDir}/gtk-4.0/assets"
                 completed++;
                 if (completed === categories.length) {
                     allThemes.sort((a, b) => (parseInt(b.rating) || 0) - (parseInt(a.rating) || 0));
-                    this.renderThemeList(container, loadingLabel, iconRow, allThemes);
+                    this.renderThemeList(container, loadingLabel, iconRow, allThemes, requestState);
                 }
             });
         });
@@ -2512,7 +2547,9 @@ rm -rf "${configDir}/gtk-4.0/assets"
         return { compatible: true, reason: T('Compatible') };
     }
 
-    renderThemeList(container, loadingLabel, iconRow, data) {
+    renderThemeList(container, loadingLabel, iconRow, data, requestState = null) {
+        if (requestState?.destroyed)
+            return;
         try {
             if (loadingLabel && loadingLabel.get_parent()) container.remove(loadingLabel);
         } catch (e) { }
@@ -2578,6 +2615,8 @@ rm -rf "${configDir}/gtk-4.0/assets"
             if (preview) {
                 const imgMsg = Soup.Message.new_from_uri('GET', GLib.Uri.parse(preview, GLib.UriFlags.NONE));
                 this._getSoupSession().send_and_read_async(imgMsg, GLib.PRIORITY_DEFAULT, null, (s, r) => {
+                    if (requestState?.destroyed)
+                        return;
                     try {
                         const bytes = s.send_and_read_finish(r);
                         const stream = Gio.MemoryInputStream.new_from_bytes(bytes);
@@ -2608,6 +2647,8 @@ rm -rf "${configDir}/gtk-4.0/assets"
                         assetType = 'icons';
                     }
                     this.downloadAndInstall(downloadUrl, name, assetType, () => {
+                        if (requestState?.destroyed)
+                            return;
                         btn.set_label(T('Installed'));
                         btn.add_css_class('flat');
                         if (iconRow) {
@@ -3190,7 +3231,7 @@ rm -rf "${configDir}/gtk-4.0/assets"
             try {
                 const uri = 'file://' + this.path + '/bar-enhanced-gdm-app/main.js';
                 const module = await import(uri);
-                module.openGdmCenter(window, this._settings, this.path, T);
+                module.openGdmCenter(window, this._extension, this.path, T);
             } catch (e) {
                 log("BarEnhanced: Error launching Advanced GDM Center:", e);
             }
@@ -3324,14 +3365,21 @@ rm -rf "${configDir}/gtk-4.0/assets"
             resetBtn.set_sensitive(false);
 
             const wallPath = selectedWallpaperPath;
-            const safeWallPath = wallPath.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
             const seconds = showSecondsRow.get_active() ? 'true' : 'false';
             const date = showDateRow.get_active() ? 'true' : 'false';
             const disableButtons = disableButtonsRow.get_active() ? 'true' : 'false';
             const disableUserList = disableUserListRow.get_active() ? 'true' : 'false';
             const welcomeEnable = welcomeRow.get_active() ? 'true' : 'false';
-            const welcomeText = welcomeEntry.get_text().replace(/\\/g, '\\\\').replace(/'/g, "'\\''");
-            const safeLogoPath = selectedLogoPath.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+
+            // This value is written into a dconf single-quoted literal, not a
+            // shell command. Keep it to one line and escape dconf's quoting.
+            const dconfString = value => String(value || '')
+                .replace(/[\r\n]/g, ' ')
+                .replace(/\\/g, '\\\\')
+                .replace(/'/g, "\\'");
+            const welcomeTextSafe = dconfString(welcomeEntry.get_text());
+            const safeWallComment = String(wallPath || '').replace(/[\r\n]/g, ' ');
+            const safeLogoComment = String(selectedLogoPath || '').replace(/[\r\n]/g, ' ');
 
             let themeScript = '';
             let dconfThemeKey = '';
@@ -3396,15 +3444,17 @@ ${themeScript}
 # Copy background to a globally readable location for GDM
 mkdir -p /usr/share/backgrounds
 WALLPAPER_DEST="/usr/share/backgrounds/bar-enhanced-gdm-bg"
-if [ -f "${safeWallPath}" ]; then
-    cp "${safeWallPath}" "$WALLPAPER_DEST"
+WALLPAPER_PATH="$1"
+LOGO_PATH="$2"
+if [ -f "$WALLPAPER_PATH" ]; then
+    cp "$WALLPAPER_PATH" "$WALLPAPER_DEST"
     chmod 644 "$WALLPAPER_DEST"
 fi
 
 # Copy logo to a globally readable location for GDM
 LOGO_DEST="/usr/share/backgrounds/bar-enhanced-gdm-logo"
-if [ -n "${safeLogoPath}" ] && [ -f "${safeLogoPath}" ]; then
-    cp "${safeLogoPath}" "$LOGO_DEST"
+if [ -n "$LOGO_PATH" ] && [ -f "$LOGO_PATH" ]; then
+    cp "$LOGO_PATH" "$LOGO_DEST"
     chmod 644 "$LOGO_DEST"
     LOGO_DCONF="logo='file://$LOGO_DEST'"
 else
@@ -3412,6 +3462,9 @@ else
     LOGO_DCONF="logo=''"
 fi
 
+if [ -f /etc/dconf/profile/gdm ] && [ ! -f /etc/dconf/profile/gdm.bar-enhanced-backup ]; then
+    cp -p /etc/dconf/profile/gdm /etc/dconf/profile/gdm.bar-enhanced-backup
+fi
 if [ ! -f /etc/dconf/profile/gdm ]; then
 mkdir -p /etc/dconf/profile
 cat << 'EOF' > /etc/dconf/profile/gdm
@@ -3424,7 +3477,7 @@ fi
 mkdir -p /etc/dconf/db/gdm.d
 cat << 'EOF' > /etc/dconf/db/gdm.d/01-bar-enhanced
 [org/gnome/desktop/background]
-# original-path='${wallPath}'
+# original-path='${safeWallComment}'
 picture-uri='file:///usr/share/backgrounds/bar-enhanced-gdm-bg'
 picture-uri-dark='file:///usr/share/backgrounds/bar-enhanced-gdm-bg'
 picture-options='zoom'
@@ -3438,16 +3491,16 @@ ${dconfThemeKey}
 disable-restart-buttons=${disableButtons}
 disable-user-list=${disableUserList}
 banner-message-enable=${welcomeEnable}
-banner-message-text='${welcomeText}'
+banner-message-text='${welcomeTextSafe}'
 ${LOGO_DCONF}
-# original-logo-path='${selectedLogoPath}'
+# original-logo-path='${safeLogoComment}'
 EOF
 dconf update
 `;
 
             try {
                 let proc = Gio.Subprocess.new(
-                    ['pkexec', 'bash', '-c', script],
+                    ['pkexec', 'bash', '-c', script, 'bar-enhanced-gdm', wallPath, selectedLogoPath],
                     Gio.SubprocessFlags.NONE
                 );
                 proc.wait_async(null, (obj, res) => {
@@ -3483,6 +3536,11 @@ rm -rf /usr/share/themes/BarEnhancedGdm
 rm -f /usr/share/backgrounds/bar-enhanced-gdm-bg
 rm -f /usr/share/backgrounds/bar-enhanced-gdm-logo
 rm -f /etc/dconf/db/gdm.d/01-bar-enhanced
+if [ -f /etc/dconf/profile/gdm.bar-enhanced-backup ]; then
+    mv -f /etc/dconf/profile/gdm.bar-enhanced-backup /etc/dconf/profile/gdm
+else
+    rm -f /etc/dconf/profile/gdm
+fi
 dconf update
 `;
 

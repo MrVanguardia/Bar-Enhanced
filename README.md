@@ -15,7 +15,7 @@
     <img src="https://img.shields.io/github/license/MrVanguardia/Bar-Enhanced?style=for-the-badge&color=FF9800" alt="License" />
   </a>
   <a href="https://extensions.gnome.org/">
-    <img src="https://img.shields.io/badge/GNOME-45%20%7C%2046%20%7C%2047%20%7C%2048+-4A154B?style=for-the-badge&logo=gnome" alt="GNOME Shell" />
+    <img src="https://img.shields.io/badge/GNOME-45%20%7C%2046%20%7C%2047%20%7C%2048%20%7C%2049%20%7C%2050-4A154B?style=for-the-badge&logo=gnome" alt="GNOME Shell" />
   </a>
   <br/>
   <img src="https://img.shields.io/badge/Platform-Linux-000000?style=for-the-badge&logo=linux&logoColor=white" alt="Platform Linux" />
@@ -46,6 +46,13 @@ We also incorporate and build upon the source code of **Dynamic Music Pill**, an
 We also incorporate and build upon the source code of **Vitals**, a comprehensive system sensor monitor created by **corecoding**. We thank them for their fantastic work in tracking hardware statistics. The Vitals components included in this project retain their original GPL license.
 
 ## ✨ What's New in Bar Enhanced?
+
+### v4.7.0 — Stability and live-update release
+
+- **Live visual updates:** Wallpaper colors, Hydro widget styles, shapes and custom colors now apply without logging out.
+- **Complete Hydro widgets:** Finished calendar and battery styles, movable desktop widgets, correct analog-clock colors, battery state icons and efficient music visualizer lifecycle.
+- **Desktop-safe widgets:** Widgets stay behind normal application windows instead of covering them.
+- **Reliability hardening:** Safer wallpaper/parallax lifecycle, palette extraction, GDM restore flow, music integration, Vitals and Bluetooth cleanup.
 
 - **Modern Navigation UI:** Replaced the legacy sidebar with a clean, categorized top-tab layout inspired by V-Shell for faster access to settings.
 - **Improved Theme Store:** A completely rebuilt online browser for community icon themes with live previews, download status, and better layout.
@@ -150,9 +157,9 @@ We also incorporate and build upon the source code of **Vitals**, a comprehensiv
 > 
 > To apply custom login backgrounds, accent colors, and custom card/password styles on GDM, your system needs the official GNOME Shell `user-theme` extension installed system-wide.
 > 
-> **The GDM Center will attempt to detect and install it automatically** when you click **Apply** (using DNF on Fedora, APT on Ubuntu/Debian, or Pacman on Arch Linux). 
+> **The GDM Center checks for this prerequisite before applying changes**; it does not install system packages automatically.
 > 
-> If you need to install it manually as a fallback:
+> Install it manually if it is missing:
 > * **Fedora:** `sudo dnf install gnome-shell-extension-user-theme`
 > * **Ubuntu / Debian:** `sudo apt install gnome-shell-extension-user-theme`
 > * **Arch Linux:** `sudo pacman -S gnome-shell-extensions`
@@ -183,6 +190,17 @@ If you already have the repository cloned, run this command from the parent fold
 ```bash
 cd Bar-Enhanced && git pull && cp -r bar-enhanced@mrvanguardia ~/.local/share/gnome-shell/extensions/ && glib-compile-schemas ~/.local/share/gnome-shell/extensions/bar-enhanced@mrvanguardia/schemas
 ```
+
+### 📦 Create a release package
+
+Build a complete installable archive (including the dock, music, sensor, media,
+and schema subdirectories) with:
+
+```bash
+bash tools/package-extension.sh
+```
+
+The resulting archive is written to `dist/bar-enhanced@mrvanguardia.shell-extension.zip`.
 
 ## 🎨 Professional Customization
 - **Bar Styles:** Choose from Mainland, Floating, Trilands, or Island layouts.

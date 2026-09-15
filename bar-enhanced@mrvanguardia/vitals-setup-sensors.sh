@@ -21,18 +21,18 @@ elif command -v apt-get &>/dev/null; then
   apt-get update && apt-get install -y lm-sensors
 elif command -v pacman &>/dev/null; then
   echo "Detectado Pacman (Arch Linux). Instalando lm_sensors..."
-  pacman -Sy --noconfirm lm_sensors
+  pacman -S --needed --noconfirm lm_sensors
 else
   echo "Error: Gestor de paquetes no compatible. Por favor instala lm_sensors manualmente."
   exit 2
 fi
 
 # 3. Detect hardware sensors (sensors-detect)
-# We answer "yes" (y) to all scans (safe ones, CPU, Super I/O, ISA, and I2C/SMBus)
-# and we also answer yes to overwriting/creating the configuration.
+# --auto limits the probe to lm-sensors' non-interactive safe defaults. Do not
+# approve every optional ISA/I2C probe automatically.
 if command -v sensors-detect &>/dev/null; then
-  echo "Ejecutando sensors-detect de forma no interactiva..."
-  yes "yes" | sensors-detect
+  echo "Ejecutando sensors-detect con detección automática segura..."
+  sensors-detect --auto
 else
   echo "Error: sensors-detect no está instalado o no se encuentra en el PATH."
   exit 3
@@ -52,7 +52,7 @@ fi
 # Fedora / RHEL
 if [ -f /etc/sysconfig/lm_sensors ]; then
   echo "Leyendo módulos en /etc/sysconfig/lm_sensors..."
-  eval $(grep '^HWMON_MODULES=' /etc/sysconfig/lm_sensors)
+  HWMON_MODULES=$(sed -n 's/^HWMON_MODULES="\([A-Za-z0-9_ -]*\)"$/\1/p' /etc/sysconfig/lm_sensors)
   for mod in $HWMON_MODULES; do
     echo "Cargando módulo: $mod"
     modprobe "$mod" 2>/dev/null || true
@@ -62,7 +62,7 @@ fi
 # Arch Linux
 if [ -f /etc/conf.d/lm_sensors ]; then
   echo "Leyendo módulos en /etc/conf.d/lm_sensors..."
-  eval $(grep '^HWMON_MODULES=' /etc/conf.d/lm_sensors)
+  HWMON_MODULES=$(sed -n 's/^HWMON_MODULES="\([A-Za-z0-9_ -]*\)"$/\1/p' /etc/conf.d/lm_sensors)
   for mod in $HWMON_MODULES; do
     echo "Cargando módulo: $mod"
     modprobe "$mod" 2>/dev/null || true

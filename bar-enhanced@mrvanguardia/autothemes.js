@@ -57,10 +57,13 @@ export function autoApplyBGPalette(obar, requestMode) {
     let themeDark = obar._settings.get_string('autotheme-dark');
     let themeLight = obar._settings.get_string('autotheme-light');
     let currentMode = obar._intSettings.get_string('color-scheme');
-    // If no auto-theme is set for requested mode, return
+    // If no auto-theme is set for the requested mode, do not leave a prior
+    // palette run holding the global stylesheet-reload pause.
     if((themeDark == 'Select Theme' && requestMode == 'dark') ||
-        (themeLight == 'Select Theme' && requestMode == 'light'))
+        (themeLight == 'Select Theme' && requestMode == 'light')) {
+        obar._settings.set_boolean('pause-reload', false);
         return;
+    }
 
     // Save autotheme, to be applied, as 'theme'
     let theme;
@@ -354,7 +357,6 @@ export function autoApplyBGPalette(obar, requestMode) {
                 obar._settings.set_strv('bgcolor', ['1.000', '1.000', '1.000']);
                 obar._settings.set_strv('bgcolor-wmax', ['1.000', '1.000', '1.000']);
                 obar._settings.set_strv('bgcolor2', ['1.000', '1.000', '1.000']);
-                obar._settings.set_string('bguri', 'file:///home/mrvanguardia/.local/share/backgrounds/2026-04-08-22-21-17-astronaut-sunset-3840x2160-22922.jpg');
                 obar._settings.set_strv('boxcolor', ['0.482', '0.435', '0.337']);
                 obar._settings.set_strv('candy1', ['0', '0.61', '0.74']);
                 obar._settings.set_strv('candy10', ['0.09', '0.19', '0.72']);
@@ -406,7 +408,6 @@ export function autoApplyBGPalette(obar, requestMode) {
                 obar._settings.set_strv('bgcolor', ['0.125', '0.125', '0.125']);
                 obar._settings.set_strv('bgcolor-wmax', ['0.125', '0.125', '0.125']);
                 obar._settings.set_strv('bgcolor2', ['0', '0.7', '0.75']);
-                obar._settings.set_string('bguri', 'file:///home/mrvanguardia/.local/share/backgrounds/2026-04-08-22-21-17-astronaut-sunset-3840x2160-22922.jpg');
                 obar._settings.set_strv('boxcolor', ['0.125', '0.125', '0.125']);
                 obar._settings.set_strv('candy1', ['0', '0.61', '0.74']);
                 obar._settings.set_strv('candy10', ['0.09', '0.19', '0.72']);
@@ -459,7 +460,6 @@ export function autoApplyBGPalette(obar, requestMode) {
             obar._settings.set_strv('dark-bgcolor', ['1.000', '1.000', '1.000']);
             obar._settings.set_strv('dark-bgcolor-wmax', ['1.000', '1.000', '1.000']);
             obar._settings.set_strv('dark-bgcolor2', ['1.000', '1.000', '1.000']);
-            obar._settings.set_string('dark-bguri', 'file:///home/mrvanguardia/.local/share/backgrounds/2026-04-08-22-21-17-astronaut-sunset-3840x2160-22922.jpg');
             obar._settings.set_strv('dark-boxcolor', ['0.482', '0.435', '0.337']);
             obar._settings.set_strv('dark-candy1', ['0', '0.61', '0.74']);
             obar._settings.set_strv('dark-candy10', ['0.09', '0.19', '0.72']);
@@ -509,7 +509,6 @@ export function autoApplyBGPalette(obar, requestMode) {
             obar._settings.set_strv('light-bgcolor', ['0.125', '0.125', '0.125']);
             obar._settings.set_strv('light-bgcolor-wmax', ['0.125', '0.125', '0.125']);
             obar._settings.set_strv('light-bgcolor2', ['0', '0.7', '0.75']);
-            obar._settings.set_string('light-bguri', 'file:///home/mrvanguardia/.local/share/backgrounds/2026-04-08-22-21-17-astronaut-sunset-3840x2160-22922.jpg');
             obar._settings.set_strv('light-boxcolor', ['0.125', '0.125', '0.125']);
             obar._settings.set_strv('light-candy1', ['0', '0.61', '0.74']);
             obar._settings.set_strv('light-candy10', ['0.09', '0.19', '0.72']);
@@ -691,6 +690,10 @@ export function autoApplyBGPalette(obar, requestMode) {
             obar._settings.set_int('window-hint', 0);
             obar._settings.set_boolean('wmax-hbarhint', true);
             obar._settings.set_boolean('wmaxbar', true);
+        // Atomic presets write settings directly, so they still need to
+        // release the batch guard and request one live CSS update.
+        obar._settings.set_boolean('pause-reload', false);
+        triggerStyleReload(obar);
         return;
     }
 
@@ -841,10 +844,8 @@ export function autoApplyBGPalette(obar, requestMode) {
         obar._settings.set_strv('prominent5', ['100', '100', '100']);
         obar._settings.set_strv('prominent6', ['100', '100', '100']);
 
-        // --- WALLPAPER / BACKGROUND URI ---
-        obar._settings.set_string('bguri',       'file:///home/mrvanguardia/.local/share/backgrounds/2026-04-08-22-21-17-astronaut-sunset-3840x2160-22922.jpg');
-        obar._settings.set_string('dark-bguri',  'file:///home/mrvanguardia/.local/share/backgrounds/2026-04-08-22-21-17-astronaut-sunset-3840x2160-22922.jpg');
-        obar._settings.set_string('light-bguri', 'file:///home/mrvanguardia/.local/share/backgrounds/2026-04-08-22-21-17-astronaut-sunset-3840x2160-22922.jpg');
+        // Keep the user's current wallpaper URIs. Theme presets must never
+        // overwrite them with a developer-machine path.
 
         // --- ALPHAS & TRANSPARENCIAS ---
         obar._settings.set_double('balpha',           0.0);
@@ -994,9 +995,7 @@ export function autoApplyBGPalette(obar, requestMode) {
         obar._settings.set_boolean('pause-reload',   false);
         obar._settings.set_boolean('reloadstyle',    true);
 
-        obar._settings.set_string('bguri',        'file:///home/mrvanguardia/.local/share/backgrounds/2026-04-08-22-21-17-astronaut-sunset-3840x2160-22922.jpg');
-        obar._settings.set_string('dark-bguri',   'file:///home/mrvanguardia/.local/share/backgrounds/2026-04-08-22-21-17-astronaut-sunset-3840x2160-22922.jpg');
-        obar._settings.set_string('light-bguri',  'file:///home/mrvanguardia/.local/share/backgrounds/2026-04-08-22-21-17-astronaut-sunset-3840x2160-22922.jpg');
+        // Keep the user's current wallpaper URIs; they are supplied by GNOME.
         obar._settings.set_string('default-font', 'Sans 12');
 
         obar._settings.set_int('monitor-height', 1080);
@@ -1056,6 +1055,10 @@ export function autoApplyBGPalette(obar, requestMode) {
         obar._settings.set_strv('light-palette11', ['204', '169', '158']);
         obar._settings.set_strv('light-palette12', ['144', '144', '148']);
 
+        // Atomic presets write settings directly, so they still need to
+        // release the batch guard and request one live CSS update.
+        obar._settings.set_boolean('pause-reload', false);
+        triggerStyleReload(obar);
         return;
     }
 

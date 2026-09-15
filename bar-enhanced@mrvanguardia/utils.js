@@ -254,7 +254,16 @@ export function colorDistance2000(color1, color2) {
         deltaHPrime = h2Prime - h1Prime - 360;
     }
 
-    const deltaHPrimeMean = (Math.abs(h1Prime - h2Prime) <= 180) ? h1Prime + h2Prime / 2 : (h1Prime + h2Prime + 360) / 2;
+    let deltaHPrimeMean;
+    if (C1Prime * C2Prime === 0) {
+        deltaHPrimeMean = h1Prime + h2Prime;
+    } else if (Math.abs(h1Prime - h2Prime) <= 180) {
+        deltaHPrimeMean = (h1Prime + h2Prime) / 2;
+    } else if (h1Prime + h2Prime < 360) {
+        deltaHPrimeMean = (h1Prime + h2Prime + 360) / 2;
+    } else {
+        deltaHPrimeMean = (h1Prime + h2Prime - 360) / 2;
+    }
 
     const T = 1 - 0.17 * Math.cos((deltaHPrimeMean - 30) * (Math.PI / 180)) + 0.24 * Math.cos(2 * deltaHPrimeMean * (Math.PI / 180)) + 0.32 * Math.cos((3 * deltaHPrimeMean + 6) * (Math.PI / 180)) - 0.20 * Math.cos((4 * deltaHPrimeMean - 63) * (Math.PI / 180));
     const deltaTheta = 30 * Math.exp(-((deltaHPrimeMean - 275) / 25) * ((deltaHPrimeMean - 275) / 25));
@@ -265,11 +274,18 @@ export function colorDistance2000(color1, color2) {
 
     const R_Term = -Math.sin((2 * deltaTheta) * (Math.PI / 180)) * R_C;
 
-    const L_Diff = deltaL / (S_L);
-    const C_Diff = (C1Prime - C2Prime) / (S_C);
-    const H_Diff = (deltaHPrime - R_Term) / (S_H);
+    const L_Diff = deltaL / S_L;
+    const C_Diff = (C2Prime - C1Prime) / S_C;
+    const deltaH = 2 * Math.sqrt(C1Prime * C2Prime) *
+        Math.sin((deltaHPrime / 2) * (Math.PI / 180));
+    const H_Diff = deltaH / S_H;
 
-    return Math.sqrt(L_Diff * L_Diff + C_Diff * C_Diff + H_Diff * H_Diff);
+    return Math.sqrt(
+        L_Diff * L_Diff +
+        C_Diff * C_Diff +
+        H_Diff * H_Diff +
+        R_Term * C_Diff * H_Diff
+    );
 }
 
 // Add tint to RGB color
@@ -364,5 +380,9 @@ export function hexToRgb(hex) {
 
 // Convert RGB to hex color
 export function rgbToHex(r, g, b) {
-    return "#" + (1 << 24 | r << 16 | g << 8 | b).toString(16).slice(1);
+    // Generated colours can be fractional after interpolation.  Bitwise
+    // conversion silently wraps out-of-range values and produced malformed
+    // SVG/CSS colours for a few edge settings, so normalize every channel.
+    const channel = value => Math.max(0, Math.min(255, Math.round(Number(value) || 0)));
+    return `#${[r, g, b].map(channel).map(value => value.toString(16).padStart(2, '0')).join('')}`;
 }

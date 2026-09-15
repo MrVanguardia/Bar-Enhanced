@@ -134,6 +134,15 @@ export function fillHydroWidgetsPreferences(window, settings, T) {
     const calendarGroup = new Adw.PreferencesGroup({ title: T('Calendar Widget Settings') });
     list.append(calendarGroup);
 
+    const calendarStyleModel = Gtk.StringList.new([T('At a Glance'), T('Material Card')]);
+    const calendarStyleMap = ['simple', 'card'];
+    const calendarStyleRow = new Adw.ComboRow({ title: T('Style'), model: calendarStyleModel });
+    calendarStyleRow.selected = Math.max(0, calendarStyleMap.indexOf(settings.get_string('hydro-calendar-style')));
+    calendarStyleRow.connect('notify::selected', () => {
+        settings.set_string('hydro-calendar-style', calendarStyleMap[calendarStyleRow.selected]);
+    });
+    calendarGroup.add(calendarStyleRow);
+
     const calendarSizeRow = new Adw.SpinRow({ 
         title: T('Size'), 
         adjustment: new Gtk.Adjustment({ lower: 100, upper: 500, step_increment: 10, page_increment: 50 }) 
@@ -141,9 +150,26 @@ export function fillHydroWidgetsPreferences(window, settings, T) {
     settings.bind('hydro-calendar-size', calendarSizeRow, 'value', Gio.SettingsBindFlags.DEFAULT);
     calendarGroup.add(calendarSizeRow);
 
+    const calendarShapeRow = new Adw.ComboRow({ title: T('Shape'), model: shapeModel });
+    let currentCalendarShape = settings.get_string('hydro-calendar-shape');
+    calendarShapeRow.selected = Math.max(0, shapeMap.indexOf(currentCalendarShape));
+    calendarShapeRow.connect('notify::selected', () => {
+        settings.set_string('hydro-calendar-shape', shapeMap[calendarShapeRow.selected]);
+    });
+    calendarGroup.add(calendarShapeRow);
+
     // Battery Widget Settings Group
     const batteryGroup = new Adw.PreferencesGroup({ title: T('Battery Widget Settings') });
     list.append(batteryGroup);
+
+    const batteryStyleModel = Gtk.StringList.new([T('Material Card'), T('Minimal')]);
+    const batteryStyleMap = ['simple', 'minimal'];
+    const batteryStyleRow = new Adw.ComboRow({ title: T('Style'), model: batteryStyleModel });
+    batteryStyleRow.selected = Math.max(0, batteryStyleMap.indexOf(settings.get_string('hydro-battery-style')));
+    batteryStyleRow.connect('notify::selected', () => {
+        settings.set_string('hydro-battery-style', batteryStyleMap[batteryStyleRow.selected]);
+    });
+    batteryGroup.add(batteryStyleRow);
 
     const batterySizeRow = new Adw.SpinRow({ 
         title: T('Size'), 
@@ -151,6 +177,14 @@ export function fillHydroWidgetsPreferences(window, settings, T) {
     });
     settings.bind('hydro-battery-size', batterySizeRow, 'value', Gio.SettingsBindFlags.DEFAULT);
     batteryGroup.add(batterySizeRow);
+
+    const batteryShapeRow = new Adw.ComboRow({ title: T('Shape'), model: shapeModel });
+    let currentBatteryShape = settings.get_string('hydro-battery-shape');
+    batteryShapeRow.selected = Math.max(0, shapeMap.indexOf(currentBatteryShape));
+    batteryShapeRow.connect('notify::selected', () => {
+        settings.set_string('hydro-battery-shape', shapeMap[batteryShapeRow.selected]);
+    });
+    batteryGroup.add(batteryShapeRow);
 
     // Media Widget Settings Group
     const mediaGroup = new Adw.PreferencesGroup({ title: T('Media Player Widget Settings') });
@@ -172,6 +206,14 @@ export function fillHydroWidgetsPreferences(window, settings, T) {
     });
     settings.bind('hydro-media-size', mediaSizeRow, 'value', Gio.SettingsBindFlags.DEFAULT);
     mediaGroup.add(mediaSizeRow);
+
+    const mediaShapeRow = new Adw.ComboRow({ title: T('Shape'), model: shapeModel });
+    let currentMediaShape = settings.get_string('hydro-media-shape');
+    mediaShapeRow.selected = Math.max(0, shapeMap.indexOf(currentMediaShape));
+    mediaShapeRow.connect('notify::selected', () => {
+        settings.set_string('hydro-media-shape', shapeMap[mediaShapeRow.selected]);
+    });
+    mediaGroup.add(mediaShapeRow);
 
     // Custom Colors Group
     const colorGroup = new Adw.PreferencesGroup({ title: T('Color Overrides') });

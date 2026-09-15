@@ -113,19 +113,22 @@ export class LyricsClient {
   }
 
   _parseLRC(lrcText) {
+    if (typeof lrcText !== 'string') return [];
+
     const lines = [];
-    const regex = /\[(\d{2}):(\d{2})\.(\d{2,3})\](.*)/;
     lrcText.split("\n").forEach((line) => {
-      const match = line.match(regex);
-      if (match) {
-        const time =
-          parseInt(match[1]) * 60 * 1000 +
-          parseInt(match[2]) * 1000 +
-          parseFloat("0." + match[3]) * 1000;
-        if (match[4].trim()) lines.push({ time, text: match[4].trim() });
+      // An LRC line may contain several timestamps and a fraction is optional.
+      const timestamps = [...line.matchAll(/\[(\d{1,2}):(\d{2})(?:\.(\d{1,3}))?\]/g)];
+      const text = line.replace(/\[\d{1,2}:\d{2}(?:\.\d{1,3})?\]/g, '').trim();
+      if (!text) return;
+
+      for (const match of timestamps) {
+        const fraction = match[3] ? Number('0.' + match[3]) * 1000 : 0;
+        const time = Number(match[1]) * 60 * 1000 + Number(match[2]) * 1000 + fraction;
+        if (Number.isFinite(time)) lines.push({ time, text });
       }
     });
-    return lines;
+    return lines.sort((a, b) => a.time - b.time);
   }
 
   destroy() {

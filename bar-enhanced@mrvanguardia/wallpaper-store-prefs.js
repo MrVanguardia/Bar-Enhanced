@@ -45,14 +45,17 @@ export function openWallpaperStoreModal(parent, settings, T, soupSession) {
     wpContainer.append(loadingLabel);
 
     let searchTimeoutId = null;
+    // A search response may arrive after another search, or after this window
+    // was destroyed. Only the newest request may mutate the GTK widget tree.
+    const requestState = { generation: 0, destroyed: false };
     searchBar.connect('search-changed', () => {
         const term = searchBar.get_text();
         if (searchTimeoutId) GLib.Source.remove(searchTimeoutId);
         if (term.length === 0) {
-            fetchOnlineWallpapers(wpContainer, loadingLabel, soupSession, T, settings);
+            fetchOnlineWallpapers(wpContainer, loadingLabel, soupSession, T, settings, requestState);
         } else if (term.length > 2) {
             searchTimeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 500, () => {
-                searchOnlineWallpapers(wpContainer, term, soupSession, T, settings);
+                searchOnlineWallpapers(wpContainer, term, soupSession, T, settings, requestState);
                 searchTimeoutId = null;
                 return GLib.SOURCE_REMOVE;
             });
@@ -61,7 +64,7 @@ export function openWallpaperStoreModal(parent, settings, T, soupSession) {
 
     searchBar.connect('activate', () => {
         const term = searchBar.get_text();
-        if (term.length > 2) searchOnlineWallpapers(wpContainer, term, soupSession, T, settings);
+        if (term.length > 2) searchOnlineWallpapers(wpContainer, term, soupSession, T, settings, requestState);
     });
 
     page.add(group);
@@ -71,11 +74,20 @@ export function openWallpaperStoreModal(parent, settings, T, soupSession) {
     toolbarView.set_content(mainBox);
     storeWindow.set_content(toolbarView);
 
-    fetchOnlineWallpapers(wpContainer, loadingLabel, soupSession, T, settings);
+    storeWindow.connect('destroy', () => {
+        requestState.destroyed = true;
+        if (searchTimeoutId) {
+            GLib.Source.remove(searchTimeoutId);
+            searchTimeoutId = null;
+        }
+    });
+
+    fetchOnlineWallpapers(wpContainer, loadingLabel, soupSession, T, settings, requestState);
     storeWindow.present();
 }
 
-function searchOnlineWallpapers(container, term, soupSession, T, settings) {
+function searchOnlineWallpapers(container, term, soupSession, T, settings, requestState) {
+    const generation = ++requestState.generation;
     _clearContainer(container);
     const loadingLabel = new Gtk.Label({ label: T('Searching...') });
     container.append(loadingLabel);
@@ -84,9 +96,9 @@ function searchOnlineWallpapers(container, term, soupSession, T, settings) {
     let completed = 0;
     const finishCheck = () => {
         completed++;
-        if (completed === 2) {
+        if (completed === 2 && !requestState.destroyed && generation === requestState.generation) {
             allWp.sort((a, b) => (parseInt(b.rating) || 0) - (parseInt(a.rating) || 0));
-            renderWallpaperList(container, loadingLabel, allWp, soupSession, T, settings);
+            renderWallpaperList(container, loadingLabel, allWp, soupSession, T, settings, requestState);
         }
     };
 
@@ -128,7 +140,8 @@ function searchOnlineWallpapers(container, term, soupSession, T, settings) {
     });
 }
 
-function fetchOnlineWallpapers(container, loadingLabel, soupSession, T, settings) {
+function fetchOnlineWallpapers(container, loadingLabel, soupSession, T, settings, requestState) {
+    const generation = ++requestState.generation;
     _clearContainer(container);
     if (loadingLabel && !loadingLabel.get_parent()) {
         container.append(loadingLabel);
@@ -139,9 +152,9 @@ function fetchOnlineWallpapers(container, loadingLabel, soupSession, T, settings
     let completed = 0;
     const finishCheck = () => {
         completed++;
-        if (completed === 2) {
+        if (completed === 2 && !requestState.destroyed && generation === requestState.generation) {
             allWp.sort((a, b) => (parseInt(b.rating) || 0) - (parseInt(a.rating) || 0));
-            renderWallpaperList(container, loadingLabel, allWp, soupSession, T, settings);
+            renderWallpaperList(container, loadingLabel, allWp, soupSession, T, settings, requestState);
         }
     };
 
@@ -194,7 +207,7 @@ function _clearContainer(container) {
     }
 }
 
-function renderWallpaperList(container, loadingLabel, data, soupSession, T, settings) {
+function renderWallpaperList(container, loadingLabel, data, soupSession, T, settings, requestState) {
     try {
         if (loadingLabel && loadingLabel.get_parent()) container.remove(loadingLabel);
     } catch (e) { }
@@ -240,6 +253,7 @@ function renderWallpaperList(container, loadingLabel, data, soupSession, T, sett
             const imgMsg = Soup.Message.new_from_uri('GET', GLib.Uri.parse(preview, GLib.UriFlags.NONE));
             soupSession.send_and_read_async(imgMsg, GLib.PRIORITY_DEFAULT, null, (s, r) => {
                 try {
+                    if (requestState?.destroyed) return;
                     const bytes = s.send_and_read_finish(r);
                     const stream = Gio.MemoryInputStream.new_from_bytes(bytes);
                     const pixbuf = GdkPixbuf.Pixbuf.new_from_stream_at_scale(stream, 128, 72, true, null);
@@ -259,36 +273,66 @@ function renderWallpaperList(container, loadingLabel, data, soupSession, T, sett
         btn.connect('clicked', () => {
             btn.set_sensitive(false);
             btn.set_label(T('Downloading...'));
+            const markFailed = () => {
+                if (requestState?.destroyed) return;
+                btn.set_label(T('Failed'));
+                btn.set_sensitive(true);
+            };
 
             const performDownloadAndApply = (downloadUrl, fileIdOverride) => {
+                if (!/^https:\/\//i.test(downloadUrl || '')) {
+                    markFailed();
+                    return;
+                }
                 let ext = '.jpg';
                 if (downloadUrl.includes('.mp4')) ext = '.mp4';
                 else if (downloadUrl.includes('.webm')) ext = '.webm';
                 else if (downloadUrl.includes('.png')) ext = '.png';
                 else if (isAnimated) ext = '.mp4';
 
-                const fileId = fileIdOverride || item.id;
+                const fileId = String(fileIdOverride || item.id || 'wallpaper')
+                    .replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 120);
                 const wpDir = GLib.get_home_dir() + '/.local/share/backgrounds/bar-enhanced';
                 GLib.mkdir_with_parents(wpDir, 0o755);
                 
                 const finalFile = `${wpDir}/${fileId}_${name.replace(/[^a-zA-Z0-9]/g, '_')}${ext}`;
 
                 if (Gio.File.new_for_path(finalFile).query_exists(null)) {
-                    applyWallpaper(finalFile, isAnimated ? 'video' : 'static', settings, btn, T);
+                    applyWallpaper(finalFile, isAnimated ? 'video' : 'image', settings, btn, T);
                     return;
                 }
 
+                const partialFile = `${finalFile}.part`;
+                const partial = Gio.File.new_for_path(partialFile);
+                try { partial.delete(null); } catch (e) {}
                 const proc = Gio.Subprocess.new(
-                    ['curl', '-L', downloadUrl, '-o', finalFile],
+                    ['curl', '--fail', '--location', '--output', partialFile, downloadUrl],
                     Gio.SubprocessFlags.NONE
                 );
 
                 proc.wait_async(null, (p, res) => {
                     try {
                         p.wait_finish(res);
-                        applyWallpaper(finalFile, isAnimated ? 'video' : 'static', settings, btn, T);
+                        if (!p.get_successful())
+                            throw new Error(`curl exited with status ${p.get_exit_status()}`);
+                        const info = partial.query_info(
+                            Gio.FILE_ATTRIBUTE_STANDARD_SIZE,
+                            Gio.FileQueryInfoFlags.NONE,
+                            null
+                        );
+                        if (!info || info.get_size() === 0)
+                            throw new Error('Downloaded wallpaper is empty');
+                        partial.move(
+                            Gio.File.new_for_path(finalFile),
+                            Gio.FileCopyFlags.OVERWRITE,
+                            null,
+                            null
+                        );
+                        if (requestState?.destroyed) return;
+                        applyWallpaper(finalFile, isAnimated ? 'video' : 'image', settings, btn, T);
                     } catch (e) {
-                        btn.set_label(T('Failed'));
+                        try { partial.delete(null); } catch (deleteError) {}
+                        markFailed();
                     }
                 });
             };
@@ -308,10 +352,10 @@ function renderWallpaperList(container, loadingLabel, data, soupSession, T, sett
                             const fileId = item.id.split('-').pop().replace('.html', '');
                             performDownloadAndApply(finalLink, fileId);
                         } else {
-                            btn.set_label(T('Failed'));
+                            markFailed();
                         }
                     } catch (err) {
-                        btn.set_label(T('Failed'));
+                        markFailed();
                     }
                 });
             } else if (item.id) {
@@ -345,10 +389,11 @@ function applyWallpaper(filePath, type, settings, btn, T) {
     settings.set_string('hydro-wallpaper-type', type);
     settings.set_boolean('hydro-wallpaper-enabled', true);
     
-    if (type === 'static' || filePath.endsWith('.png') || filePath.endsWith('.jpg')) {
+    if (type === 'image' || filePath.endsWith('.png') || filePath.endsWith('.jpg')) {
         const bgSettings = new Gio.Settings({ schema_id: 'org.gnome.desktop.background' });
-        bgSettings.set_string('picture-uri', 'file://' + filePath);
-        bgSettings.set_string('picture-uri-dark', 'file://' + filePath);
+        const uri = Gio.File.new_for_path(filePath).get_uri();
+        bgSettings.set_string('picture-uri', uri);
+        bgSettings.set_string('picture-uri-dark', uri);
     }
 
     btn.set_label(T('Applied'));

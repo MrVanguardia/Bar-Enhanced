@@ -271,8 +271,8 @@ export function fillVitalsPreferences(parentWindow, realExtension) {
                 startBtn.set_sensitive(true);
                 startBtn.set_label(T('Start Configuration'));
                 try {
-                    let success = obj.wait_finish(res);
-                    if (success) {
+                    obj.wait_finish(res);
+                    if (obj.get_successful()) {
                         let infoDialog = new Gtk.MessageDialog({
                             transient_for: dialog,
                             modal: true,

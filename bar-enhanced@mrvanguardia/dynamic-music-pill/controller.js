@@ -101,6 +101,7 @@ export class MusicController {
         this._sleepTimerId = null;
         this._sleepTimerActive = false;
         this._sleepTimerEndTime = null;
+        this._closeAppTimeoutId = null;
 
         // Network lyrics acquisition related
         this._lyricsClient = new LyricsClient();
@@ -112,10 +113,13 @@ export class MusicController {
 
         this._lyricOwnerId = null;
         this._lyricIfaceInfo = null;
+        this._enabled = false;
+        this._cacheCleanupIdleId = null;
 
         this._createPill();
 
-        GLib.idle_add(GLib.PRIORITY_LOW, () => {
+        this._cacheCleanupIdleId = GLib.idle_add(GLib.PRIORITY_LOW, () => {
+            this._cacheCleanupIdleId = null;
             this._cleanupDiskCache();
             return GLib.SOURCE_REMOVE;
         });
@@ -146,6 +150,9 @@ export class MusicController {
     }
 
     enable() {
+        if (this._enabled)
+            return;
+        this._enabled = true;
         this._isShuttingDown = false;
         this._createPill();
         initDTDModule();
@@ -215,7 +222,14 @@ export class MusicController {
     }
 
     disable() {
+        if (!this._enabled)
+            return;
+        this._enabled = false;
         this._isShuttingDown = true;
+        if (this._cacheCleanupIdleId) {
+            GLib.Source.remove(this._cacheCleanupIdleId);
+            this._cacheCleanupIdleId = null;
+        }
         if (this._artMonitor) {
             this._artMonitor.cancel();
             this._artMonitor = null;
@@ -227,6 +241,14 @@ export class MusicController {
         if (this._retryArtTimer) {
             GLib.Source.remove(this._retryArtTimer);
             this._retryArtTimer = null;
+        }
+        if (this._cleaningTimeout) {
+            GLib.Source.remove(this._cleaningTimeout);
+            this._cleaningTimeout = null;
+        }
+        if (this._closeAppTimeoutId) {
+            GLib.Source.remove(this._closeAppTimeoutId);
+            this._closeAppTimeoutId = null;
         }
         if (this._startupCompleteId) {
             Main.layoutManager.disconnect(this._startupCompleteId);
@@ -377,14 +399,21 @@ export class MusicController {
         if (killTarget) {
             killTarget = killTarget.toLowerCase();
 
-            GLib.timeout_add(GLib.PRIORITY_DEFAULT, 800, () => {
-                if (!this._proxies.has(busName)) return GLib.SOURCE_REMOVE;
+            if (this._closeAppTimeoutId)
+                GLib.Source.remove(this._closeAppTimeoutId);
+            this._closeAppTimeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 800, () => {
+                this._closeAppTimeoutId = null;
+                if (this._isShuttingDown || !this._proxies.has(busName))
+                    return GLib.SOURCE_REMOVE;
 
                 try {
                     if (killTarget.includes('.')) {
                         Gio.Subprocess.new(['flatpak', 'kill', killTarget], Gio.SubprocessFlags.NONE);
+                    } else {
+                        // Match only the executable name. `pkill -f` may match an
+                        // unrelated command line containing the player name.
+                        Gio.Subprocess.new(['pkill', '-x', killTarget], Gio.SubprocessFlags.NONE);
                     }
-                    Gio.Subprocess.new(['pkill', '-f', killTarget], Gio.SubprocessFlags.NONE);
                 } catch (e) {
                     log("[Dynamic Music Pill] Failed to hard kill: " + killTarget);
                 }

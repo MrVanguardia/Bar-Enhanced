@@ -25,6 +25,7 @@ const Labels = Object.freeze({
  */
 export class FileManager1Client {
     constructor() {
+        this._destroyed = false;
         this._signalsHandler = new Utils.GlobalSignalsHandler();
         this._cancellable = new Gio.Cancellable();
 
@@ -34,6 +35,8 @@ export class FileManager1Client {
             'org.freedesktop.FileManager1',
             '/org/freedesktop/FileManager1',
             (initable, error) => {
+            if (this._destroyed)
+                return;
             // Use async construction to avoid blocking on errors.
                 if (error) {
                     if (!error.matches(Gio.IOErrorEnum, Gio.IOErrorEnum.CANCELLED))
@@ -70,6 +73,7 @@ export class FileManager1Client {
     }
 
     destroy() {
+        this._destroyed = true;
         if (this._windowsUpdateIdle) {
             GLib.source_remove(this._windowsUpdateIdle);
             delete this._windowsUpdateIdle;
@@ -101,6 +105,8 @@ export class FileManager1Client {
     }
 
     _onPropertyChanged(proxy, changed, _invalidated) {
+        if (this._destroyed)
+            return;
         const property = changed.unpack();
         if (property &&
             ('OpenWindowsWithLocations' in property))
@@ -119,11 +125,11 @@ export class FileManager1Client {
     }
 
     _onWindowsChanged() {
-        if (this._windowsUpdateIdle)
+        if (this._destroyed || this._windowsUpdateIdle)
             return;
 
         this._windowsUpdateIdle = GLib.idle_add(GLib.PRIORITY_DEFAULT, () => {
-            if (this._updateWindows())
+            if (!this._destroyed && this._updateWindows())
                 this._updateLocationMap();
 
             delete this._windowsUpdateIdle;
@@ -132,6 +138,8 @@ export class FileManager1Client {
     }
 
     _updateLocationMap() {
+        if (this._destroyed || !this._proxy)
+            return;
         const properties = this._proxy.get_cached_property_names();
         if (!properties) {
             // Nothing to check yet.

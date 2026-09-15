@@ -15,6 +15,11 @@ export const PlayerSelectorMenu = GObject.registerClass(
 
             this._controller = controller;
             this._settings = controller._settings;
+            this._monitorsChangedId = Main.layoutManager.connect('monitors-changed', () => {
+                this._syncStageSize();
+                if (this.visible)
+                    this._positionMenu();
+            });
 
             this._backgroundBtn = new St.Button({ style: 'background-color: transparent;', reactive: true, x_expand: true, y_expand: true, width: bgW, height: bgH });
             this._backgroundBtn.connectObject('clicked', () => { this.hide(); }, this);
@@ -88,7 +93,16 @@ export const PlayerSelectorMenu = GObject.registerClass(
                     GLib.Source.remove(this._leaveHideTimeoutId);
                     this._leaveHideTimeoutId = null;
                 }
+                if (this._monitorsChangedId) {
+                    Main.layoutManager.disconnect(this._monitorsChangedId);
+                    this._monitorsChangedId = null;
+                }
             });
+        }
+
+        _syncStageSize() {
+            this.set_size(global.stage.width, global.stage.height);
+            this._backgroundBtn.set_size(global.stage.width, global.stage.height);
         }
 
         populate() {
@@ -232,6 +246,9 @@ export const PlayerSelectorMenu = GObject.registerClass(
         }
 
         showMenu() {
+            let pill = this._controller?._pill;
+            if (!pill || !pill.get_parent())
+                return;
             disableDashToDockAutohide();
             this.populate();
             this.visible = true;
@@ -239,10 +256,18 @@ export const PlayerSelectorMenu = GObject.registerClass(
             this.grab_key_focus();
             this.ease({ opacity: 255, duration: 200, mode: Clutter.AnimationMode.EASE_OUT_QUAD });
 
-            let pill = this._controller._pill;
+            this._positionMenu();
+        }
+
+        _positionMenu() {
+            let pill = this._controller?._pill;
+            if (!pill || !pill.get_parent())
+                return;
             let [px, py] = pill.get_transformed_position();
             let [pw, ph] = pill.get_transformed_size();
-            let monitor = Main.layoutManager.findMonitorForActor(pill);
+            let monitor = Main.layoutManager.findMonitorForActor(pill) || Main.layoutManager.primaryMonitor;
+            if (!monitor)
+                return;
 
             let c = pill._displayedColor;
             let bgAlpha = pill._currentBgAlpha || 0.95;
@@ -282,6 +307,8 @@ export const PlayerSelectorMenu = GObject.registerClass(
                 } else {
                     startX = Math.round(px - menuW - 15);
                 }
+                if (startX < monitor.x + 10) startX = monitor.x + 10;
+                else if (startX + menuW > monitor.x + monitor.width - 10) startX = monitor.x + monitor.width - menuW - 10;
             } else {
                 startX = Math.round(px + (pw / 2) - (menuW / 2));
                 if (monitor) {

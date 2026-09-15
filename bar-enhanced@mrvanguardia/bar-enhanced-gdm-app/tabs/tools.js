@@ -1,6 +1,7 @@
 import Adw from 'gi://Adw';
 import Gtk from 'gi://Gtk';
 import Gio from 'gi://Gio';
+import GLib from 'gi://GLib';
 
 export function buildToolsTab(extension, extensionPath, T) {
     const page = new Adw.PreferencesPage({
@@ -29,24 +30,12 @@ export function buildToolsTab(extension, extensionPath, T) {
     // Wire extract button
     extractBtn.connect('clicked', () => {
         try {
-            let script = `#!/bin/bash
-# Extracts default shell theme resource
-DIR="/tmp/default-theme"
-mkdir -p "$DIR"
-gresource extract /usr/share/gnome-shell/gnome-shell-theme.gresource /org/gnome/shell/theme/gnome-shell.css "$DIR/gnome-shell.css" &>/dev/null
-echo "Theme extracted successfully to $DIR"
-`;
-            let file = Gio.File.new_for_path('/tmp/gdm-extract.sh');
-            try { file.delete(null); } catch(e) {}
-            let outStream = file.replace(null, false, Gio.FileCreateFlags.NONE, null);
-            let dataStream = new Gio.DataOutputStream({ base_stream: outStream });
-            dataStream.put_string(script, null);
-            dataStream.close(null);
-            
-            file.set_attribute_uint32('unix::mode', 0o755, Gio.FileQueryInfoFlags.NONE, null);
-            
+            const outputDir = GLib.build_filenamev([GLib.get_user_runtime_dir(), 'bar-enhanced-default-theme']);
+            const script = 'mkdir -p "$1" && gresource extract '
+                + '/usr/share/gnome-shell/gnome-shell-theme.gresource '
+                + '/org/gnome/shell/theme/gnome-shell.css "$1/gnome-shell.css"';
             let proc = Gio.Subprocess.new(
-                ['bash', '/tmp/gdm-extract.sh'],
+                ['bash', '-c', script, 'bar-enhanced-gdm-extract', outputDir],
                 Gio.SubprocessFlags.NONE
             );
             
@@ -58,7 +47,9 @@ echo "Theme extracted successfully to $DIR"
             proc.wait_async(null, (p, res) => {
                 try {
                     p.wait_finish(res);
-                    let successToast = new Adw.Toast({ title: T ? T('Theme extracted to /tmp/default-theme!') : 'Theme extracted to /tmp/default-theme!' });
+                    if (!p.get_successful())
+                        throw new Error('gresource extraction failed');
+                    let successToast = new Adw.Toast({ title: T ? T('Theme extracted successfully.') : 'Theme extracted successfully.' });
                     if (page.get_root() && page.get_root().add_toast) page.get_root().add_toast(successToast);
                 } catch(e) {
                     let errToast = new Adw.Toast({ title: T ? T('Extraction failed.') : 'Extraction failed.' });

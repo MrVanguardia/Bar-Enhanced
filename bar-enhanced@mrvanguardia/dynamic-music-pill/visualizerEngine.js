@@ -26,6 +26,7 @@ export class SharedVisualizerEngine {
         this._bins = new Array(this._fixedBarCount).fill(0);
         this._silentFrames = 0;
         this._rollingMax = 2000;
+        this._restartId = null;
     }
 
     subscribe(callback) {
@@ -48,10 +49,7 @@ export class SharedVisualizerEngine {
     }
 
     _evaluatePlayback() {
-        let anyPlaying = false;
-        for (let isPlaying of this._subscribers.values()) {
-            if (isPlaying) { anyPlaying = true; break; }
-        }
+        const anyPlaying = this._hasPlayingSubscribers();
 
         if (anyPlaying) {
             if (!this._cavaProcess) this.startCava();
@@ -59,6 +57,13 @@ export class SharedVisualizerEngine {
             this.stopCava();
             this._broadcast(new Array(this._fixedBarCount).fill(0), true);
         }
+    }
+
+    _hasPlayingSubscribers() {
+        for (const isPlaying of this._subscribers.values()) {
+            if (isPlaying) return true;
+        }
+        return false;
     }
 
     startCava() {
@@ -98,6 +103,7 @@ export class SharedVisualizerEngine {
             launcher.setenv('PULSE_PROP', 'application.id=org.PulseAudio.pavucontrol', true);
 
             this._process = launcher.spawnv(['cava', '-p', tmpConfig]);
+            const process = this._process;
 
             this._stdout = this._process.get_stdout_pipe();
             this._cancellable = new Gio.Cancellable();
@@ -106,6 +112,30 @@ export class SharedVisualizerEngine {
             this._cavaProcess = true;
 
             this._readStdoutBytes();
+            process.wait_async(null, (completedProcess, result) => {
+                try { completedProcess.wait_finish(result); } catch (e) {}
+                // stopCava() clears _process before deliberately terminating
+                // Cava, so only an unexpected exit reaches this branch.
+                if (this._process !== process) return;
+                this._process = null;
+                if (this._cancellable) {
+                    this._cancellable.cancel();
+                    this._cancellable = null;
+                }
+                this._stdout = null;
+                this._cavaProcess = false;
+                if (this._tmpConfigPath) {
+                    try { Gio.File.new_for_path(this._tmpConfigPath).delete(null); } catch (e) {}
+                    this._tmpConfigPath = null;
+                }
+                if (this._hasPlayingSubscribers() && !this._restartId) {
+                    this._restartId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 1000, () => {
+                        this._restartId = null;
+                        if (this._hasPlayingSubscribers()) this.startCava();
+                        return GLib.SOURCE_REMOVE;
+                    });
+                }
+            });
         } catch (e) {
             log("[Dynamic Music Pill] Shared Cava error: " + e.message);
         }
@@ -186,11 +216,17 @@ export class SharedVisualizerEngine {
 
     _broadcast(data, isSilent) {
         for (let cb of this._subscribers.keys()) {
-            cb(data, isSilent);
+            try { cb(data, isSilent); } catch (e) {
+                log('[Dynamic Music Pill] Visualizer subscriber error: ' + e.message);
+            }
         }
     }
 
     stopCava() {
+        if (this._restartId) {
+            GLib.Source.remove(this._restartId);
+            this._restartId = null;
+        }
         if (this._cancellable) {
             this._cancellable.cancel();
             this._cancellable = null;

@@ -301,6 +301,10 @@ export const MusicPill = GObject.registerClass(
                 this._applyStyle(this._displayedColor.r, this._displayedColor.g, this._displayedColor.b);
             }, this);
             this._settings.connectObject('changed::hide-text', () => this._updateDimensions(), this);
+            this._settings.connectObject('changed::music-pill-enabled', () => {
+                if (!this._settings.get_boolean('music-pill-enabled'))
+                    this._ensureHidden();
+            }, this);
             this._settings.connectObject('changed::pill-dynamic-width', () => { this._updateDimensions(); if (this._isActiveState) this._body.ease({ width: this._targetWidth, duration: 300, mode: Clutter.AnimationMode.EASE_OUT_QUAD }); }, this);
             this._settings.connectObject('changed::inline-artist', () => this._updateTextDisplay(true), this);
             this._settings.connectObject('changed::use-custom-colors', () => { this._applyStyle(this._displayedColor.r, this._displayedColor.g, this._displayedColor.b); this._updateDimensions(); }, this);
@@ -419,7 +423,7 @@ export const MusicPill = GObject.registerClass(
             if (this._hoverTimeout) { GLib.Source.remove(this._hoverTimeout); this._hoverTimeout = null; }
             if (this._singleClickTimerId) { GLib.Source.remove(this._singleClickTimerId); this._singleClickTimerId = null; }
             if (this._idleDimId) { GLib.Source.remove(this._idleDimId); this._idleDimId = null; }
-            if (this._cancellable) { this._cancellable.cancel(); this._cancellable = null; }
+            if (this._colorCancellable) { this._colorCancellable.cancel(); this._colorCancellable = null; }
         }
         animateOutAndDestroy() {
         }
@@ -937,8 +941,34 @@ export const MusicPill = GObject.registerClass(
             }
         }
 
+        // Hydro Media can keep the shared controller alive while the panel
+        // pill itself is disabled. Keep that mode invisible instead of
+        // recreating/showing a UI element the user explicitly turned off.
+        _ensureHidden() {
+            if (this._hideGraceTimer) {
+                GLib.Source.remove(this._hideGraceTimer);
+                this._hideGraceTimer = null;
+            }
+            this.remove_all_transitions();
+            this._body?.remove_all_transitions();
+            this._isActiveState = false;
+            this.reactive = false;
+            this._visualizer?.setPlaying(false);
+            this.set_width(0);
+            this.opacity = 255;
+            this.visible = false;
+
+            if (this._interfaceSettings && this._settings.get_boolean('sync-accent-color')) {
+                try { this._interfaceSettings.set_string('accent-color', this._originalAccent || 'blue'); } catch (e) {}
+            }
+        }
+
         updateDisplay(title, artist, artUrl, status, busName, isSkipActive, player = null) {
             if (!this.get_parent()) return;
+            if (!this._settings.get_boolean('music-pill-enabled')) {
+                this._ensureHidden();
+                return;
+            }
 
             let statusChanged = this._currentStatus !== status;
             let busChanged = this._currentBusName !== busName;
@@ -1256,15 +1286,20 @@ export const MusicPill = GObject.registerClass(
             if (this._colorCancellable) {
                 this._colorCancellable.cancel();
             }
-            this._colorCancellable = new Gio.Cancellable();
+            const cancellable = new Gio.Cancellable();
+            this._colorCancellable = cancellable;
 
-            file.load_contents_async(this._colorCancellable, (f, res) => {
+            file.load_contents_async(cancellable, (f, res) => {
                 try {
+                    if (this._colorCancellable !== cancellable)
+                        return;
                     let [ok, bytes] = f.load_contents_finish(res);
                     if (ok && this._visualizer) {
                         let stream = Gio.MemoryInputStream.new_from_bytes(bytes);
-                        GdkPixbuf.Pixbuf.new_from_stream_async(stream, this._colorCancellable, (source, pixRes) => {
+                        GdkPixbuf.Pixbuf.new_from_stream_async(stream, cancellable, (source, pixRes) => {
                             try {
+                                if (this._colorCancellable !== cancellable)
+                                    return;
                                 let pixbuf = GdkPixbuf.Pixbuf.new_from_stream_finish(pixRes);
                                 if (!pixbuf || !this._visualizer) return;
 

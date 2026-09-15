@@ -45,6 +45,7 @@ export const Sensors = GObject.registerClass({
     _init(settings, sensorIcons) {
         this._settings = settings;
         this._sensorIcons = sensorIcons;
+        this._destroyed = false;
 
         this.resetHistory();
 
@@ -107,6 +108,8 @@ export const Sensors = GObject.registerClass({
     }
 
     query(callback, dwell) {
+        if (this._destroyed)
+            return;
         if (!this._hardware_detected) {
             // we could set _hardware_detected in discoverHardwareMonitors, but by
             // doing it here, we guarantee avoidance of race conditions
@@ -770,7 +773,8 @@ export const Sensors = GObject.registerClass({
         if(format !== "string" && (value === 'N/A' || value === '[N/A]' || isNaN(value))) return;
 
         let nvidiaLabel = {'label': label, 'type': type, 'format': format};
-        if (!this._nvidia_labels.includes(nvidiaLabel))
+        if (!this._nvidia_labels.some(existing =>
+            existing.label === label && existing.type === type && existing.format === format))
             this._nvidia_labels.push(nvidiaLabel);
 
         this._returnValue(callback, label, value, type, format);
@@ -779,7 +783,8 @@ export const Sensors = GObject.registerClass({
     _returnValue(callback, label, value, type, format) {
         // don't return if value is not a number - will revisit later
         //if (isNaN(value)) return;
-        callback(label, value, type, format);
+        if (!this._destroyed)
+            callback(label, value, type, format);
     }
 
     _discoverHardwareMonitors(callback) {
@@ -1096,6 +1101,7 @@ export const Sensors = GObject.registerClass({
     }
 
     destroy() {
+        this._destroyed = true;
         this._destroyFrameMonitor();
         this._terminateNvidiaSmiProcess();
 
