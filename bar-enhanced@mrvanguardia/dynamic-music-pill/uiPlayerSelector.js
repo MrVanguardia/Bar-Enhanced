@@ -142,7 +142,7 @@ export const PlayerSelectorMenu = GObject.registerClass(
             let currentSelected = this._settings.get_string('selected-player-bus');
 
             // ==== Auto (Smart Selection) Button ====
-            let autoContent = new St.BoxLayout({ vertical: false, style: 'spacing: 12px;' });
+            let autoContent = new St.BoxLayout({ orientation: Clutter.Orientation.HORIZONTAL, style: 'spacing: 12px;' });
             let autoIcon = new St.Icon({ icon_name: 'emblem-system-symbolic', icon_size: 24, style: textColorStyle });
             let autoLabel = new St.Label({ text: _('Auto (Smart Selection)'), y_align: Clutter.ActorAlign.CENTER, style: textColorStyle });
             autoContent.add_child(autoIcon);
@@ -191,7 +191,7 @@ export const PlayerSelectorMenu = GObject.registerClass(
 
                 let rawAppName = busName.replace('org.mpris.MediaPlayer2.', '').split('.')[0];
                 let identity = (proxy._identity || (rawAppName.charAt(0).toUpperCase() + rawAppName.slice(1))).replace(/\b\w/g, c => c.toUpperCase());
-                let btnContent = new St.BoxLayout({ vertical: false, style: 'spacing: 12px;' });
+                let btnContent = new St.BoxLayout({ orientation: Clutter.Orientation.HORIZONTAL, style: 'spacing: 12px;' });
 
                 let icon = new St.Icon({
                     gicon: proxy._gicon || getPlayerIcon(proxy, busName),
