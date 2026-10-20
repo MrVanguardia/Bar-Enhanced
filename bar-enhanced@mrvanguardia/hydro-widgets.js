@@ -262,7 +262,7 @@ const HydroClockWidget = GObject.registerClass(
 
             // DIGITAL FACE
             this._digitalBox = new St.BoxLayout({
-                vertical: true,
+                orientation: Clutter.Orientation.VERTICAL,
                 x_align: Clutter.ActorAlign.CENTER,
                 y_align: Clutter.ActorAlign.CENTER
             });
@@ -601,7 +601,7 @@ const HydroWeatherWidget = GObject.registerClass(
 
             // Simple/Leaf Style (Image Reference)
             this._simpleBox = new St.BoxLayout({
-                vertical: false,
+                orientation: Clutter.Orientation.HORIZONTAL,
                 x_align: Clutter.ActorAlign.CENTER,
                 y_align: Clutter.ActorAlign.CENTER,
                 style: 'spacing: 12px;'
@@ -623,12 +623,12 @@ const HydroWeatherWidget = GObject.registerClass(
 
             // Detailed Style
             this._detailedBox = new St.BoxLayout({
-                vertical: true,
+                orientation: Clutter.Orientation.VERTICAL,
                 x_align: Clutter.ActorAlign.CENTER,
                 y_align: Clutter.ActorAlign.CENTER
             });
             this._detLocation = new St.Label({ text: 'San Francisco', style: 'font-size: 16px; font-weight: 600;' });
-            this._detTempBox = new St.BoxLayout({ vertical: false, style: 'spacing: 12px;' });
+            this._detTempBox = new St.BoxLayout({ orientation: Clutter.Orientation.HORIZONTAL, style: 'spacing: 12px;' });
             this._detIcon = new St.Icon({ icon_name: 'weather-clear-symbolic', icon_size: 48 });
             this._detTemp = new St.Label({ text: '20°', style: 'font-size: 42px; font-weight: 800;' });
             this._detTempBox.add_child(this._detIcon);
@@ -641,7 +641,7 @@ const HydroWeatherWidget = GObject.registerClass(
 
             // Minimal Style
             this._minimalBox = new St.BoxLayout({
-                vertical: false,
+                orientation: Clutter.Orientation.HORIZONTAL,
                 x_align: Clutter.ActorAlign.CENTER,
                 y_align: Clutter.ActorAlign.CENTER,
                 style: 'spacing: 8px;'
@@ -653,17 +653,17 @@ const HydroWeatherWidget = GObject.registerClass(
 
             // Pixel 16 Style (Capsule: horizontal layout with left text column and right icon+temp)
             this._pixel16Box = new St.BoxLayout({
-                vertical: false,
+                orientation: Clutter.Orientation.HORIZONTAL,
                 x_align: Clutter.ActorAlign.CENTER,
                 y_align: Clutter.ActorAlign.CENTER,
                 style: 'spacing: 16px;'
             });
-            this._pxLeftCol = new St.BoxLayout({ vertical: true, y_align: Clutter.ActorAlign.CENTER });
+            this._pxLeftCol = new St.BoxLayout({ orientation: Clutter.Orientation.VERTICAL, y_align: Clutter.ActorAlign.CENTER });
             this._pxLocation = new St.Label({ text: 'Location', style: 'font-size: 14px; font-weight: bold;' });
             this._pxDesc = new St.Label({ text: 'Clear', style: 'font-size: 12px; opacity: 0.7;' });
             this._pxLeftCol.add_child(this._pxLocation);
             this._pxLeftCol.add_child(this._pxDesc);
-            this._pxRightCol = new St.BoxLayout({ vertical: false, y_align: Clutter.ActorAlign.CENTER, style: 'spacing: 8px;' });
+            this._pxRightCol = new St.BoxLayout({ orientation: Clutter.Orientation.HORIZONTAL, y_align: Clutter.ActorAlign.CENTER, style: 'spacing: 8px;' });
             this._pxIcon = new St.Icon({ icon_name: 'weather-clear-symbolic', icon_size: 32 });
             this._pxTemp = new St.Label({ text: '20°', style: 'font-size: 32px; font-weight: 300;' });
             this._pxRightCol.add_child(this._pxIcon);
@@ -836,14 +836,14 @@ const HydroCalendarWidget = GObject.registerClass(
             super._init({}, extension, 'hydro-calendar');
 
             this._mainBox = new St.BoxLayout({
-                vertical: true,
+                orientation: Clutter.Orientation.VERTICAL,
                 x_align: Clutter.ActorAlign.START,
                 y_align: Clutter.ActorAlign.CENTER,
                 style: 'spacing: 6px; width: 100%;'
             });
 
             this._topRow = new St.BoxLayout({
-                vertical: false,
+                orientation: Clutter.Orientation.HORIZONTAL,
                 style: 'spacing: 12px;'
             });
 
@@ -853,7 +853,7 @@ const HydroCalendarWidget = GObject.registerClass(
             });
 
             this._weatherBox = new St.BoxLayout({
-                vertical: false,
+                orientation: Clutter.Orientation.HORIZONTAL,
                 style: 'spacing: 6px;'
             });
 
@@ -974,7 +974,7 @@ const HydroBatteryWidget = GObject.registerClass(
             this._upowerClient = UPowerGlib.Client.new();
 
             this._mainBox = new St.BoxLayout({
-                vertical: true,
+                orientation: Clutter.Orientation.VERTICAL,
                 x_align: Clutter.ActorAlign.CENTER,
                 y_align: Clutter.ActorAlign.CENTER,
                 style: 'spacing: 8px; width: 100%;'
@@ -988,7 +988,7 @@ const HydroBatteryWidget = GObject.registerClass(
             });
 
             this._statusRow = new St.BoxLayout({
-                vertical: false,
+                orientation: Clutter.Orientation.HORIZONTAL,
                 x_align: Clutter.ActorAlign.CENTER,
                 style: 'spacing: 6px;'
             });
@@ -1076,7 +1076,7 @@ const HydroBatteryWidget = GObject.registerClass(
             const scale = size / 220.0;
             const style = this._settings ? this._settings.get_string('hydro-battery-style') : 'simple';
             const minimal = style === 'minimal';
-            this._mainBox.vertical = !minimal;
+            this._mainBox.orientation = minimal ? Clutter.Orientation.HORIZONTAL : Clutter.Orientation.VERTICAL;
             this._mainBox.style = `spacing: ${Math.max(4, Math.round(8 * scale))}px; width: 100%;`;
             this._sysLabel.style = `font-size: ${Math.max(20, Math.round((minimal ? 34 : 48) * scale))}px; font-weight: ${minimal ? 500 : 300}; font-family: sans-serif; letter-spacing: -1px;`;
             this._sysIcon.icon_size = Math.max(14, Math.round((minimal ? 24 : 20) * scale));
@@ -1094,7 +1094,7 @@ const HydroMediaWidget = GObject.registerClass(
             super._init({}, extension, 'hydro-media');
 
             this._simpleBox = new St.BoxLayout({
-                vertical: false,
+                orientation: Clutter.Orientation.HORIZONTAL,
                 x_align: Clutter.ActorAlign.FILL,
                 y_align: Clutter.ActorAlign.CENTER,
                 style: 'spacing: 16px; width: 100%;'
@@ -1106,7 +1106,7 @@ const HydroMediaWidget = GObject.registerClass(
             this._albumArt.style = 'background-color: rgba(255,255,255,0.1); padding: 8px;';
 
             this._infoCol = new St.BoxLayout({
-                vertical: true,
+                orientation: Clutter.Orientation.VERTICAL,
                 style: 'spacing: 4px;'
             });
 
@@ -1121,7 +1121,7 @@ const HydroMediaWidget = GObject.registerClass(
             });
 
             this._controlsBox = new St.BoxLayout({
-                vertical: false,
+                orientation: Clutter.Orientation.HORIZONTAL,
                 style: 'spacing: 12px; margin-top: 8px;'
             });
 
@@ -1142,7 +1142,7 @@ const HydroMediaWidget = GObject.registerClass(
 
             // Vinyl Style Box
             this._vinylBox = new St.BoxLayout({
-                vertical: false,
+                orientation: Clutter.Orientation.HORIZONTAL,
                 x_align: Clutter.ActorAlign.CENTER,
                 y_align: Clutter.ActorAlign.CENTER,
                 style: 'spacing: 24px;'
@@ -1170,7 +1170,7 @@ const HydroMediaWidget = GObject.registerClass(
             this._vinylRecord.add_child(this._vinylHole);
             
             this._vinylInfoCol = new St.BoxLayout({
-                vertical: true,
+                orientation: Clutter.Orientation.VERTICAL,
                 y_align: Clutter.ActorAlign.CENTER,
                 style: 'spacing: 8px;'
             });
@@ -1186,7 +1186,7 @@ const HydroMediaWidget = GObject.registerClass(
 
             // Lyrics and Visualizer Box
             this._vinylExtraBox = new St.BoxLayout({
-                vertical: false,
+                orientation: Clutter.Orientation.HORIZONTAL,
                 style: 'spacing: 12px; margin-top: 4px;',
                 y_align: Clutter.ActorAlign.CENTER
             });
@@ -1216,7 +1216,7 @@ const HydroMediaWidget = GObject.registerClass(
             
             // Reusing same buttons for vinyl
             this._vinylControlsBox = new St.BoxLayout({
-                vertical: false,
+                orientation: Clutter.Orientation.HORIZONTAL,
                 style: 'spacing: 16px; margin-top: 12px;'
             });
             this._vinylPrevBtn = new St.Button({ child: new St.Icon({ icon_name: 'media-skip-backward-symbolic', icon_size: 24 }), reactive: true });
@@ -1232,7 +1232,7 @@ const HydroMediaWidget = GObject.registerClass(
             
             // Poster Style Box
             this._posterBox = new St.BoxLayout({
-                vertical: true,
+                orientation: Clutter.Orientation.VERTICAL,
                 x_align: Clutter.ActorAlign.CENTER,
                 y_align: Clutter.ActorAlign.CENTER,
                 style: 'spacing: 16px;'
@@ -1243,7 +1243,7 @@ const HydroMediaWidget = GObject.registerClass(
             this._posterArt.setRadius(24);
             
             this._posterInfoCol = new St.BoxLayout({
-                vertical: true,
+                orientation: Clutter.Orientation.VERTICAL,
                 x_align: Clutter.ActorAlign.CENTER,
                 style: 'spacing: 6px;'
             });
@@ -1260,7 +1260,7 @@ const HydroMediaWidget = GObject.registerClass(
             });
 
             this._posterControls = new St.BoxLayout({
-                vertical: false,
+                orientation: Clutter.Orientation.HORIZONTAL,
                 x_align: Clutter.ActorAlign.CENTER,
                 style: 'spacing: 24px; margin-top: 8px;'
             });
@@ -1282,7 +1282,7 @@ const HydroMediaWidget = GObject.registerClass(
 
             // Sleek (Soundbar) Style Box
             this._sleekBox = new St.BoxLayout({
-                vertical: false,
+                orientation: Clutter.Orientation.HORIZONTAL,
                 x_align: Clutter.ActorAlign.FILL,
                 y_align: Clutter.ActorAlign.CENTER,
                 style: 'spacing: 16px;'
@@ -1294,7 +1294,7 @@ const HydroMediaWidget = GObject.registerClass(
             this._sleekArt.style = 'border: 2px solid rgba(255,255,255,0.1);';
             
             this._sleekInfoCol = new St.BoxLayout({
-                vertical: true,
+                orientation: Clutter.Orientation.VERTICAL,
                 y_align: Clutter.ActorAlign.CENTER,
                 x_expand: false,
                 style: 'spacing: 2px;'
@@ -1305,14 +1305,14 @@ const HydroMediaWidget = GObject.registerClass(
                 style: 'font-weight: 800; font-size: 16px; font-family: sans-serif;'
             });
             
-            this._sleekArtistRow = new St.BoxLayout({ vertical: false, style: 'spacing: 8px;', y_align: Clutter.ActorAlign.CENTER });
+            this._sleekArtistRow = new St.BoxLayout({ orientation: Clutter.Orientation.HORIZONTAL, style: 'spacing: 8px;', y_align: Clutter.ActorAlign.CENTER });
             
             this._sleekArtist = new St.Label({
                 text: 'Unknown Artist',
                 style: 'font-size: 13px; opacity: 0.8;'
             });
             
-            this._sleekVisualizerBox = new St.BoxLayout({ vertical: false, y_align: Clutter.ActorAlign.CENTER });
+            this._sleekVisualizerBox = new St.BoxLayout({ orientation: Clutter.Orientation.HORIZONTAL, y_align: Clutter.ActorAlign.CENTER });
             this._sleekVisualizer = null;
             if (mpSettings) {
                 this._sleekVisualizer = new WaveformVisualizer(16, mpSettings, false);
@@ -1327,7 +1327,7 @@ const HydroMediaWidget = GObject.registerClass(
             this._sleekInfoCol.add_child(this._sleekArtistRow);
 
             this._sleekControls = new St.BoxLayout({
-                vertical: false,
+                orientation: Clutter.Orientation.HORIZONTAL,
                 y_align: Clutter.ActorAlign.CENTER,
                 style: 'spacing: 12px;'
             });

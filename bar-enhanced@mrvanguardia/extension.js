@@ -159,7 +159,7 @@ const BarEnhancedDashboard = GObject.registerClass(
 
             // Build Glassmorphic container
             let widgetBox = new St.BoxLayout({
-                vertical: true,
+                orientation: Clutter.Orientation.VERTICAL,
                 style_class: 'bar-enhanced-dashboard-menu'
             });
 
@@ -184,8 +184,8 @@ const BarEnhancedDashboard = GObject.registerClass(
             widgetBox.add_child(layoutTitle);
 
             // Grid rows for layout selection
-            let row1 = new St.BoxLayout({ vertical: false, style_class: 'bar-enhanced-dashboard-row' });
-            let row2 = new St.BoxLayout({ vertical: false, style_class: 'bar-enhanced-dashboard-row' });
+            let row1 = new St.BoxLayout({ orientation: Clutter.Orientation.HORIZONTAL, style_class: 'bar-enhanced-dashboard-row' });
+            let row2 = new St.BoxLayout({ orientation: Clutter.Orientation.HORIZONTAL, style_class: 'bar-enhanced-dashboard-row' });
             widgetBox.add_child(row1);
             widgetBox.add_child(row2);
 

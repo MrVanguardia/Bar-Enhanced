@@ -19,7 +19,7 @@ export var BluetoothBatteryButton = GObject.registerClass({
 
         // Container for panel button to stack icon and battery bar vertically
         this.panelBox = new St.BoxLayout({
-            vertical: true,
+            orientation: Clutter.Orientation.VERTICAL,
             style_class: 'bar-enhanced-bt-panel-box',
             x_align: Clutter.ActorAlign.CENTER,
             y_align: Clutter.ActorAlign.CENTER
@@ -52,13 +52,13 @@ export var BluetoothBatteryButton = GObject.registerClass({
 
         // Main container
         this.mainBox = new St.BoxLayout({
-            vertical: true,
+            orientation: Clutter.Orientation.VERTICAL,
             style_class: 'bar-enhanced-bt-container'
         });
         this.menu.box.add_child(this.mainBox);
 
         // Header
-        let headerBox = new St.BoxLayout({ vertical: false, style_class: 'bar-enhanced-bt-header' });
+        let headerBox = new St.BoxLayout({ orientation: Clutter.Orientation.HORIZONTAL, style_class: 'bar-enhanced-bt-header' });
         let headerLabel = new St.Label({
             text: _('Bluetooth Devices'),
             x_expand: true,
@@ -70,7 +70,7 @@ export var BluetoothBatteryButton = GObject.registerClass({
 
         // Devices container
         this.devicesBox = new St.BoxLayout({
-            vertical: true,
+            orientation: Clutter.Orientation.VERTICAL,
             style_class: 'bar-enhanced-bt-devices'
         });
         this.mainBox.add_child(this.devicesBox);
@@ -204,7 +204,7 @@ export var BluetoothBatteryButton = GObject.registerClass({
             log(`Bar Enhanced Bluetooth Device: ${name}, connected: ${dev.connected}, battery: ${battery}`);
 
             let itemBox = new St.BoxLayout({
-                vertical: false,
+                orientation: Clutter.Orientation.HORIZONTAL,
                 style_class: 'bar-enhanced-bt-device-item'
             });
 
@@ -227,7 +227,7 @@ export var BluetoothBatteryButton = GObject.registerClass({
             // Battery
             if (battery > 0) {
                 let batteryBox = new St.BoxLayout({
-                    vertical: false,
+                    orientation: Clutter.Orientation.HORIZONTAL,
                     style_class: 'bar-enhanced-bt-battery-box'
                 });
 

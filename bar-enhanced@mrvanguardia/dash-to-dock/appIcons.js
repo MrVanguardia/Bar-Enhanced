@@ -242,7 +242,7 @@ export const DockAbstractAppIcon = GObject.registerClass({
         // This is necessary due to an upstream bug
         // https://bugzilla.gnome.org/show_bug.cgi?id=757556
         // It can be safely removed once it get solved upstream.
-        this._menu?.close(false);
+        this._menu?.close({animate: false});
         delete this._menu;
     }
 
@@ -1080,7 +1080,7 @@ const DockAppIconMenu = class DockAppIconMenu extends PopupMenu.PopupMenu {
 
     popup(_activatingButton) {
         this._rebuildMenu();
-        this.open(BoxPointer.PopupAnimation.FULL);
+        this.open();
     }
 
     removeAll() {
