@@ -11,7 +11,7 @@ This release brings the recent stability, live-update and visual work together i
 
 ## Validation and limits
 
-- `bash tests/validate-extension.sh` and `unzip -t` pass for the release archive.
+- `bash tests/validate-extension.sh` and `unzip -t` pass for the release archive. An isolated GNOME 50.6 Devkit smoke test passed three enable/disable cycles with live bar and menu style changes while optional modules were off.
 - Local GNOME 50 testing covered installation and the Quick Settings color workflow. This does **not** prove every hardware, third-party-extension or GNOME 51 combination.
 - The per-pill color option is documented for GNOME 50. GNOME 51 behavior should be confirmed separately before promising full parity.
 
