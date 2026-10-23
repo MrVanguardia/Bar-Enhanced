@@ -77,9 +77,9 @@
       <description>Display network information</description>
     </key>
     <key type="b" name="include-public-ip">
-      <default>true</default>
+      <default>false</default>
       <summary>Include public IP address</summary>
-      <description>Display public IP address of internet connection</description>
+      <description>Contact ipv4.corecoding.com to display the public IP address of the internet connection</description>
     </key>
     <key type="i" name="network-public-ip-interval">
       <default>60</default>

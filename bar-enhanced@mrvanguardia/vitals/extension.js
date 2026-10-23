@@ -312,7 +312,7 @@ export var VitalsMenuButton = GObject.registerClass({
         this._sensors = new Sensors.Sensors(this._settings, this._sensorIcons);
         this._values = new Values.Values(this._settings, this._sensorIcons);
         this._menuLayout = new St.BoxLayout({
-            vertical: false,
+            orientation: Clutter.Orientation.HORIZONTAL,
             clip_to_allocation: true,
             x_align: Clutter.ActorAlign.START,
             y_align: Clutter.ActorAlign.CENTER,
@@ -382,7 +382,7 @@ export var VitalsMenuButton = GObject.registerClass({
 
         let customButtonBox = new St.BoxLayout({
             style_class: 'vitals-button-box',
-            vertical: false,
+            orientation: Clutter.Orientation.HORIZONTAL,
             clip_to_allocation: true,
             x_align: Clutter.ActorAlign.CENTER,
             y_align: Clutter.ActorAlign.CENTER,
@@ -921,10 +921,19 @@ export var VitalsMenuButton = GObject.registerClass({
 
     destroy() {
         this._destroyTimer();
+
+        if (this._menuStateChangeId) {
+            this.menu.disconnect(this._menuStateChangeId);
+            this._menuStateChangeId = null;
+        }
         this._sensors.destroy();
+        this._sensors = null;
 
         for (let signal of Object.values(this._settingChangedSignals))
             this._settings.disconnect(signal);
+        this._settingChangedSignals = [];
+        this._settings = null;
+        this._extensionObject = null;
 
         super.destroy();
     }

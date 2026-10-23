@@ -47,7 +47,7 @@ function localPath(value) {
     try {
         return Gio.File.new_for_uri(value).get_path() || '';
     } catch (e) {
-        log(`BarEnhanced: Invalid local file URI: ${e.message}`);
+        console.error(`BarEnhanced: invalid local file URI: ${e.message}`);
         return '';
     }
 }
@@ -89,7 +89,7 @@ function getGdmPanelFallback(extension) {
 }
 `;
     } catch (e) {
-        log(`BarEnhanced: Could not generate GDM panel fallback: ${e.message}`);
+        console.error(`BarEnhanced: could not generate GDM panel fallback: ${e.message}`);
         return '';
     }
 }
@@ -274,7 +274,7 @@ function getCss(appearance, topBar, misc, extensionPath, extension) {
                 }
             }
         } catch (e) {
-            log("Error reading user session top bar stylesheet: " + e);
+            console.error('BarEnhanced: failed to read the user-session top-bar stylesheet:', e.message);
         }
     }
 

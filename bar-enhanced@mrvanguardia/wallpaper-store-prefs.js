@@ -6,6 +6,27 @@ import Gdk from 'gi://Gdk';
 import Soup from 'gi://Soup';
 import GdkPixbuf from 'gi://GdkPixbuf';
 
+// Pling's typeid is a category number (312 currently includes JPGs, archives,
+// and videos), not a media type. Only apply formats our wallpaper manager can
+// handle, based on the actual download URL.
+export function wallpaperMediaFromUrl(url) {
+    if (!/^https:\/\//i.test(url || ''))
+        return null;
+    let path;
+    try {
+        path = GLib.Uri.parse(url, GLib.UriFlags.NONE).get_path().toLowerCase();
+    } catch (e) {
+        return null;
+    }
+    const match = /\.(jpe?g|png|webp|mp4|webm)$/.exec(path);
+    if (!match)
+        return null;
+    return {
+        type: ['mp4', 'webm'].includes(match[1]) ? 'video' : 'image',
+        extension: `.${match[1]}`,
+    };
+}
+
 export function openWallpaperStoreModal(parent, settings, T, soupSession) {
     const storeWindow = new Adw.Window({
         title: T('Wallpaper Store'),
@@ -35,7 +56,7 @@ export function openWallpaperStoreModal(parent, settings, T, soupSession) {
     const page = new Adw.PreferencesPage();
     const group = new Adw.PreferencesGroup({
         title: T('Featured Wallpapers'),
-        description: T('Animated (Pling) and 4K Static (4kwallpapers.com).')
+        description: T('Downloadable wallpapers from Pling. Unsupported formats are unavailable.')
     });
 
     const wpContainer = new Gtk.Box({ orientation: Gtk.Orientation.VERTICAL, spacing: 8 });
@@ -94,11 +115,12 @@ function searchOnlineWallpapers(container, term, soupSession, T, settings, reque
 
     let allWp = [];
     let completed = 0;
+    let loadFailed = false;
     const finishCheck = () => {
         completed++;
-        if (completed === 2 && !requestState.destroyed && generation === requestState.generation) {
+        if (completed === 1 && !requestState.destroyed && generation === requestState.generation) {
             allWp.sort((a, b) => (parseInt(b.rating) || 0) - (parseInt(a.rating) || 0));
-            renderWallpaperList(container, loadingLabel, allWp, soupSession, T, settings, requestState);
+            renderWallpaperList(container, loadingLabel, allWp, soupSession, T, settings, requestState, loadFailed);
         }
     };
 
@@ -107,37 +129,15 @@ function searchOnlineWallpapers(container, term, soupSession, T, settings, reque
     soupSession.send_and_read_async(msgPling, GLib.PRIORITY_DEFAULT, null, (s, res) => {
         try {
             const bytes = s.send_and_read_finish(res);
+            if (msgPling.get_status() !== Soup.Status.OK)
+                throw new Error(`HTTP ${msgPling.get_status()}`);
             const response = JSON.parse(new TextDecoder('utf-8').decode(bytes.get_data()));
             const rawData = response?.data;
             if (rawData) allWp = [...allWp, ...(Array.isArray(rawData) ? rawData : [rawData])];
-        } catch (e) { }
+        } catch (e) { loadFailed = true; console.warn(`Bar Enhanced wallpaper search failed: ${e}`); }
         finishCheck();
     });
 
-    const url4k = `https://4kwallpapers.com/?s=${encodeURIComponent(term)}`;
-    const msg4k = Soup.Message.new_from_uri('GET', GLib.Uri.parse(url4k, GLib.UriFlags.NONE));
-    soupSession.send_and_read_async(msg4k, GLib.PRIORITY_DEFAULT, null, (s, res) => {
-        try {
-            const bytes = s.send_and_read_finish(res);
-            const html = new TextDecoder('utf-8').decode(bytes.get_data());
-            const regex = /<a[^>]*href="([^"]+\.html)"[^>]*>[\s\S]*?<img itemprop="thumbnail" src="([^"]+)"[^>]*alt="([^"]+)"/g;
-            let match;
-            while ((match = regex.exec(html)) !== null) {
-                let pageUrl = match[1];
-                let thumb = match[2];
-                if (!thumb.startsWith('http')) thumb = 'https://4kwallpapers.com' + thumb;
-                let title = match[3].split(',')[0].trim();
-                allWp.push({
-                    id: pageUrl,
-                    name: title,
-                    previewpic1: thumb,
-                    typeid: 'static-4k',
-                    downloadlink1: pageUrl
-                });
-            }
-        } catch (e) { }
-        finishCheck();
-    });
 }
 
 function fetchOnlineWallpapers(container, loadingLabel, soupSession, T, settings, requestState) {
@@ -150,11 +150,12 @@ function fetchOnlineWallpapers(container, loadingLabel, soupSession, T, settings
 
     let allWp = [];
     let completed = 0;
+    let loadFailed = false;
     const finishCheck = () => {
         completed++;
-        if (completed === 2 && !requestState.destroyed && generation === requestState.generation) {
+        if (completed === 1 && !requestState.destroyed && generation === requestState.generation) {
             allWp.sort((a, b) => (parseInt(b.rating) || 0) - (parseInt(a.rating) || 0));
-            renderWallpaperList(container, loadingLabel, allWp, soupSession, T, settings, requestState);
+            renderWallpaperList(container, loadingLabel, allWp, soupSession, T, settings, requestState, loadFailed);
         }
     };
 
@@ -163,39 +164,15 @@ function fetchOnlineWallpapers(container, loadingLabel, soupSession, T, settings
     soupSession.send_and_read_async(msgPling, GLib.PRIORITY_DEFAULT, null, (s, res) => {
         try {
             const bytes = s.send_and_read_finish(res);
+            if (msgPling.get_status() !== Soup.Status.OK)
+                throw new Error(`HTTP ${msgPling.get_status()}`);
             const response = JSON.parse(new TextDecoder('utf-8').decode(bytes.get_data()));
             const rawData = response?.data;
             if (rawData) allWp = [...allWp, ...(Array.isArray(rawData) ? rawData : [rawData])];
-        } catch (e) { }
+        } catch (e) { loadFailed = true; console.warn(`Bar Enhanced wallpaper catalog failed: ${e}`); }
         finishCheck();
     });
 
-    const url4k = `https://4kwallpapers.com/`;
-    const msg4k = Soup.Message.new_from_uri('GET', GLib.Uri.parse(url4k, GLib.UriFlags.NONE));
-    soupSession.send_and_read_async(msg4k, GLib.PRIORITY_DEFAULT, null, (s, res) => {
-        try {
-            const bytes = s.send_and_read_finish(res);
-            const html = new TextDecoder('utf-8').decode(bytes.get_data());
-            const regex = /<a[^>]*href="([^"]+\.html)"[^>]*>[\s\S]*?<img itemprop="thumbnail" src="([^"]+)"[^>]*alt="([^"]+)"/g;
-            let match;
-            let count = 0;
-            while ((match = regex.exec(html)) !== null && count < 30) {
-                let pageUrl = match[1];
-                let thumb = match[2];
-                if (!thumb.startsWith('http')) thumb = 'https://4kwallpapers.com' + thumb;
-                let title = match[3].split(',')[0].trim();
-                allWp.push({
-                    id: pageUrl,
-                    name: title,
-                    previewpic1: thumb,
-                    typeid: 'static-4k',
-                    downloadlink1: pageUrl
-                });
-                count++;
-            }
-        } catch (e) { }
-        finishCheck();
-    });
 }
 
 function _clearContainer(container) {
@@ -207,13 +184,13 @@ function _clearContainer(container) {
     }
 }
 
-function renderWallpaperList(container, loadingLabel, data, soupSession, T, settings, requestState) {
+function renderWallpaperList(container, loadingLabel, data, soupSession, T, settings, requestState, loadFailed = false) {
     try {
         if (loadingLabel && loadingLabel.get_parent()) container.remove(loadingLabel);
     } catch (e) { }
 
     if (!data || data.length === 0) {
-        const noRes = new Gtk.Label({ label: T('No results found.'), margin_top: 20 });
+        const noRes = new Gtk.Label({ label: loadFailed ? T('Wallpaper provider unavailable. Try again later.') : T('No results found.'), margin_top: 20 });
         container.append(noRes);
         return;
     }
@@ -224,19 +201,14 @@ function renderWallpaperList(container, loadingLabel, data, soupSession, T, sett
         const preview = item.previewpic1 || item.previewpic2;
         if (!item.id && !link) return;
 
-        const typeid = String(item.typeid || '');
-        const isAnimated = typeid === '312' || (item.typename && item.typename.toLowerCase().includes('video'));
-        const typeLabelText = isAnimated ? T('Animated Video') : T('Static 4K');
+        const listedMedia = wallpaperMediaFromUrl(link);
+        const typeLabelText = listedMedia?.type === 'video' ? T('Animated Video') :
+            listedMedia ? T('Static Image') : T('Unsupported format');
         
         let currentUri = settings.get_string('hydro-wallpaper-uri');
         let isApplied = false;
         
-        if (typeid === 'static-4k') {
-            const fileId = item.id.split('-').pop().replace('.html', '');
-            isApplied = currentUri.includes(fileId);
-        } else {
-            isApplied = currentUri.includes(item.id);
-        }
+        isApplied = currentUri.includes(item.id);
 
         const row = new Adw.ActionRow({
             title: name,
@@ -267,48 +239,55 @@ function renderWallpaperList(container, loadingLabel, data, soupSession, T, sett
             label: isApplied ? T('Applied') : T('Apply'),
             valign: Gtk.Align.CENTER,
             css_classes: isApplied ? ['pill', 'flat'] : ['pill', 'suggested-action'],
-            sensitive: !isApplied
+            sensitive: !isApplied && !!listedMedia
         });
 
         btn.connect('clicked', () => {
             btn.set_sensitive(false);
             btn.set_label(T('Downloading...'));
-            const markFailed = () => {
+            const markFailed = (error) => {
+                if (error)
+                    console.warn(`Bar Enhanced wallpaper download failed: ${error}`);
                 if (requestState?.destroyed) return;
                 btn.set_label(T('Failed'));
+                btn.set_tooltip_text(error ? String(error) : T('Download failed'));
                 btn.set_sensitive(true);
             };
 
             const performDownloadAndApply = (downloadUrl, fileIdOverride) => {
-                if (!/^https:\/\//i.test(downloadUrl || '')) {
-                    markFailed();
+                const media = wallpaperMediaFromUrl(downloadUrl);
+                if (!media) {
+                    markFailed(T('Unsupported wallpaper format or download link'));
                     return;
                 }
-                let ext = '.jpg';
-                if (downloadUrl.includes('.mp4')) ext = '.mp4';
-                else if (downloadUrl.includes('.webm')) ext = '.webm';
-                else if (downloadUrl.includes('.png')) ext = '.png';
-                else if (isAnimated) ext = '.mp4';
 
                 const fileId = String(fileIdOverride || item.id || 'wallpaper')
                     .replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 120);
                 const wpDir = GLib.get_home_dir() + '/.local/share/backgrounds/bar-enhanced';
                 GLib.mkdir_with_parents(wpDir, 0o755);
                 
-                const finalFile = `${wpDir}/${fileId}_${name.replace(/[^a-zA-Z0-9]/g, '_')}${ext}`;
+                const finalFile = `${wpDir}/${fileId}_${name.replace(/[^a-zA-Z0-9]/g, '_')}${media.extension}`;
 
                 if (Gio.File.new_for_path(finalFile).query_exists(null)) {
-                    applyWallpaper(finalFile, isAnimated ? 'video' : 'image', settings, btn, T);
+                    applyWallpaper(finalFile, media.type, settings, btn, T);
                     return;
                 }
 
                 const partialFile = `${finalFile}.part`;
                 const partial = Gio.File.new_for_path(partialFile);
                 try { partial.delete(null); } catch (e) {}
-                const proc = Gio.Subprocess.new(
-                    ['curl', '--fail', '--location', '--output', partialFile, downloadUrl],
-                    Gio.SubprocessFlags.NONE
-                );
+                let proc;
+                try {
+                    proc = Gio.Subprocess.new(
+                        ['curl', '--fail', '--location', '--output', partialFile,
+                            '--connect-timeout', '10', '--max-time', '120',
+                            '--max-filesize', '524288000', '--silent', '--show-error', downloadUrl],
+                        Gio.SubprocessFlags.NONE
+                    );
+                } catch (e) {
+                    markFailed(e);
+                    return;
+                }
 
                 proc.wait_async(null, (p, res) => {
                     try {
@@ -329,39 +308,32 @@ function renderWallpaperList(container, loadingLabel, data, soupSession, T, sett
                             null
                         );
                         if (requestState?.destroyed) return;
-                        applyWallpaper(finalFile, isAnimated ? 'video' : 'image', settings, btn, T);
+                        applyWallpaper(finalFile, media.type, settings, btn, T);
                     } catch (e) {
                         try { partial.delete(null); } catch (deleteError) {}
-                        markFailed();
+                        markFailed(e);
                     }
                 });
             };
 
-            if (typeid === 'static-4k') {
-                const msg = Soup.Message.new_from_uri('GET', GLib.Uri.parse(link, GLib.UriFlags.NONE));
-                soupSession.send_and_read_async(msg, GLib.PRIORITY_DEFAULT, null, (s, res) => {
-                    try {
-                        const bytes = s.send_and_read_finish(res);
-                        const html = new TextDecoder('utf-8').decode(bytes.get_data());
-                        const dlRegex = /<a[^>]*href="(\/images\/wallpapers\/[^"]+)"[^>]*id="resolution"/;
-                        const match = dlRegex.exec(html);
-                        
-                        if (match && match[1]) {
-                            let finalLink = match[1];
-                            if (!finalLink.startsWith('http')) finalLink = 'https://4kwallpapers.com' + finalLink;
-                            const fileId = item.id.split('-').pop().replace('.html', '');
-                            performDownloadAndApply(finalLink, fileId);
-                        } else {
-                            markFailed();
-                        }
-                    } catch (err) {
-                        markFailed();
-                    }
-                });
-            } else if (item.id) {
+            if (item.id) {
                 const downloadApiUrl = `https://api.pling.com/ocs/v1/content/download/${item.id}/1?format=json`;
-                const msg = Soup.Message.new_from_uri('GET', GLib.Uri.parse(downloadApiUrl, GLib.UriFlags.NONE));
-                soupSession.send_and_read_async(msg, GLib.PRIORITY_DEFAULT, null, (s, res) => {
+                let msg;
+                try {
+                    msg = Soup.Message.new_from_uri('GET', GLib.Uri.parse(downloadApiUrl, GLib.UriFlags.NONE));
+                } catch (e) {
+                    markFailed(e);
+                    return;
+                }
+                const cancellable = new Gio.Cancellable();
+                let timeoutId = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, 20, () => {
+                    timeoutId = 0;
+                    cancellable.cancel();
+                    return GLib.SOURCE_REMOVE;
+                });
+                soupSession.send_and_read_async(msg, GLib.PRIORITY_DEFAULT, cancellable, (s, res) => {
+                    if (timeoutId)
+                        GLib.Source.remove(timeoutId);
                     try {
                         const bytes = s.send_and_read_finish(res);
                         const resp = JSON.parse(new TextDecoder('utf-8').decode(bytes.get_data()));
@@ -369,10 +341,9 @@ function renderWallpaperList(container, loadingLabel, data, soupSession, T, sett
                         if (!realLink && resp?.ocs?.data) {
                             realLink = resp.ocs.data.downloadlink || resp.ocs.data.link;
                         }
-                        if (realLink) performDownloadAndApply(realLink);
-                        else performDownloadAndApply(link || `https://www.pling.com/p/${item.id}/dw/`);
+                        performDownloadAndApply(realLink || link);
                     } catch (err) {
-                        performDownloadAndApply(link || `https://www.pling.com/p/${item.id}/dw/`);
+                        performDownloadAndApply(link);
                     }
                 });
             } else {

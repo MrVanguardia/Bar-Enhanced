@@ -561,5 +561,6 @@ export const LyricsWidget = GObject.registerClass(
             this._stopHoverAnim();
             this._stopPulseAnim();
             this._cancelManualTimer();
+            this._lyrics = null;
         }
     });

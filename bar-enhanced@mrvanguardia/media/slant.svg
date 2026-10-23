@@ -1,5 +1,4 @@
-<svg fill="#229922dd" version="1.1" xmlns="http://www.w3.org/2000/svg"  xml:space="preserve">
-    <g>
-        <path d="M0,50 H40 L60,0 H20 L0,50 z"></path> 
-    </g>
+<svg xmlns="http://www.w3.org/2000/svg" width="60" height="50" viewBox="0 0 60 50" aria-label="Bar Enhanced accent slant">
+  <path d="M19 4h35L41 46H6L19 4Z" fill="#4B9DFF"/>
+  <path d="M26 9h20L36 40H16L26 9Z" fill="#6DD0E7" fill-opacity=".72"/>
 </svg>

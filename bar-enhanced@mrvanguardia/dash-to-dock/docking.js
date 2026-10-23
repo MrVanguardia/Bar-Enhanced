@@ -47,7 +47,6 @@ import {Extension} from './dependencies/shell/extensions/extension.js';
 // the shell domain with the default _() and N_()
 const {gettext: __} = Extension;
 
-const {signals: Signals} = imports;
 
 const DOCK_DWELL_CHECK_INTERVAL = 100;
 const ICON_ANIMATOR_DURATION = 3000;
@@ -501,13 +500,13 @@ const DockedDash = GObject.registerClass({
         }
 
         if (this._triggerTimeoutId)
-            GLib.source_remove(this._triggerTimeoutId);
+            GLib.Source.remove(this._triggerTimeoutId);
 
         this._restoreUnredirect();
 
         // Remove barrier timeout
         if (this._removeBarrierTimeoutId > 0)
-            GLib.source_remove(this._removeBarrierTimeoutId);
+            GLib.Source.remove(this._removeBarrierTimeoutId);
 
         // Remove existing barrier
         this._removeBarrier();
@@ -519,7 +518,7 @@ const DockedDash = GObject.registerClass({
         }
 
         if (this._optionalScrollWorkspaceSwitchDeadTimeId) {
-            GLib.source_remove(this._optionalScrollWorkspaceSwitchDeadTimeId);
+            GLib.Source.remove(this._optionalScrollWorkspaceSwitchDeadTimeId);
             delete this._optionalScrollWorkspaceSwitchDeadTimeId;
         }
     }
@@ -885,7 +884,7 @@ const DockedDash = GObject.registerClass({
                 // re-hiding dock immediately. This gives users an opportunity
                 // to hover over the dock
                 if (this._removeBarrierTimeoutId > 0)
-                    GLib.source_remove(this._removeBarrierTimeoutId);
+                    GLib.Source.remove(this._removeBarrierTimeoutId);
 
                 if (!this._delayedHide) {
                     this._removeBarrierTimeoutId = GLib.timeout_add(
@@ -902,6 +901,11 @@ const DockedDash = GObject.registerClass({
 
         let dur = (typeof time === 'number' && !isNaN(time)) ? Math.max(0, time * 1000) : 250;
         let del = (typeof delay === 'number' && !isNaN(delay)) ? Math.max(0, delay * 1000) : 0;
+        // This is deliberately presentation-only.  The independent autohide
+        // and intellihide paths still decide *when* to hide; this preference
+        // controls only whether their shared slide-out transition is drawn.
+        if (!DockManager.settings.hideAnimation)
+            dur = 0;
 
         this._slider.ease({
             'slide-x': 0,
@@ -914,7 +918,7 @@ const DockedDash = GObject.registerClass({
                     this._restoreUnredirect();
                 // Remove queued barrier removal timeout if any
                 if (this._removeBarrierTimeoutId > 0)
-                    GLib.source_remove(this._removeBarrierTimeoutId);
+                    GLib.Source.remove(this._removeBarrierTimeoutId);
                 this._updateBarrier();
                 this.dash.iconAnimator.pause();
             },
@@ -984,7 +988,7 @@ const DockedDash = GObject.registerClass({
 
     _cancelDockDwell() {
         if (this._dockDwellTimeoutId !== 0) {
-            GLib.source_remove(this._dockDwellTimeoutId);
+            GLib.Source.remove(this._dockDwellTimeoutId);
             this._dockDwellTimeoutId = 0;
         }
     }
@@ -1053,7 +1057,7 @@ const DockedDash = GObject.registerClass({
             return;
 
         if (this._triggerTimeoutId)
-            GLib.source_remove(this._triggerTimeoutId);
+            GLib.Source.remove(this._triggerTimeoutId);
 
         // In case the mouse move away from the dock area before hovering it,
         // in such case the leave event would never be triggered and the dock
@@ -1334,7 +1338,7 @@ const DockedDash = GObject.registerClass({
             this._signalsHandler.removeWithLabel(Labels.WORKSPACE_SWITCH_SCROLL);
 
             if (this._optionalScrollWorkspaceSwitchDeadTimeId) {
-                GLib.source_remove(this._optionalScrollWorkspaceSwitchDeadTimeId);
+                GLib.Source.remove(this._optionalScrollWorkspaceSwitchDeadTimeId);
                 this._optionalScrollWorkspaceSwitchDeadTimeId = 0;
             }
         };
@@ -1485,7 +1489,7 @@ const KeyboardShortcuts = class DashToDockKeyboardShortcuts {
     destroy() {
         DockManager.allDocks.forEach(dock => {
             if (dock._numberOverlayTimeoutId) {
-                GLib.source_remove(dock._numberOverlayTimeoutId);
+                GLib.Source.remove(dock._numberOverlayTimeoutId);
                 delete dock._numberOverlayTimeoutId;
             }
         });
@@ -1589,7 +1593,7 @@ const KeyboardShortcuts = class DashToDockKeyboardShortcuts {
 
             // Restart the counting if the shortcut is pressed again
             if (dock._numberOverlayTimeoutId) {
-                GLib.source_remove(dock._numberOverlayTimeoutId);
+                GLib.Source.remove(dock._numberOverlayTimeoutId);
                 dock._numberOverlayTimeoutId = 0;
             }
 
@@ -1711,75 +1715,93 @@ export class DockManager {
         if (DockManager._singleton)
             throw new Error('DashToDock has been already initialized');
         DockManager._singleton = this;
-        this._extension = extension;
-        this._signalsHandler = new Utils.GlobalSignalsHandler(this);
-        this._methodInjections = new Utils.InjectionsHandler(this);
-        this._vfuncInjections = new Utils.VFuncInjectionsHandler(this);
-        this._propertyInjections = new Utils.PropertyInjectionsHandler(this);
-        this._settings = this._extension.getSettings(
-            'org.gnome.shell.extensions.dash-to-dock');
-        this._appSwitcherSettings = new Gio.Settings({schema_id: 'org.gnome.shell.app-switcher'});
-        this._mapSettingsValues();
+        this._allDocks = [];
+        try {
+            this._extension = extension;
+            this._signalsHandler = new Utils.GlobalSignalsHandler(this);
+            this._methodInjections = new Utils.InjectionsHandler(this);
+            this._vfuncInjections = new Utils.VFuncInjectionsHandler(this);
+            this._propertyInjections = new Utils.PropertyInjectionsHandler(this);
+            this._settings = this._extension.getSettings(
+                'org.gnome.shell.extensions.bar-enhanced.dash-to-dock');
+            this._appSwitcherSettings = new Gio.Settings({schema_id: 'org.gnome.shell.app-switcher'});
+            this._mapSettingsValues();
 
-        this._iconTheme = new St.IconTheme();
+            this._iconTheme = new St.IconTheme();
 
-        this._desktopIconsUsableArea = new DesktopIconsIntegration.DesktopIconsUsableAreaClass(extension);
-        this._oldDash = Main.overview.isDummy ? null : Main.overview.dash;
-        this._discreteGpuAvailable = AppDisplay.discreteGpuAvailable;
-        this._appSpread = new AppSpread.AppSpread();
-        this._notificationsMonitor = new NotificationsMonitor.NotificationsMonitor();
+            this._desktopIconsUsableArea = new DesktopIconsIntegration.DesktopIconsUsableAreaClass(extension);
+            this._oldDash = Main.overview.isDummy ? null : Main.overview.dash;
+            this._discreteGpuAvailable = AppDisplay.discreteGpuAvailable;
+            this._appSpread = new AppSpread.AppSpread();
+            this._notificationsMonitor = new NotificationsMonitor.NotificationsMonitor();
 
-        const needsRemoteModel = () =>
-            !this._notificationsMonitor.dndMode && this._settings.showIconsEmblems;
+            const needsRemoteModel = () =>
+                !this._notificationsMonitor.dndMode && this._settings.showIconsEmblems;
 
-        const ensureRemoteModel = () => {
-            const shouldHaveRemoteModel = needsRemoteModel();
-            if (shouldHaveRemoteModel && !this._remoteModel) {
-                this._remoteModel = new LauncherAPI.LauncherEntryRemoteModel();
-                this._appIconsDecorator = new AppIconsDecorator.AppIconsDecorator();
-            } else if (!shouldHaveRemoteModel) {
-                this._remoteModel?.destroy();
-                delete this._remoteModel;
-                this._appIconsDecorator?.destroy();
-                delete this._appIconsDecorator;
-            }
-        };
-        ensureRemoteModel();
-
-        this._signalsHandler.add(this._notificationsMonitor, 'changed',
-            () => ensureRemoteModel());
-        this._signalsHandler.add(this._settings, 'changed::show-icons-emblems',
-            () => ensureRemoteModel());
-
-        if (this._discreteGpuAvailable === undefined) {
-            const updateDiscreteGpuAvailable = () => {
-                const switcherooProxy = global.get_switcheroo_control();
-                if (switcherooProxy) {
-                    const prop = switcherooProxy.get_cached_property('HasDualGpu');
-                    this._discreteGpuAvailable = prop?.unpack() ?? false;
-                } else {
-                    this._discreteGpuAvailable = false;
+            const ensureRemoteModel = () => {
+                const shouldHaveRemoteModel = needsRemoteModel();
+                if (shouldHaveRemoteModel && !this._remoteModel) {
+                    this._remoteModel = new LauncherAPI.LauncherEntryRemoteModel();
+                    this._appIconsDecorator = new AppIconsDecorator.AppIconsDecorator();
+                } else if (!shouldHaveRemoteModel) {
+                    this._remoteModel?.destroy();
+                    delete this._remoteModel;
+                    this._appIconsDecorator?.destroy();
+                    delete this._appIconsDecorator;
                 }
             };
-            this._signalsHandler.add(global, 'notify::switcheroo-control',
-                () => updateDiscreteGpuAvailable());
-            updateDiscreteGpuAvailable();
+            ensureRemoteModel();
+
+            this._signalsHandler.add(this._notificationsMonitor, 'changed',
+                () => ensureRemoteModel());
+            this._signalsHandler.add(this._settings, 'changed::show-icons-emblems',
+                () => ensureRemoteModel());
+
+            if (this._discreteGpuAvailable === undefined) {
+                const updateDiscreteGpuAvailable = () => {
+                    const switcherooProxy = global.get_switcheroo_control();
+                    if (switcherooProxy) {
+                        const prop = switcherooProxy.get_cached_property('HasDualGpu');
+                        this._discreteGpuAvailable = prop?.unpack() ?? false;
+                    } else {
+                        this._discreteGpuAvailable = false;
+                    }
+                };
+                this._signalsHandler.add(global, 'notify::switcheroo-control',
+                    () => updateDiscreteGpuAvailable());
+                updateDiscreteGpuAvailable();
+            }
+
+            // Connect relevant signals to the toggling function
+            this._bindSettingsChanges();
+
+            this._ensureLocations();
+
+            this._createDocks();
+
+            this._overrideAppMenus();
+
+            // status variable: true when the overview is shown through the dash
+            // applications button.
+            this._forcedOverview = false;
+        } catch (error) {
+            try {
+                this.destroy();
+            } catch (cleanupError) {
+                console.error('DashToDock: failed to clean up partial initialization:', cleanupError);
+                for (const handler of [this._signalsHandler, this._methodInjections,
+                    this._vfuncInjections, this._propertyInjections]) {
+                    try {
+                        handler?.destroy();
+                    } catch (handlerError) {
+                        console.error('DashToDock: failed to restore a partial override:', handlerError);
+                    }
+                }
+            } finally {
+                DockManager._singleton = null;
+            }
+            throw error;
         }
-
-        // Connect relevant signals to the toggling function
-        this._bindSettingsChanges();
-
-        this._ensureLocations();
-
-        /* Array of all the docks created */
-        this._allDocks = [];
-        this._createDocks();
-
-        this._overrideAppMenus();
-
-        // status variable: true when the overview is shown through the dash
-        // applications button.
-        this._forcedOverview = false;
     }
 
     static getDefault() {
@@ -1808,10 +1830,6 @@ export class DockManager {
 
     static get iconTheme() {
         return DockManager.getDefault().iconTheme;
-    }
-
-    get settings() { // eslint-disable-line no-dupe-class-members
-        return this._settings;
     }
 
     get iconTheme() {
@@ -2165,6 +2183,8 @@ export class DockManager {
     _runStartupAnimation() {
         DockManager.allDocks.forEach(dock => {
             const {dash} = dock;
+            if (!dock.get_stage() || !dash.get_stage())
+                return;
 
             switch (dock.position) {
             case St.Side.LEFT:
@@ -2241,7 +2261,8 @@ export class DockManager {
         // And to return the preferred height depending on the state
         this._methodInjections.addWithLabel(Labels.MAIN_DASH, this._oldDash,
             'get_preferred_height', (_originalMethod, ...args) => {
-                if (this.mainDock.isHorizontal && !this.settings.dockFixed)
+                if (this.mainDock.get_stage() &&
+                    this.mainDock.isHorizontal && !this.settings.dockFixed)
                     return this.mainDock.get_preferred_height(...args);
                 return [0, 0];
             });
@@ -2502,11 +2523,14 @@ export class DockManager {
     _deleteDocks() {
         // Remove extra features
         this._workspaceIsolation?.destroy();
+        this._workspaceIsolation = null;
         this._keyboardShortcuts?.destroy();
+        this._keyboardShortcuts = null;
         this._desktopIconsUsableArea?.resetMargins();
 
         // Delete all docks
         [...this._allDocks].forEach(d => d.destroy());
+        this._allDocks = [];
 
         this.emit('docks-destroyed');
     }
@@ -2578,36 +2602,67 @@ export class DockManager {
     }
 
     destroy() {
-        this.emit('destroy');
+        if (this._destroyed)
+            return;
+        this._destroyed = true;
+        const cleanup = (name, action) => {
+            try {
+                action();
+            } catch (error) {
+                console.error(`DashToDock: failed to clean up ${name}:`, error);
+            }
+        };
+
+        cleanup('managed signals and overrides', () => this.emit('destroy'));
         if (this._toggleLater) {
-            Utils.laterRemove(this._toggleLater);
+            cleanup('deferred callback', () => Utils.laterRemove(this._toggleLater));
             delete this._toggleLater;
         }
-        this._restoreDash();
-        this._deleteDocks();
-        this._revertPanelCorners();
+        cleanup('main dash', () => this._restoreDash());
+        cleanup('docks', () => this._deleteDocks());
+        for (const dock of [...this._allDocks])
+            cleanup('remaining dock', () => dock.destroy());
+        this._allDocks = [];
+        cleanup('workspace isolation', () => this._workspaceIsolation?.destroy());
+        this._workspaceIsolation = null;
+        cleanup('keyboard shortcuts', () => this._keyboardShortcuts?.destroy());
+        this._keyboardShortcuts = null;
+        cleanup('panel corners', () => this._revertPanelCorners());
         if (this._oldSelectorMargin)
-            this.searchController.margin_bottom = this._oldSelectorMargin;
-        if (this._fm1Client) {
-            this._fm1Client.destroy();
-            this._fm1Client = null;
-        }
-        this._notificationsMonitor.destroy();
-        this._appSpread.destroy();
-        this._trash?.destroy();
+            cleanup('selector margin', () => { this.searchController.margin_bottom = this._oldSelectorMargin; });
+        cleanup('file manager client', () => this._fm1Client?.destroy());
+        this._fm1Client = null;
+        cleanup('notifications monitor', () => this._notificationsMonitor?.destroy());
+        this._notificationsMonitor = null;
+        cleanup('app spread', () => this._appSpread?.destroy());
+        this._appSpread = null;
+        cleanup('trash', () => this._trash?.destroy());
         this._trash = null;
-        Locations.unWrapFileManagerApp();
-        this._removables?.destroy();
+        cleanup('file manager wrapper', () => Locations.unWrapFileManagerApp());
+        cleanup('removable locations', () => this._removables?.destroy());
         this._removables = null;
         this._iconTheme = null;
-        this._remoteModel?.destroy();
-        this._appIconsDecorator?.destroy();
+        cleanup('remote model', () => this._remoteModel?.destroy());
+        this._remoteModel = null;
+        cleanup('app icon decorators', () => this._appIconsDecorator?.destroy());
+        this._appIconsDecorator = null;
+        for (const [name, handler] of [
+            ['signals', this._signalsHandler],
+            ['method overrides', this._methodInjections],
+            ['vfunc overrides', this._vfuncInjections],
+            ['property overrides', this._propertyInjections],
+        ])
+            cleanup(name, () => handler?.destroy());
         this._settings = null;
         this._appSwitcherSettings = null;
         this._oldDash = null;
 
-        this._desktopIconsUsableArea?.destroy();
+        cleanup('desktop icon usable area', () => this._desktopIconsUsableArea?.destroy());
         this._desktopIconsUsableArea = null;
+        this._signalsHandler = null;
+        this._methodInjections = null;
+        this._vfuncInjections = null;
+        this._propertyInjections = null;
         this._extension = null;
         DockManager._singleton = null;
     }
@@ -2644,7 +2699,7 @@ export class DockManager {
         return !!Main.panel?._rightCorner && !!Main.panel?._leftCorner;
     }
 }
-Signals.addSignalMethods(DockManager.prototype);
+Utils.addSignalMethods(DockManager.prototype);
 
 // This class drives long-running icon animations, to keep them running in sync
 // with each other, and to save CPU by pausing them when the dock is hidden.

@@ -109,7 +109,8 @@ export const Values = GObject.registerClass({
                 unit = (memory_measurement)?1000:1024;
 
                 if (value > 0) {
-                    value *= unit;
+                    // /proc/meminfo reports KiB regardless of display units.
+                    value *= 1024;
                     exp = Math.floor(Math.log(value) / Math.log(unit));
                     if (value >= Math.pow(unit, exp) * (unit - 0.05)) exp++;
                     value = parseFloat((value / Math.pow(unit, exp)));
@@ -278,18 +279,25 @@ export const Values = GObject.registerClass({
             // appends total upload and download for all interfaces for #216
             let vals = Object.values(this._history[type]).map(x => parseFloat(x[1]));
             let sum = vals.reduce((partialSum, a) => partialSum + a, 0);
-            const memUnit = this._settings.get_int('memory-measurement') ? 1000 : 1024;
             output.push({ label: 'Boot ' + direction, value: this._legible(sum, format), type, key: '__' + type + '_boot__' });
 
             // keeps track of session start point
-            if (!(key in this._networkSpeedOffset) || this._networkSpeedOffset[key] <= 0)
-                this._networkSpeedOffset[key] = sum;
+            if (!(type in this._networkSpeedOffset) || this._networkSpeedOffset[type] <= 0)
+                this._networkSpeedOffset[type] = sum;
 
             // outputs session upload and download for all interfaces for #234
-            output.push({ label: 'Session ' + direction, value: this._legible(sum - this._networkSpeedOffset[key], format), type, key: '__' + type + '_ses__' });
+            output.push({ label: 'Session ' + direction, value: this._legible(Math.max(0, sum - this._networkSpeedOffset[type]), format), type, key: '__' + type + '_ses__' });
 
             // calculate speed for this interface
-            let speed = (value - previousValue[1]) / dwell;
+            // There is no reliable rate for the first sample. Counters can
+            // also reset when a network interface reconnects, so never render
+            // a negative or non-finite transfer rate.
+            let speed = 0;
+            if (previousValue && dwell > 0) {
+                speed = (value - previousValue[1]) / dwell;
+                if (!Number.isFinite(speed) || speed < 0)
+                    speed = 0;
+            }
             output.push({ label, value: this._legible(speed, 'speed'), type, key });
 
             // store speed for Device report

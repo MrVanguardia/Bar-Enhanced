@@ -27,7 +27,7 @@ function scanThemes(dirs, checkSubdir = null) {
                 }
             }
         } catch (e) {
-            log(`BarEnhanced: Error scanning themes in ${path}:`, e);
+            console.error(`BarEnhanced: failed to scan themes in ${path}:`, e.message);
         }
     }
     return list;

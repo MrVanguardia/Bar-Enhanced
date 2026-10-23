@@ -8,7 +8,6 @@ import {
     Utils,
 } from './imports.js';
 
-const {signals: Signals} = imports;
 
 const Labels = Object.freeze({
     SOURCES: Symbol('sources'),
@@ -118,4 +117,4 @@ export class NotificationsMonitor {
     }
 }
 
-Signals.addSignalMethods(NotificationsMonitor.prototype);
+Utils.addSignalMethods(NotificationsMonitor.prototype);

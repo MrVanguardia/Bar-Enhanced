@@ -1,5 +1,14 @@
-<svg fill="#229922dd" version="1.1" xmlns="http://www.w3.org/2000/svg"  xml:space="preserve">
-    <g>
-        <path d="M500,100 l-50,-100 H0 L50,100 L0,200 h450 L500,100 z"></path> 
-    </g>
+<svg xmlns="http://www.w3.org/2000/svg" width="500" height="200" viewBox="0 0 500 200" aria-label="Bar Enhanced banner">
+  <defs>
+    <linearGradient id="bar" x1="0" y1="0" x2="1" y2="0">
+      <stop stop-color="#45C9E8"/>
+      <stop offset="1" stop-color="#5188FF"/>
+    </linearGradient>
+  </defs>
+  <path d="M24 26h412c22 0 38 18 38 38v72c0 20-16 38-38 38H24c-10 0-16-10-12-19l24-55-24-55C8 36 14 26 24 26Z" fill="#102039"/>
+  <rect x="58" y="67" width="310" height="17" rx="8.5" fill="url(#bar)"/>
+  <rect x="58" y="99" width="244" height="14" rx="7" fill="#F3F8FF"/>
+  <circle cx="69" cy="142" r="5" fill="#45C9E8"/>
+  <circle cx="89" cy="142" r="5" fill="#5188FF"/>
+  <circle cx="109" cy="142" r="5" fill="#F3F8FF"/>
 </svg>

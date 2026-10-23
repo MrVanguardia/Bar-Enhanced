@@ -5,6 +5,11 @@ import Gtk from 'gi://Gtk';
 import GLib from 'gi://GLib';
 import Gdk from 'gi://Gdk';
 
+Gio._promisify(Gio.File.prototype, 'enumerate_children_async', 'enumerate_children_finish');
+Gio._promisify(Gio.FileEnumerator.prototype, 'next_files_async', 'next_files_finish');
+Gio._promisify(Gio.FileEnumerator.prototype, 'close_async', 'close_finish');
+Gio._promisify(Gio.File.prototype, 'delete_async', 'delete_finish');
+
 const ES_MAP = {
     '💡 How to find the correct App ID?': '💡 ¿Cómo encontrar el ID de aplicación correcto?',
     'About': 'Acerca de',
@@ -362,7 +367,10 @@ export function fillMusicPillPreferences(parentWindow, settings) {
                         settings.set_string('fallback-art-path', path);
                         fallbackRow.subtitle = path;
                     }
-                } catch (e) { log(e); }
+                } catch (error) {
+                    if (!error.matches?.(Gio.IOErrorEnum, Gio.IOErrorEnum.CANCELLED))
+                        console.error('Dynamic Music Pill preferences: failed to select fallback artwork:', error);
+                }
             });
         });
 
@@ -1334,8 +1342,15 @@ export function fillMusicPillPreferences(parentWindow, settings) {
                 child = next;
             }
 
-            let connection = Gio.bus_get_sync(Gio.BusType.SESSION, null);
-            connection.call(
+            Gio.bus_get(Gio.BusType.SESSION, null, (source, result) => {
+                let connection;
+                try {
+                    connection = Gio.bus_get_finish(result);
+                } catch (e) {
+                    console.error('Dynamic Music Pill: failed to connect to the session bus:', e.message);
+                    return;
+                }
+                connection.call(
                 'org.freedesktop.DBus', '/org/freedesktop/DBus', 'org.freedesktop.DBus', 'ListNames',
                 null, null, Gio.DBusCallFlags.NONE, -1, null,
                 (c, res) => {
@@ -1364,7 +1379,8 @@ export function fillMusicPillPreferences(parentWindow, settings) {
                         }
                     } catch(e) {}
                 }
-            );
+                );
+            });
         };
 
         refreshBtn.connect('clicked', updateDetected);
@@ -1536,8 +1552,15 @@ export function fillMusicPillPreferences(parentWindow, settings) {
                 child = next;
             }
             
-            let connection = Gio.bus_get_sync(Gio.BusType.SESSION, null);
-            connection.call(
+            Gio.bus_get(Gio.BusType.SESSION, null, (source, result) => {
+                let connection;
+                try {
+                    connection = Gio.bus_get_finish(result);
+                } catch (e) {
+                    console.error('Dynamic Music Pill: failed to connect to the session bus:', e.message);
+                    return;
+                }
+                connection.call(
                 'org.freedesktop.DBus', '/org/freedesktop/DBus', 'org.freedesktop.DBus', 'ListNames',
                 null, null, Gio.DBusCallFlags.NONE, -1, null,
                 (c, res) => {
@@ -1593,10 +1616,11 @@ export function fillMusicPillPreferences(parentWindow, settings) {
                             });
                         }
                     } catch (e) {
-                        log('Error fetching DBus names:', e);
+                        console.error('BarEnhanced: failed to fetch D-Bus names:', e);
                     }
                 }
-            );
+                );
+            });
         };
 
         const refreshMappingRow = new Adw.ActionRow({
@@ -1630,9 +1654,19 @@ export function fillMusicPillPreferences(parentWindow, settings) {
                     let file = dlg.save_finish(res);
                     if (file) {
                         let bytes = new GLib.Bytes(new TextEncoder().encode(JSON.stringify(data, null, 2)));
-                        file.replace_contents_bytes_async(bytes, null, false, Gio.FileCreateFlags.REPLACE_DESTINATION, null, null);
+                        file.replace_contents_bytes_async(bytes, null, false,
+                            Gio.FileCreateFlags.REPLACE_DESTINATION, null, (target, writeResult) => {
+                                try {
+                                    target.replace_contents_finish(writeResult);
+                                } catch (error) {
+                                    console.error('Dynamic Music Pill preferences: failed to export settings:', error);
+                                }
+                            });
                     }
-                } catch (e) { log(e); }
+                } catch (error) {
+                    if (!error.matches?.(Gio.IOErrorEnum, Gio.IOErrorEnum.CANCELLED))
+                        console.error('Dynamic Music Pill preferences: failed to choose export file:', error);
+                }
             });
         });
         exportRow.add_suffix(exportBtn);
@@ -1659,10 +1693,15 @@ export function fillMusicPillPreferences(parentWindow, settings) {
                                         }
                                     });
                                 }
-                            } catch (e) { log(e); }
+                            } catch (error) {
+                                console.error('Dynamic Music Pill preferences: failed to import settings:', error);
+                            }
                         });
                     }
-                } catch (e) { log(e); }
+                } catch (error) {
+                    if (!error.matches?.(Gio.IOErrorEnum, Gio.IOErrorEnum.CANCELLED))
+                        console.error('Dynamic Music Pill preferences: failed to choose import file:', error);
+                }
             });
         });
         importRow.add_suffix(importBtn);
@@ -1673,16 +1712,40 @@ export function fillMusicPillPreferences(parentWindow, settings) {
 
         const ownCacheDir = GLib.build_filenamev([GLib.get_user_cache_dir(), 'dynamic-music-pill', 'art']);
 
-        const getCacheInfo = () => {
+        const cacheCancellable = new Gio.Cancellable();
+        window.connect('close-request', () => cacheCancellable.cancel());
+
+        const getCacheInfo = async () => {
+            const dir = Gio.File.new_for_path(ownCacheDir);
+            let enumerator = null;
+            let count = 0;
+            let size = 0;
             try {
-                let dir = Gio.File.new_for_path(ownCacheDir);
-                if (!dir.query_exists(null)) return { count: 0, size: 0 };
-                let en = dir.enumerate_children('standard::size', Gio.FileQueryInfoFlags.NONE, null);
-                let count = 0, size = 0, fi;
-                while ((fi = en.next_file(null)) !== null) { count++; size += fi.get_size(); }
-                en.close(null);
-                return { count, size };
-            } catch (e) { return { count: 0, size: 0 }; }
+                enumerator = await dir.enumerate_children_async('standard::size',
+                    Gio.FileQueryInfoFlags.NONE, GLib.PRIORITY_DEFAULT, cacheCancellable);
+                while (true) {
+                    const files = await enumerator.next_files_async(64, GLib.PRIORITY_DEFAULT, cacheCancellable);
+                    if (files.length === 0)
+                        break;
+                    for (const file of files) {
+                        count++;
+                        size += file.get_size();
+                    }
+                }
+            } catch (error) {
+                if (!error.matches?.(Gio.IOErrorEnum, Gio.IOErrorEnum.NOT_FOUND) &&
+                    !error.matches?.(Gio.IOErrorEnum, Gio.IOErrorEnum.CANCELLED))
+                    console.error('Dynamic Music Pill preferences: failed to inspect art cache:', error);
+            } finally {
+                if (enumerator) {
+                    try {
+                        await enumerator.close_async(GLib.PRIORITY_DEFAULT, null);
+                    } catch (error) {
+                        console.error('Dynamic Music Pill preferences: failed to close art cache:', error);
+                    }
+                }
+            }
+            return { count, size };
         };
 
         const formatSize = (bytes) => {
@@ -1695,26 +1758,60 @@ export function fillMusicPillPreferences(parentWindow, settings) {
 
         const cacheRow = new Adw.ActionRow({
             title: _('Album Art Cache'),
-            subtitle: buildSubtitle(getCacheInfo())
+            subtitle: buildSubtitle({ count: 0, size: 0 })
         });
+
+        let cacheRefreshGeneration = 0;
+        const refreshCacheInfo = async () => {
+            const generation = ++cacheRefreshGeneration;
+            const info = await getCacheInfo();
+            if (!cacheCancellable.is_cancelled() && generation === cacheRefreshGeneration)
+                cacheRow.subtitle = buildSubtitle(info);
+        };
 
         const clearCacheBtn = new Gtk.Button({
             label: _('Clear'),
             valign: Gtk.Align.CENTER,
-            css_classes: ['destructive-action']
+            css_classes: ['destructive-action'],
+            sensitive: false
+        });
+        void refreshCacheInfo().finally(() => {
+            if (!cacheCancellable.is_cancelled())
+                clearCacheBtn.sensitive = true;
         });
 
-        clearCacheBtn.connect('clicked', () => {
+        clearCacheBtn.connect('clicked', async () => {
+            cacheRefreshGeneration++;
+            clearCacheBtn.sensitive = false;
+            const dir = Gio.File.new_for_path(ownCacheDir);
+            let enumerator = null;
             try {
-                let dir = Gio.File.new_for_path(ownCacheDir);
-                if (dir.query_exists(null)) {
-                    let en = dir.enumerate_children('standard::name', Gio.FileQueryInfoFlags.NONE, null);
-                    let fi;
-                    while ((fi = en.next_file(null)) !== null) dir.get_child(fi.get_name()).delete(null);
-                    en.close(null);
+                enumerator = await dir.enumerate_children_async('standard::name',
+                    Gio.FileQueryInfoFlags.NONE, GLib.PRIORITY_DEFAULT, cacheCancellable);
+                while (true) {
+                    const files = await enumerator.next_files_async(64, GLib.PRIORITY_DEFAULT, cacheCancellable);
+                    if (files.length === 0)
+                        break;
+                    for (const file of files)
+                        await dir.get_child(file.get_name()).delete_async(GLib.PRIORITY_DEFAULT, cacheCancellable);
                 }
-            } catch (e) {}
-            cacheRow.subtitle = buildSubtitle(getCacheInfo());
+            } catch (error) {
+                if (!error.matches?.(Gio.IOErrorEnum, Gio.IOErrorEnum.NOT_FOUND) &&
+                    !error.matches?.(Gio.IOErrorEnum, Gio.IOErrorEnum.CANCELLED))
+                    console.error('Dynamic Music Pill preferences: failed to clear art cache:', error);
+            } finally {
+                if (enumerator) {
+                    try {
+                        await enumerator.close_async(GLib.PRIORITY_DEFAULT, null);
+                    } catch (error) {
+                        console.error('Dynamic Music Pill preferences: failed to close art cache:', error);
+                    }
+                }
+                if (!cacheCancellable.is_cancelled()) {
+                    await refreshCacheInfo();
+                    clearCacheBtn.sensitive = true;
+                }
+            }
         });
 
         cacheRow.add_suffix(clearCacheBtn);

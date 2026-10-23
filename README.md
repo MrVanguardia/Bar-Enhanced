@@ -1,5 +1,5 @@
 
-# Bar Enhanced (GNOME 4X Extension)  
+# Bar Enhanced (GNOME 50/51 Extension)
 
 <p align="center">
   <a href="https://github.com/MrVanguardia/Bar-Enhanced/stargazers">
@@ -15,7 +15,7 @@
     <img src="https://img.shields.io/github/license/MrVanguardia/Bar-Enhanced?style=for-the-badge&color=FF9800" alt="License" />
   </a>
   <a href="https://extensions.gnome.org/">
-    <img src="https://img.shields.io/badge/GNOME-45%20%7C%2046%20%7C%2047%20%7C%2048%20%7C%2049%20%7C%2050-4A154B?style=for-the-badge&logo=gnome" alt="GNOME Shell" />
+    <img src="https://img.shields.io/badge/GNOME-50%20%7C%2051-4A154B?style=for-the-badge&logo=gnome" alt="GNOME Shell" />
   </a>
   <br/>
   <img src="https://img.shields.io/badge/Platform-Linux-000000?style=for-the-badge&logo=linux&logoColor=white" alt="Platform Linux" />
@@ -47,18 +47,25 @@ We also incorporate and build upon the source code of **Vitals**, a comprehensiv
 
 ## ✨ What's New in Bar Enhanced?
 
+### v4.8.0 — Quick Settings, compatibility and visual polish
+
+- Per-pill arrow background colors in Quick Settings on GNOME 50: choose **Menus → Quick Settings Arrow Colors → Per Tile**, open Quick Settings once, then set each detected arrow color. **Shared** keeps the existing secondary-surface color.
+- Fixed discovery of arrow buttons when Quick Settings opens and recognition of GNOME 50 side buttons; preferences now explain when no expandable tile has been detected.
+- GNOME 51 compatibility changes are included, but runtime verification on GNOME 51 is still pending. GNOME 50 was exercised locally.
+- Refreshed extension, dock, pixel-widget and Vitals icons; improved live theme updates and bundled-module reliability.
+
 ### v4.7.0 — Stability and live-update release
 
 - **Live visual updates:** Wallpaper colors, Hydro widget styles, shapes and custom colors now apply without logging out.
 - **Complete Hydro widgets:** Finished calendar and battery styles, movable desktop widgets, correct analog-clock colors, battery state icons and efficient music visualizer lifecycle.
 - **Desktop-safe widgets:** Widgets stay behind normal application windows instead of covering them.
-- **Reliability hardening:** Safer wallpaper/parallax lifecycle, palette extraction, GDM restore flow, music integration, Vitals and Bluetooth cleanup.
+- **Reliability hardening:** Static wallpapers no longer zoom or follow the pointer; palette extraction, GDM restore flow, music integration, Vitals and Bluetooth cleanup.
 
 - **Modern Navigation UI:** Replaced the legacy sidebar with a clean, categorized top-tab layout inspired by V-Shell for faster access to settings.
 - **Improved Theme Store:** A completely rebuilt online browser for community icon themes with live previews, download status, and better layout.
 - **Enhanced Responsiveness:** Optimized preference window that adapts to different screen resolutions, ensuring no buttons or controls are cut off.
 - **Clean Welcome Experience:** A new streamlined landing page with quick-start guides and daily inspiration.
-- **Optimized Codebase:** Refactored for better performance and compatibility with the latest GNOME versions (45-50).
+- **Optimized Codebase:** Refactored and validated against GNOME Shell 50.
 
 ## 🚀 Key Features
 
@@ -205,7 +212,48 @@ The resulting archive is written to `dist/bar-enhanced@mrvanguardia.shell-extens
 ## 🎨 Professional Customization
 - **Bar Styles:** Choose from Mainland, Floating, Trilands, or Island layouts.
 - **System-Wide Sync:** Propagate accent colors across the entire shell ecosystem.
-- **Profile Management:** Export your setups as code snippets or JSON files to share with the community.
+- **Profile Management:** Export deterministic, editable JSON or dconf-style TXT profiles, or generate a compact Base64 share code.
+
+### Configuration, modules, and profiles
+
+Bar Enhanced groups optional components under **Preferences → System → Integrated
+Modules**. Dash to Dock, Dynamic Music Pill, Vitals, and Bluetooth Battery can be
+disabled independently there; the configuration button beside a module opens its
+component-specific options.
+
+Use **Preferences → Admin → Save Configuration Profile** for an editable backup:
+
+- **JSON** is the complete, portable profile format. Every section and nested
+  key is alphabetically sorted, so two exports can be compared cleanly in a
+  diff tool.
+- **TXT** is a readable dconf-style alternative, also sorted within every
+  section. Both JSON and TXT can be imported from the corresponding Admin
+  action.
+- **Compact share code** is Base64-encoded JSON for copying a theme in chat. It
+  is not encryption and is intentionally not the only export path.
+
+Auto-theme, Pywal/Material You, wallpaper palette refresh, and immersive music
+theme are automation modes: while one is actively applying a theme, it can
+replace manual colour choices. For a fully manual menu palette, disable the
+automation mode you do not want, then enable **Secondary Palette Override** in
+the Menus page before editing the secondary Quick Settings surface.
+
+On GNOME 50, **Menus → Quick Settings Arrow Colors** lets you choose **Shared**
+or **Per Tile** for the background of each expandable tile's arrow button.
+With Per Tile selected, open Quick Settings once to discover the buttons;
+their individual color pickers then appear automatically in preferences.
+The main tile surface and its active/hover/text colors remain controlled by
+the existing shared menu palette. The older "Individual Menu Surfaces" and
+per-control color editors were removed because they duplicated and conflicted
+with that palette; their stored profile keys remain importable but no longer
+affect styling. Arrow overrides apply while Specialized Popup Styles are
+enabled. Changing a menu color
+does not change GNOME's desktop-wide accent unless **Use menu color as GNOME
+system accent** is explicitly enabled.
+
+The embedded Dash to Dock uses Bar Enhanced's own dconf namespace and its CSS
+loads only while its module is enabled. It does not reuse or alter settings from
+an independently installed Dash to Dock or Ubuntu Dock.
 
 ## 📸 Screenshots
 
@@ -240,6 +288,8 @@ This program is free software: you can redistribute it and/or modify it under th
 
 ## 📄 Additional documentation
 
+- [🧭 Architecture and verification](docs/ARCHITECTURE.md)
+- [✅ EGO release audit](docs/EGO_RELEASE_AUDIT.md)
 - [👥 Contributors](CONTRIBUTORS.md)
 - [📢 Third-party notice](THIRD_PARTY_NOTICES.md)
 - [📋 Theme Vanguard Gold](Vanguard%20Gold%20Theme.txt)

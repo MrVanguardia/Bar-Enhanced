@@ -43,7 +43,7 @@ export async function haveDBusMenu() {
         const {default: DBusMenu} = await import('gi://Dbusmenu');
         return DBusMenu;
     } catch (e) {
-        log(`Failed to import DBusMenu, quicklists are not available: ${e}`);
+        console.warn(`Dash to dock: DBusMenu is unavailable, so quicklists are disabled: ${e.message}`);
         return null;
     }
 }

@@ -1,13 +1,13 @@
-.dash-item-container .overview-tile .overview-icon,
-.dash-item-container .show-apps .overview-icon {
+#dashtodockContainer .dash-item-container .overview-tile .overview-icon,
+#dashtodockContainer .dash-item-container .show-apps .overview-icon {
   background-color: rgba(255, 255, 255, 0); }
 
-.dash-item-container .overview-tile:hover .overview-icon,
-.dash-item-container .overview-tile.focused .overview-icon,
-.dash-item-container .show-apps:hover .overview-icon {
+#dashtodockContainer .dash-item-container .overview-tile:hover .overview-icon,
+#dashtodockContainer .dash-item-container .overview-tile.focused .overview-icon,
+#dashtodockContainer .dash-item-container .show-apps:hover .overview-icon {
   background-color: rgba(238, 238, 238, 0.2); }
 
-.dash-item-container .overview-tile .app-grid-running-dot {
+#dashtodockContainer .dash-item-container .overview-tile .app-grid-running-dot {
   margin-bottom: 8px;
   offset-y: 2px; }
 
@@ -1324,8 +1324,8 @@
   background: #303030; }
 
 #dashtodockContainer.dashtodock .progress-bar,
-.overview-tile .progress-bar,
-.icon-grid .progress-bar {
+#dashtodockContainer .overview-tile .progress-bar,
+#dashtodockContainer .icon-grid .progress-bar {
   /* Customization of the progress bar style. The possible elements
      * are:
      *
@@ -1415,15 +1415,13 @@
   transition-duration: 500ms; }
 
 #dashtodockContainer .number-overlay,
-.overview-tile .number-overlay,
-.icon-grid .number-overlay {
+#dashtodockContainer .overview-tile .number-overlay,
+#dashtodockContainer .icon-grid .number-overlay {
   color: white;
   background-color: rgba(0, 0, 0, 0.8);
   text-align: center; }
 
-#dashtodockContainer .notification-badge,
-.overview-tile .notification-badge,
-.icon-grid .notification-badge {
+#dashtodockContainer .notification-badge {
   color: white;
   background-color: red;
   padding: 0.2em 0.5em;

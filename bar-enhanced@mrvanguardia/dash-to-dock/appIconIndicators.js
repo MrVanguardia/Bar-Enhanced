@@ -7,6 +7,7 @@ import {
     Pango,
     St,
 } from './dependencies/gi.js';
+import Cairo from 'cairo';
 
 import {Main} from './dependencies/shell/ui.js';
 
@@ -14,8 +15,6 @@ import {
     Docking,
     Utils,
 } from './imports.js';
-
-const {cairo: Cairo} = imports;
 
 const RunningIndicatorStyle = Object.freeze({
     DEFAULT: 0,

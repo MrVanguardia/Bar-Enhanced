@@ -30,6 +30,7 @@ export const MusicPill = GObject.registerClass(
             this._lastScrollTime = 0;
             this._controller = controller;
             this._settings = controller._settings;
+            this._barSettings = controller._barSettings;
 
             this._isActiveState = false;
             this._targetWidth = 250;
@@ -113,7 +114,7 @@ export const MusicPill = GObject.registerClass(
                 } return Clutter.EVENT_PROPAGATE;
             }, this);
 
-            this._tabletControls = new St.BoxLayout({ vertical: false, y_align: Clutter.ActorAlign.CENTER, style: 'margin-left: 6px;' });
+            this._tabletControls = new St.BoxLayout({ orientation: Clutter.Orientation.HORIZONTAL, y_align: Clutter.ActorAlign.CENTER, style: 'margin-left: 6px;' });
             this._tabletControls.add_child(this._prevBtn);
             this._tabletControls.add_child(this._playPauseBtnTablet);
             this._tabletControls.add_child(this._nextBtn);
@@ -289,7 +290,7 @@ export const MusicPill = GObject.registerClass(
                     }
                 } catch (e) {
                     // Without it sometimes trigger the virtal windows switching on the dash-to-dock, maybe if you scroll too fast. 
-                    log(`[Dynamic Music Pill] Scroll handled with safe-skip: ${e.message}`);
+                    console.warn(`[Dynamic Music Pill] Scroll handled with safe-skip: ${e.message}`);
                 }
 
                 return Clutter.EVENT_STOP;
@@ -301,8 +302,8 @@ export const MusicPill = GObject.registerClass(
                 this._applyStyle(this._displayedColor.r, this._displayedColor.g, this._displayedColor.b);
             }, this);
             this._settings.connectObject('changed::hide-text', () => this._updateDimensions(), this);
-            this._settings.connectObject('changed::music-pill-enabled', () => {
-                if (!this._settings.get_boolean('music-pill-enabled'))
+            this._barSettings.connectObject('changed::music-pill-enabled', () => {
+                if (!this._barSettings.get_boolean('music-pill-enabled'))
                     this._ensureHidden();
             }, this);
             this._settings.connectObject('changed::pill-dynamic-width', () => { this._updateDimensions(); if (this._isActiveState) this._body.ease({ width: this._targetWidth, duration: 300, mode: Clutter.AnimationMode.EASE_OUT_QUAD }); }, this);
@@ -412,7 +413,7 @@ export const MusicPill = GObject.registerClass(
             if (this._artDebounceTimer) { GLib.Source.remove(this._artDebounceTimer); this._artDebounceTimer = null; }
             if (this._hideGraceTimer) { GLib.Source.remove(this._hideGraceTimer); this._hideGraceTimer = null; }
             
-            if (this._settings.get_boolean('immersive-music-theme')) {
+            if (this._barSettings.get_boolean('immersive-music-theme')) {
                 let ext = Main.extensionManager.lookup('bar-enhanced@mrvanguardia');
                 if (ext && ext.stateObj) {
                     ext.stateObj.immersiveColorOverride = null;
@@ -424,6 +425,10 @@ export const MusicPill = GObject.registerClass(
             if (this._singleClickTimerId) { GLib.Source.remove(this._singleClickTimerId); this._singleClickTimerId = null; }
             if (this._idleDimId) { GLib.Source.remove(this._idleDimId); this._idleDimId = null; }
             if (this._colorCancellable) { this._colorCancellable.cancel(); this._colorCancellable = null; }
+            if (this._cancellable) { this._cancellable.cancel(); this._cancellable = null; }
+            this._interfaceSettings = null;
+            this._controller = null;
+            this._settings = null;
         }
         animateOutAndDestroy() {
         }
@@ -965,7 +970,7 @@ export const MusicPill = GObject.registerClass(
 
         updateDisplay(title, artist, artUrl, status, busName, isSkipActive, player = null) {
             if (!this.get_parent()) return;
-            if (!this._settings.get_boolean('music-pill-enabled')) {
+            if (!this._barSettings.get_boolean('music-pill-enabled')) {
                 this._ensureHidden();
                 return;
             }
@@ -1135,7 +1140,7 @@ export const MusicPill = GObject.registerClass(
                             try { this._interfaceSettings.set_string('accent-color', this._originalAccent || 'blue'); } catch (e) { }
                         }
 
-                        if (this._settings.get_boolean('immersive-music-theme')) {
+                        if (this._barSettings.get_boolean('immersive-music-theme')) {
                             let ext = Main.extensionManager.lookup('bar-enhanced@mrvanguardia');
                             if (ext && ext.stateObj) {
                                 ext.stateObj.immersiveColorOverride = null;
@@ -1319,7 +1324,7 @@ export const MusicPill = GObject.registerClass(
                                         this._interfaceSettings.set_string('accent-color', closestAccent);
                                     }
                                 } catch (err) {
-                                    log('[Dynamic Music Pill] Native accent sync failed: ', err.message);
+                                    console.error('[Dynamic Music Pill] Native accent sync failed:', err.message);
                                 }
 
                                 if (this._visualizer && this._visualizer.setColor) {
@@ -1328,14 +1333,14 @@ export const MusicPill = GObject.registerClass(
                                 }
                             } catch (pixErr) {
                                 if (!pixErr.matches || !pixErr.matches(Gio.IOErrorEnum, Gio.IOErrorEnum.CANCELLED)) {
-                                    log('Failed to decode art pixbuf: ' + pixErr.message);
+                                    console.error('Dynamic Music Pill: failed to decode art pixbuf:', pixErr.message);
                                 }
                             }
                         });
                     }
                 } catch (e) {
                     if (!e.matches(Gio.IOErrorEnum, Gio.IOErrorEnum.CANCELLED)) {
-                        log('Failed to load art color: ' + e.message);
+                        console.error('Dynamic Music Pill: failed to load art color:', e.message);
                     }
                 }
             });
@@ -1375,7 +1380,7 @@ export const MusicPill = GObject.registerClass(
                     this._currentBorderOp = targetBorderOp; 
                     this._colorAnimId = null; 
                     
-                    if (this._settings.get_boolean('immersive-music-theme')) {
+                    if (this._barSettings.get_boolean('immersive-music-theme')) {
                         let ext = Main.extensionManager.lookup('bar-enhanced@mrvanguardia');
                         if (ext && ext.stateObj) {
                             ext.stateObj.immersiveColorOverride = this._displayedColor;

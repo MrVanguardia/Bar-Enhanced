@@ -1,4 +1,3 @@
-const DEBUG = false;
 /* stylesheets.js
  *
  * This program is free software: you can redistribute it and/or modify
@@ -26,8 +25,11 @@ import GLib from 'gi://GLib';
 import * as Utils from './utils.js';
 
 Gio._promisify(Gio.File.prototype, 'load_contents_async', 'load_contents_finish');
+Gio._promisify(Gio.File.prototype, 'query_info_async', 'query_info_finish');
 Gio._promisify(Gio.File.prototype, 'move_async', 'move_finish');
 Gio._promisify(Gio.File.prototype, 'delete_async', 'delete_finish');
+Gio._promisify(Gio.File.prototype, 'replace_contents_async', 'replace_contents_finish');
+Gio._promisify(Gio.File.prototype, 'make_directory_async', 'make_directory_finish');
 Gio._promisify(Gio.File.prototype, 'replace_async', 'replace_finish');
 Gio._promisify(Gio.OutputStream.prototype, 'write_bytes_async', 'write_bytes_finish');
 
@@ -77,7 +79,7 @@ async function saveCalEventSVG(obar, Me) {
         await writeGeneratedFile(svgpath, svg);
     }
     catch (e) {
-        if (DEBUG) log(`Failed to write calendar-today.svg file: ${svgpath}: ${e}`);
+        console.error(`BarEnhanced: failed to write calendar-today.svg: ${svgpath}`, e);
     }
 
 }
@@ -107,7 +109,7 @@ async function saveToggleSVG(type, obar, Me) {
         await writeGeneratedFile(svgpath, svg);
     }
     catch (e) {
-        if (DEBUG) log(`Failed to write toggle-on.svg file: ${svgpath}: ${e}`);
+        console.error(`BarEnhanced: failed to write toggle SVG: ${svgpath}`, e);
     }
 
 }
@@ -158,7 +160,7 @@ async function saveCheckboxSVG(type, obar, Me) {
         await writeGeneratedFile(svgpath, svg);
     }
     catch (e) {
-        if (DEBUG) log(`Failed to write checkbox-on/off.svg file: ${svgpath}: ${e}`);
+        console.error(`BarEnhanced: failed to write checkbox SVG: ${svgpath}`, e);
     }
 
 }
@@ -1024,7 +1026,22 @@ function createGtkCss(obar, gtk4) {
 export function saveGtkCss(obar, caller) {
     // The user requested to completely remove GTK window customization because it was causing black blocks and visual bugs.
     // We will now only perform cleanup of the old injected CSS files.
-    runCleanupGtkCss();
+    void runCleanupGtkCss();
+}
+
+async function fileExistsAsync(file) {
+    try {
+        await file.query_info_async(
+            Gio.FILE_ATTRIBUTE_STANDARD_TYPE,
+            Gio.FileQueryInfoFlags.NONE,
+            GLib.PRIORITY_DEFAULT,
+            null);
+        return true;
+    } catch (e) {
+        if (e.matches(Gio.IOErrorEnum, Gio.IOErrorEnum.NOT_FOUND))
+            return false;
+        throw e;
+    }
 }
 
 async function runCleanupGtkCss() {
@@ -1032,11 +1049,20 @@ async function runCleanupGtkCss() {
     const gtk3Dir = Gio.File.new_for_path(`${configDir}/gtk-3.0`);
     const gtk4Dir = Gio.File.new_for_path(`${configDir}/gtk-4.0`);
     
-    [gtk3Dir, gtk4Dir].forEach(async (dir) => {
+    for (const dir of [gtk3Dir, gtk4Dir]) {
         let file = Gio.File.new_for_path(dir.get_path() + '/gtk.css');
         let backup = Gio.File.new_for_path(dir.get_path() + '/gtk_backup_byBarEnhanced.css');
-        const isGtk = file.query_exists(null);
-        const isBackupBarEnhanced = backup.query_exists(null);
+        let isGtk = false;
+        let isBackupBarEnhanced = false;
+        try {
+            [isGtk, isBackupBarEnhanced] = await Promise.all([
+                fileExistsAsync(file),
+                fileExistsAsync(backup),
+            ]);
+        } catch (e) {
+            console.error('BarEnhanced: failed to inspect GTK cleanup files:', e.message);
+            continue;
+        }
         
         let isGtkBarEnhanced = false;
         if (isGtk) {
@@ -1054,75 +1080,97 @@ async function runCleanupGtkCss() {
 
         if (isGtkBarEnhanced && isBackupBarEnhanced) {
             try { // Restore backup
-                backup.move_async(file, Gio.FileCopyFlags.OVERWRITE, null, null, null, null);
+                await backup.move_async(
+                    file,
+                    Gio.FileCopyFlags.OVERWRITE,
+                    GLib.PRIORITY_DEFAULT,
+                    null,
+                    null);
             } catch (e) {
-                // Ignore
+                console.error('BarEnhanced: failed to restore GTK backup:', e.message);
             }
         } else if (isGtkBarEnhanced) {
             try { // Delete the corrupted injected file
-                file.delete_async(null, null, null);
+                await file.delete_async(GLib.PRIORITY_DEFAULT, null);
             } catch (e) {
-                // Ignore
+                console.error('BarEnhanced: failed to remove injected GTK CSS:', e.message);
             }
         }
-    });
+    }
 }
 
-// Apply override to provide flatpak apps access to Gtk config css files
-export function saveFlatpakOverrides(obar, caller) {
-    const applyFlatpak = obar._settings.get_boolean('apply-flatpak');
-    if (!applyFlatpak && !obar.fsystemChanged) return;
-    const dataDir = GLib.get_user_data_dir();
-    const overrideDir = Gio.File.new_for_path(`${dataDir}/flatpak/overrides`);
-    if (!overrideDir.query_exists(null)) {
+const FLATPAK_GTK_FILESYSTEMS = ['xdg-config/gtk-3.0:ro', 'xdg-config/gtk-4.0:ro'];
+
+async function ensureFlatpakOverrideDirectory(directory) {
+    for (const path of [directory.get_parent(), directory]) {
         try {
-            const file = Gio.File.new_for_path(overrideDir.get_path());
-            file.make_directory_with_parents(null);
+            await path.make_directory_async(GLib.PRIORITY_DEFAULT, null);
         } catch (e) {
-            if (DEBUG) log('Error creating flatpak override directory: ' + e);
+            if (!e.matches(Gio.IOErrorEnum, Gio.IOErrorEnum.EXISTS))
+                throw e;
         }
     }
+}
 
-    let keyfile = GLib.KeyFile.new();
-    let globalFile = Gio.File.new_for_path(overrideDir.get_path() + '/global');
-    if (!globalFile.query_exists(null)) {
-        try {
-            globalFile.create(Gio.FileCreateFlags.NONE, null);
-            keyfile.set_string('Context', 'filesystems', '');
-            keyfile.save_to_file(globalFile.get_path());
-        }
-        catch (e) {
-            if (DEBUG) log('Error creating flatpak override global file: ' + e);
-        }
-    }
+async function updateFlatpakOverride(obar, enabled) {
+    const owned = obar._flatpakOwnedPermissions ?? new Set();
+    if (!enabled && owned.size === 0)
+        return;
 
+    const overrideDir = Gio.File.new_for_path(`${GLib.get_user_data_dir()}/flatpak/overrides`);
+    const globalFile = overrideDir.get_child('global');
+    if (enabled)
+        await ensureFlatpakOverrideDirectory(overrideDir);
+
+    const keyfile = new GLib.KeyFile();
     try {
-        keyfile.load_from_file(globalFile.get_path(), GLib.KeyFileFlags.NONE);
-    }
-    catch (e) {
-        if (DEBUG) log('Error loading flatpak override global file: ' + e);
+        const [contents] = await globalFile.load_contents_async(null);
+        const data = new TextDecoder('utf-8').decode(contents);
+        keyfile.load_from_data(data, data.length, GLib.KeyFileFlags.KEEP_COMMENTS);
+    } catch (e) {
+        if (!enabled || !e.matches(Gio.IOErrorEnum, Gio.IOErrorEnum.NOT_FOUND))
+            throw e;
     }
 
+    let previous = '';
     try {
-        if (caller == 'disable' || !applyFlatpak) {
-            if (!obar.fsystemBackup)
-                obar.fsystemBackup = '';
-            keyfile.set_string('Context', 'filesystems', obar.fsystemBackup);
-            keyfile.save_to_file(globalFile.get_path());
-        }
-        else if (applyFlatpak) {
-            obar.fsystemBackup = keyfile.get_string('Context', 'filesystems');
-            if (!obar.fsystemBackup)
-                obar.fsystemBackup = '';
-            let fsystem = obar.fsystemBackup + ';xdg-config/gtk-3.0:ro;xdg-config/gtk-4.0:ro;';
-            keyfile.set_string('Context', 'filesystems', fsystem);
-            keyfile.save_to_file(globalFile.get_path());
-            obar.fsystemChanged = true;
-        }
+        previous = keyfile.get_string('Context', 'filesystems');
+    } catch (e) {
+        if (!enabled)
+            throw e;
     }
-    catch (e) {
-        if (DEBUG) log('Error saving flatpak override global file: ' + e);
+    const entries = previous.split(';').filter(Boolean);
+    const next = enabled
+        ? [...entries, ...FLATPAK_GTK_FILESYSTEMS.filter(permission => !entries.includes(permission))]
+        : entries.filter(permission => !owned.has(permission));
+    if (next.join(';') === entries.join(';'))
+        return;
+
+    keyfile.set_string('Context', 'filesystems', `${next.join(';')};`);
+    const [data] = keyfile.to_data();
+    await globalFile.replace_contents_async(
+        new TextEncoder().encode(data), null, false,
+        Gio.FileCreateFlags.REPLACE_DESTINATION, null);
+
+    if (enabled) {
+        for (const permission of FLATPAK_GTK_FILESYSTEMS) {
+            if (!entries.includes(permission))
+                owned.add(permission);
+        }
+        obar._flatpakOwnedPermissions = owned;
+    } else {
+        owned.clear();
     }
+}
+
+// Change only permissions added by this instance, preserving other Flatpak overrides.
+export function saveFlatpakOverrides(obar, caller) {
+    const enabled = caller !== 'disable' && obar._settings.get_boolean('apply-flatpak');
+    obar._flatpakOverrideOp = (obar._flatpakOverrideOp ?? Promise.resolve())
+        .catch(() => {})
+        .then(() => updateFlatpakOverride(obar, enabled))
+        .catch(e => console.error('BarEnhanced: failed to update Flatpak override:', e));
+    return obar._flatpakOverrideOp;
 }
 
 function parseRGB(rgb) {
@@ -1198,7 +1246,6 @@ function getStylesheet(obar, Me) {
                 };
                 let rgbRatio = accentRGBs[systemAccent] || accentRGBs['blue'];
                 borderColor = rgbRatio;
-                msColor = rgbRatio;
             }
         } catch (e) {
             // fallback gracefully
@@ -1219,6 +1266,8 @@ function getStylesheet(obar, Me) {
     let qtoggleRadius = obar._settings.get_double('qtoggle-radius');
     let qtileBorderColor = obar._settings.get_strv('qtile-border');
     let sliderHeight = obar._settings.get_double('slider-height');
+    let sliderHandleOverride = obar._settings.get_boolean('slider-handle-color-override');
+    let sliderHandleColor = obar._settings.get_strv('slider-handle-color');
     let sliHandBorder = obar._settings.get_double('handle-border');
     let mbgGradient = obar._settings.get_boolean('mbg-gradient');
     let autofgBar = obar._settings.get_boolean('autofg-bar');
@@ -1402,7 +1451,6 @@ function getStylesheet(obar, Me) {
         }
         rgb = parseRGB(rgb);
         hgColor = [rgb, rgb, rgb];
-        // if (DEBUG) log('getAutoHgColor: hgColor, bgColor, bgHsp ', hgColor, bgColor, bgHsp);
         return hgColor;
     }
 
@@ -1922,18 +1970,21 @@ function getStylesheet(obar, Me) {
     // Slider
     let sliderBaseColor = `${colorMix(smbgred, mbgred, -0.2)},${colorMix(smbggreen, mbggreen, -0.2)},${colorMix(smbgblue, mbgblue, -0.2)}`;
     let sliderActiveColor = `${colorMix(msred, mbgred, -0.2)},${colorMix(msgreen, mbggreen, -0.2)},${colorMix(msblue, mbgblue, -0.2)}`;
+    let sliderHandleRGB = sliderHandleOverride
+        ? sliderHandleColor.map(value => Math.round(Math.max(0, Math.min(1, Number(value) || 0)) * 255)).join(',')
+        : sliderActiveColor;
     let bCol = mfgred > 200 ? 255 : 0; // Slider border color
     let sliHandRadius = Math.ceil(8 - sliHandBorder / 2);
     if (sliHandRadius < 4) sliHandRadius = 4;
     let sliderStyle =
-        `   color: rgba(${obar.gnomeVersion >= 47 ? sliderActiveColor : sliderBaseColor}, 1) !important;
+        `   color: rgba(${sliderHandleOverride ? sliderHandleRGB : (obar.gnomeVersion >= 47 ? sliderActiveColor : sliderBaseColor)}, 1) !important;
         -barlevel-height: ${sliderHeight}px;
         -barlevel-border-width: 0.5px;
         -barlevel-border-color: rgba(${bCol},${bCol},${bCol},0.25) !important;
         -barlevel-active-border-color: rgba(${bCol},${bCol},${bCol},0.25) !important;
         -slider-handle-border-width: ${sliHandBorder}px;
         -slider-handle-radius: ${sliHandRadius}px;
-        -slider-handle-border-color: rgba(${sliderActiveColor}, 1) !important;
+        -slider-handle-border-color: rgba(${sliderHandleRGB}, 1) !important;
         -barlevel-background-color: rgba(${sliderBaseColor}, 1) !important;
         -barlevel-active-background-color: rgba(${sliderActiveColor}, 1) !important;
         -barlevel-overdrive-color: rgba(${destructRed}, ${destructGreen}, ${destructBlue}, 1) !important;
@@ -1942,6 +1993,10 @@ function getStylesheet(obar, Me) {
 
     // Apply-All-Shell: Menu styles applied to shell allover
     let applyAllShell = obar._settings.get_boolean('apply-all-shell');
+    // The application grid is also owned and extensively rebuilt by overview
+    // extensions such as V-Shell.  Do not inject broad .overview-tile rules
+    // unless the user explicitly opts into styling that subsystem.
+    let themeAppGrid = obar._settings.get_boolean('theme-app-grid');
 
     // Define Overview style (reset) if Disabled in Overview
     // If applyALlShell then FG = sub-menu FG and BG = sub-menu-BG
@@ -3145,10 +3200,16 @@ function getStylesheet(obar, Me) {
     let baseHintFgColor = darkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(25, 25, 25, 0.7)';
 
     // let accentColor = `rgba(${msred},${msgreen},${msblue},${msAlpha})`;
-    let applyAccentShell, applyMenuNotif, dashDockStyle;
+    let applyAccentShell, applyMenuNotif, dashDockStyle, dashToDockEnabled;
     applyAccentShell = obar._settings.get_boolean('apply-accent-shell');
     applyMenuNotif = obar._settings.get_boolean('apply-menu-notif');
     dashDockStyle = obar._settings.get_string('dashdock-style');
+    dashToDockEnabled = obar._settings.get_boolean('dash-to-dock-enabled');
+    if (dashToDockEnabled) {
+        const badgeColor = obar._settings.get_strv('dock-badge-color')
+            .map(value => Math.round(Math.max(0, Math.min(1, Number(value) || 0)) * 255)).join(',');
+        stylesheet += `#dashtodockContainer .notification-badge { background-color: rgb(${badgeColor}) !important; }\n`;
+    }
 
     let tooltipBgRed = 0.8 * mbgred + 0.2 * (255 - mfgred);
     let tooltipBgGreen = 0.8 * mbggreen + 0.2 * (255 - mfggreen);
@@ -3223,10 +3284,10 @@ function getStylesheet(obar, Me) {
     }
 
     /* app-grid */
-    if (applyAccentShell) {
+    if (applyAccentShell && themeAppGrid) {
         stylesheet += `
         .overview-tile:active, .overview-tile:checked,
-        .app-well-app:active .overview-icon, .app-well-app:checked .overview-icon
+        .app-well-app:active .overview-icon, .app-well-app:checked .overview-icon,
         .show-apps:active .overview-icon, .show-apps:checked .overview-icon,
         .grid-search-result:active .overview-icon, .grid-search-result:checked .overview-icon {
             color: rgba(${amfgred},${amfggreen},${amfgblue},1.0) !important;
@@ -3238,7 +3299,7 @@ function getStylesheet(obar, Me) {
         } `;
     }
 
-    if (applyAllShell) {
+    if (applyAllShell && themeAppGrid) {
         stylesheet += `
         .overview-tile {
             background-color: transparent;
@@ -3253,7 +3314,7 @@ function getStylesheet(obar, Me) {
             /*transition-duration: 100ms;*/
         }
         .overview-tile:focus, .overview-tile:selected,
-        .app-well-app:focus .overview-icon, .app-well-app:selected .overview-icon
+        .app-well-app:focus .overview-icon, .app-well-app:selected .overview-icon,
         .grid-search-result:focus .overview-icon, .grid-search-result:selected .overview-icon {
             background-color: ${smhbg} ;
             /*transition-duration: 100ms;*/
@@ -3275,13 +3336,7 @@ function getStylesheet(obar, Me) {
         .app-folder-dialog .folder-name-container .folder-name-label {
             color: rgba(${smfgred},${smfggreen},${smfgblue},1) !important;
         }
-        .app-folder-dialog .folder-name-container .edit-folder-button,
-        .quick-settings-tile .quick-settings-tile-main-button, 
-        .quick-settings-tile .quick-settings-tile-side-button,
-        .quick-settings-tile .quick-settings-tile-main-button:checked,
-        .quick-settings-tile .quick-settings-tile-side-button:checked,
-        .quick-settings-tile .quick-settings-tile-main-button:active,
-        .quick-settings-tile .quick-settings-tile-side-button:active {
+        .app-folder-dialog .folder-name-container .edit-folder-button {
             color: rgba(${mfgred},${mfggreen},${mfgblue},1) !important;
             background-color: ${mbg} !important;
             border: 1px solid ${qtcolor} !important;
@@ -3292,41 +3347,6 @@ function getStylesheet(obar, Me) {
             background-clip: padding-box;
         } 
 
-        .quick-settings-tile .quick-settings-tile-main-button,
-        .quick-settings-tile .quick-settings-tile-main-button:checked {
-            border-radius: ${qtoggleRadius}px 0 0 ${qtoggleRadius}px !important;
-            border-right-width: 0.5px !important;
-            border-right-color: ${qtcolor} !important;
-            margin-right: 0 !important;
-        }
-
-        .quick-settings-tile .quick-settings-tile-side-button,
-        .quick-settings-tile .quick-settings-tile-side-button:checked {
-            border-radius: 0 ${qtoggleRadius}px ${qtoggleRadius}px 0 !important;
-            border-left: 1px solid ${qtcolor} !important;
-            border-left-width: 0.5px !important;
-            margin-left: -1px !important;
-        }
-
-        /* Ensure active/checked states don't re-introduce the blue line */
-        .quick-settings-tile-main-button:checked,
-        .quick-settings-tile-side-button:checked {
-            border-color: ${qtcolor} !important;
-        }
-
-        /* Fallback for GNOME 43/44 compatibility */
-        .quick-toggle-arrow {
-            border-left: 1px solid ${qtcolor} !important;
-            box-shadow: none !important;
-        }
-        .quick-settings-tile-main-button:hover, .quick-settings-tile-side-button:hover,
-        .quick-settings-tile-main-button:focus, .quick-settings-tile-side-button:focus {
-            background-color: ${mhbg} !important;
-            color: rgba(${mhfgred},${mhfggreen},${mhfgblue},1) !important;
-            border: none !important;
-            outline: none !important;
-            outline-width: 0 !important;
-        }
         .app-folder-dialog .folder-name-container .edit-folder-button:hover,
         .app-folder-dialog .folder-name-container .edit-folder-button:focus,
         .app-folder-dialog .folder-name-container .icon-button:hover,
@@ -3364,6 +3384,62 @@ function getStylesheet(obar, Me) {
         .page-indicator:active .page-indicator-icon, .page-indicator:checked .page-indicator-icon {
             background-color: rgba(${smfgred},${smfggreen},${smfgblue},0.9) !important;
         }*/ `;
+    }
+
+    // Quick Settings shares a few visual values with the overview, but it is
+    // not part of the application grid.  Keep these rules active when the
+    // grid layer is disabled for V-Shell compatibility.
+    if (applyAllShell) {
+        stylesheet += `
+        .quick-settings-tile .quick-settings-tile-main-button,
+        .quick-settings-tile .quick-settings-tile-side-button {
+            color: rgba(${mfgred},${mfggreen},${mfgblue},1) !important;
+            background-color: ${mbg} !important;
+            border: 1px solid ${qtcolor} !important;
+            box-shadow: none !important;
+            outline: none !important;
+            outline-width: 0 !important;
+            margin: 0 !important;
+            background-clip: padding-box;
+        }
+        .quick-settings-tile .quick-settings-tile-main-button,
+        .quick-settings-tile .quick-settings-tile-main-button:checked {
+            border-radius: ${qtoggleRadius}px 0 0 ${qtoggleRadius}px !important;
+            border-right-width: 0.5px !important;
+            border-right-color: ${qtcolor} !important;
+            margin-right: 0 !important;
+        }
+        .quick-settings-tile .quick-settings-tile-side-button,
+        .quick-settings-tile .quick-settings-tile-side-button:checked {
+            border-radius: 0 ${qtoggleRadius}px ${qtoggleRadius}px 0 !important;
+            border-left: 1px solid ${qtcolor} !important;
+            border-left-width: 0.5px !important;
+            margin-left: -1px !important;
+        }
+        .quick-settings-tile-main-button:checked,
+        .quick-settings-tile-side-button:checked {
+            border-color: ${qtcolor} !important;
+        }
+        .quick-settings-tile .quick-settings-tile-main-button:checked,
+        .quick-settings-tile .quick-settings-tile-main-button:active,
+        .quick-settings-tile .quick-settings-tile-side-button:checked,
+        .quick-settings-tile .quick-settings-tile-side-button:active {
+            color: rgba(${amfgred},${amfggreen},${amfgblue},1) !important;
+            background-color: rgba(${msred},${msgreen},${msblue},${msAlpha}) !important;
+            border-color: ${qtcolor} !important;
+        }
+        .quick-toggle-arrow {
+            border-left: 1px solid ${qtcolor} !important;
+            box-shadow: none !important;
+        }
+        .quick-settings-tile-main-button:hover, .quick-settings-tile-side-button:hover,
+        .quick-settings-tile-main-button:focus, .quick-settings-tile-side-button:focus {
+            background-color: ${mhbg} !important;
+            color: rgba(${mhfgred},${mhfggreen},${mhfgblue},1) !important;
+            border: none !important;
+            outline: none !important;
+            outline-width: 0 !important;
+        } `;
     }
 
     /* App Switcher */
@@ -3551,12 +3627,15 @@ function getStylesheet(obar, Me) {
         dashAlpha = dbgAlpha;
     }
 
-    if (dashDockStyle != 'Default') {
+    // These selectors intentionally target the embedded dock only.  Emitting
+    // them while its module is disabled would also recolour Ubuntu Dock and
+    // other extensions that expose the standard #dash style classes.
+    if (dashToDockEnabled && dashDockStyle != 'Default') {
         dashBorderColor = dBorder ? dashBorderColor : 'transparent';
         dashShadowColor = dShadow ? dashShadowColor : 'transparent';
 
         stylesheet += `
-        .dash-background {
+        #dashtodockContainer .dash-background {
             background-color: ${dashBgColor} !important;
             color: ${dashFgColor} !important;
             border: 1px solid ${dashBorderColor} !important;
@@ -3569,47 +3648,47 @@ function getStylesheet(obar, Me) {
             border-radius: ${dbRadius}px !important;
             ${dashBorder}
         }
-        .dash-separator {
+        #dashtodockContainer .dash-separator {
             background-color: ${dashBorderColor} !important;
             box-shadow: 1px 1px 0px rgba(25,25,25,0.1) !important;
         }
-        .dash-item-container .app-well-app .overview-icon, .dash-item-container .overview-tile .overview-icon, .dash-item-container .show-apps .overview-icon {
+        #dashtodockContainer .dash-item-container .app-well-app .overview-icon, #dashtodockContainer .dash-item-container .overview-tile .overview-icon, #dashtodockContainer .dash-item-container .show-apps .overview-icon {
             color: ${dashFgColor} !important;
             background-color: transparent !important;
         }
-        .dash-item-container .overview-tile, .dash-item-container .overview-tile:hover, .dash-item-container .overview-tile.focused, .dash-item-container .overview-tile:active {
+        #dashtodockContainer .dash-item-container .overview-tile, #dashtodockContainer .dash-item-container .overview-tile:hover, #dashtodockContainer .dash-item-container .overview-tile.focused, #dashtodockContainer .dash-item-container .overview-tile:active {
             background-color: transparent !important;
         }
-        .dash-item-container .app-well-app:active .overview-icon,
-        .dash-item-container .overview-tile:active .overview-icon,
-        .dash-item-container .show-apps:active .overview-icon {
+        #dashtodockContainer .dash-item-container .app-well-app:active .overview-icon,
+        #dashtodockContainer .dash-item-container .overview-tile:active .overview-icon,
+        #dashtodockContainer .dash-item-container .show-apps:active .overview-icon {
             color: rgba(${amfgred},${amfggreen},${amfgblue},1.0) !important;
             background-color: ${msc} !important;
         }
-        .dash-item-container .app-well-app:hover .overview-icon, .dash-item-container .app-well-app.focused .overview-icon,
-        .dash-item-container .overview-tile:hover .overview-icon, .dash-item-container .overview-tile.focused .overview-icon,
-        .dash-item-container .show-apps:hover .overview-icon, .dash-item-container .show-apps.focused .overview-icon {
+        #dashtodockContainer .dash-item-container .app-well-app:hover .overview-icon, #dashtodockContainer .dash-item-container .app-well-app.focused .overview-icon,
+        #dashtodockContainer .dash-item-container .overview-tile:hover .overview-icon, #dashtodockContainer .dash-item-container .overview-tile.focused .overview-icon,
+        #dashtodockContainer .dash-item-container .show-apps:hover .overview-icon, #dashtodockContainer .dash-item-container .show-apps.focused .overview-icon {
             background-color: ${dashHighlightColor} !important;
         }
-        .dash-label { /* app-icon tooltip */
+        #dashtodockContainer .dash-label { /* app-icon tooltip */
             background-color: rgba(${tooltipBgRed},${tooltipBgGreen},${tooltipBgBlue}, 0.9) !important;
             color: rgba(${mfgred},${mfggreen},${mfgblue},1) !important;
             box-shadow: 0 2px 0 0 rgba(${mshred},${mshgreen},${mshblue}, 0.25) !important; /* menu shadow */
             border-color: transparent !important;
         }
 
-        #dash StIcon {
+        #dashtodockContainer #dash StIcon {
             height: ${dIconSize}px !important;
             width: ${dIconSize}px !important;
         }
-        #dash .app-well-app-running-dot, #dash .app-grid-running-dot, #dash .show-apps-running-dot {
+        #dashtodockContainer #dash .app-well-app-running-dot, #dashtodockContainer #dash .app-grid-running-dot, #dashtodockContainer #dash .show-apps-running-dot {
             height: ${dIconSize / 15.0}px;
             width: ${dIconSize / 15.0}px;
             border-radius: ${dIconSize / 15.0}px;
             background-color: ${dashFgColor} !important;
             border: 2px solid ${dashFgColor} !important;
         }
-        #dash StWidget.focused .app-well-app-running-dot, #dash StWidget.focused .app-grid-running-dot, #dash StWidget.focused .show-apps-running-dot {
+        #dashtodockContainer #dash StWidget.focused .app-well-app-running-dot, #dashtodockContainer #dash StWidget.focused .app-grid-running-dot, #dashtodockContainer #dash StWidget.focused .show-apps-running-dot {
             background-color: rgba(${msred},${msgreen},${msblue}, 1.0) !important;
             border-color: ${dashFgColor} !important;
             box-shadow: 0 0 2px rgba(225,225,225,0.5) !important;
@@ -4155,6 +4234,18 @@ function getStylesheet(obar, Me) {
         }
 
 
+        `;
+    }
+
+    // Privacy indicators are an independent System option; they must not
+    // depend on Unified Shell Color Propagation being enabled.
+    const accRed = msred;
+    const accGreen = msgreen;
+    const accBlue = msblue;
+    const afgRed = amfgred;
+    const afgGreen = amfggreen;
+    const afgBlue = amfgblue;
+    stylesheet += `
         /* Privacy Indicators Accent Color */
         .privacy-indicators-accent-color .privacy-indicator {
             color: rgba(${accRed}, ${accGreen}, ${accBlue}, 1.0) !important;
@@ -4289,7 +4380,6 @@ function getStylesheet(obar, Me) {
             box-shadow: inset 0 0 10px 1px #cccccc !important;
         }
         `;
-    }
         // Dynamic Music Pill Styles
         stylesheet += `
         .music-pill-container {
@@ -4591,6 +4681,31 @@ function getStylesheet(obar, Me) {
         }
         `;
 
+
+    if (menustyle && obar._settings.get_string('quick-settings-arrow-mode') === 'individual') {
+        const arrowColors = obar._settings.get_value('quick-settings-arrow-colors').deep_unpack();
+        for (const [id, color] of Object.entries(arrowColors)) {
+            if (!/^tile-[a-f0-9]+$/.test(id) || !/^#[a-fA-F0-9]{6}$/.test(color)) continue;
+            stylesheet += `\n.quick-toggle-arrow.be-arrow-${id},
+                .quick-toggle-arrow.be-arrow-${id}:checked,
+                .quick-toggle-arrow.be-arrow-${id}:active,
+                .quick-toggle-arrow.be-arrow-${id}:hover,
+                .quick-toggle-menu-button.be-arrow-${id},
+                .quick-toggle-menu-button.be-arrow-${id}:checked,
+                .quick-toggle-menu-button.be-arrow-${id}:active,
+                .quick-toggle-menu-button.be-arrow-${id}:hover,
+                .quick-menu-toggle .quick-toggle-arrow.icon-button.be-arrow-${id}:checked,
+                .quick-menu-toggle .quick-toggle-arrow.icon-button.be-arrow-${id}:hover,
+                .quick-toggle-has-menu .quick-toggle-arrow.icon-button.be-arrow-${id}:checked,
+                .quick-toggle-has-menu .quick-toggle-arrow.icon-button.be-arrow-${id}:hover,
+                .quick-settings-tile .quick-settings-tile-side-button.be-arrow-${id},
+                .quick-settings-tile .quick-settings-tile-side-button.be-arrow-${id}:checked,
+                .quick-settings-tile .quick-settings-tile-side-button.be-arrow-${id}:active,
+                .quick-settings-tile .quick-settings-tile-side-button.be-arrow-${id}:hover {
+                    background-color: ${color} !important;
+                }`;
+        }
+    }
     return stylesheet;
 }
 
@@ -4599,15 +4714,18 @@ async function writeStylesheet(obar, stylesheet) {
     let file = Gio.File.new_for_path(stylepath);
     let bytearray = new TextEncoder().encode(stylesheet);
 
+    let stream = null;
     try {
-        let stream = await file.replace_async(null, false, Gio.FileCreateFlags.NONE, GLib.PRIORITY_DEFAULT, null);
+        stream = await file.replace_async(null, false, Gio.FileCreateFlags.NONE, GLib.PRIORITY_DEFAULT, null);
         await stream.write_bytes_async(bytearray, GLib.PRIORITY_DEFAULT, null);
-        stream.close(null);
         return true;
     }
     catch (e) {
-        if (DEBUG) log("Failed to write stylsheet file: " + stylepath, e);
+        console.error(`BarEnhanced: failed to write stylesheet: ${stylepath}`, e);
         return false;
+    } finally {
+        if (stream)
+            stream.close(null);
     }
 }
 
@@ -4670,6 +4788,9 @@ async function runReloadStyle(obar, Me) {
     obar._styleReloadInFlight = true;
     const reloadGeneration = obar._styleReloadGeneration || 0;
     try {
+        await obar._runtimeAssetsReady;
+        if (!obar._settings || obar._styleReloadGeneration !== reloadGeneration)
+            return;
         // Get stylesheet string
         let stylesheet = getStylesheet(obar, Me);
         const [stylesheetWritten] = await Promise.all([
@@ -4687,7 +4808,7 @@ async function runReloadStyle(obar, Me) {
             obar.reloadStylesheet();
     }
     catch (e) {
-        if (DEBUG) log("Failed to reload stylesheet: ", e);
+        console.error('BarEnhanced: failed to reload stylesheet:', e);
     } finally {
         obar._styleReloadInFlight = false;
         if (obar._styleReloadQueued && obar._settings && obar._styleReloadGeneration === reloadGeneration) {

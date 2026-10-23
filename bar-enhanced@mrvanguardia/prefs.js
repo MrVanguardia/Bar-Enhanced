@@ -33,10 +33,22 @@ import { fillBluetoothBatteryPreferences } from './bluetooth-battery-prefs.js';
 import { fillHydroWidgetsPreferences } from './hydro-widgets-prefs.js';
 import { openWallpaperStoreModal } from './wallpaper-store-prefs.js';
 
+Gio._promisify(Gio.File.prototype, 'query_info_async', 'query_info_finish');
+Gio._promisify(Gio.File.prototype, 'make_directory_async', 'make_directory_finish');
+Gio._promisify(Gio.File.prototype, 'load_contents_async', 'load_contents_finish');
+Gio._promisify(Gio.File.prototype, 'copy_async', 'copy_finish');
+Gio._promisify(Gio.File.prototype, 'replace_contents_async', 'replace_contents_finish');
+Gio._promisify(Gio.File.prototype, 'move_async', 'move_finish');
+
 const SCHEMA_PATH = '/org/gnome/shell/extensions/bar-enhanced/';
 
 // Automated translation fallback for Spanish
 const ES_MAP = {
+    'Vitals Menu': 'Menú de Vitals', 'Bluetooth Battery Menu': 'Menú de batería Bluetooth',
+    'Quick Settings': 'Ajustes rápidos', 'Calendar': 'Calendario', 'Notifications': 'Notificaciones',
+    'Panel Menus': 'Menús del panel', 'Surface': 'Superficie', 'Foreground': 'Texto',
+    'Active': 'Activo', 'Hover': 'Al pasar el cursor', 'Secondary': 'Secundario',
+    'Use menu color as GNOME system accent': 'Usar el color del menú como acento de GNOME',
     'Welcome': 'Bienvenido', 'Auto Themes': 'Temas Automáticos', 'Top Bar': 'Barra Superior',
     'Efficiency': 'Eficiencia', 'Aesthetics': 'Estética', 'Highlights': 'Resaltados',
     'Borders': 'Bordes', 'Menus': 'Menús', 'Dash & Dock': 'Dash y Dock',
@@ -57,6 +69,7 @@ const ES_MAP = {
     'Auto-Refresh on Wallpaper Change': 'Auto-Refrescar al cambiar Fondo', 'Dynamic Opacity Calculation': 'Cálculo de Opacidad Dinámica',
     'Auto-Set Bar Foreground': 'Auto-Ajustar Texto de Barra', 'Auto-Set Menu Foreground': 'Auto-Ajustar Texto de Menú',
     'Alternate Secondary Menu Color': 'Color Alternativo de Menú Secundario', 'Manual Accent Override': 'Sobrescribir Acento Manualmente',
+    'Sync Active Tile Color with Automatic Palette': 'Sincronizar Color del Tile Activo con Paleta Automática',
     'Custom Accent Color': 'Color de Acento Personalizado', 'Apply Engine Configuration': 'Aplicar Configuración del Motor',
     'Dark Mode Base Theme': 'Tema Base Modo Oscuro', 'Light Mode Base Theme': 'Tema Base Modo Claro',
     'Apply Auto-Theme Engine': 'Aplicar Motor de Tema Automático', 'Extracted Color Palette': 'Paleta de Colores Extraída',
@@ -82,15 +95,24 @@ const ES_MAP = {
     'Text Color': 'Color de Texto', 'Text Transparency': 'Transparencia de Texto', 'Background Color': 'Color de Fondo',
     'Background Transparency': 'Transparencia de Fondo', 'Surface Linear Gradient': 'Degradado Lineal de Superficie',
     'Override Secondary Menu Colors': 'Sobrescribir Menú Secundario', 'Secondary Surface': 'Superficie Secundaria',
+    'Used by the Quick Settings menu arrow; enable the override to edit it.': 'Usada por la flecha del menú de Ajustes rápidos; activa la sobrescritura para editarla.',
     'Popups Geometry': 'Geometría de Popups', 'Outline Color': 'Color de Contorno', 'Outline Transparency': 'Transparencia de Contorno',
     'Dynamic Focus Calculation': 'Cálculo de Enfoque Dinámico', 'Focus Indicator': 'Indicador de Enfoque', 'Active Indicator': 'Indicador Activo',
+    'Active Tile Surface': 'Superficie de mosaico activo', 'Color of enabled Quick Settings tiles, independent of the menu arrow.': 'Color de los mosaicos activos de Ajustes rápidos, independiente de la flecha del menú.',
     'Cast Shadow Color': 'Color de Sombra Proyectada', 'Cast Shadow Intensity': 'Intensidad de Sombra Proyectada',
     'Panel Edge Rounding': 'Redondeo de Bordes de Panel', 'Calendar Block Rounding': 'Redondeo de Bloques de Calendario',
     'Quick Settings Rounding': 'Redondeo de Ajustes Rápidos', 'Adjustment Sliders Verticality': 'Verticalidad de Deslizadores',
+    'Custom Slider Handle Color': 'Color personalizado del control deslizante', 'Slider Handle Color': 'Color del control deslizante',
+    'Dock Notification Badge Color': 'Color del contador de notificaciones del dock',
     'Docking Parameters': 'Parámetros de Dock', 'Color Synchronization': 'Sincronización de Color', 'System Default': 'Predeterminado del Sistema',
     'Sync with Popups': 'Sincronizar con Menús', 'Sync with Top Bar': 'Sincronizar con Barra Superior', 'Manual Color Specification': 'Especificación de Color Manual',
     'Manual Dock Surface': 'Superficie de Dock Manual', 'Dock Transparency': 'Transparencia del Dock', 'Perimeter Rounding': 'Redondeo Perimetral',
     'Forced Symbol Scale': 'Escala de Símbolos Forzada', 'Render Dock Outline': 'Mostrar Contorno del Dock', 'Render Dock Projection Shadow': 'Mostrar Sombra del Dock',
+    'Customize Running Indicator Colors': 'Personalizar colores de indicadores activos', 'Running Indicator Color': 'Color de indicador activo', 'Running Indicator Border': 'Borde de indicador activo',
+    'Binary': 'Binario', 'Dot': 'Punto',
+    'Do Nothing': 'No hacer nada', 'Minimize or Overview': 'Minimizar o vista general', 'Show Previews': 'Mostrar vistas previas',
+    'Minimize or Previews': 'Minimizar o vistas previas', 'Focus or Previews': 'Enfocar o vistas previas', 'Focus or App Spread': 'Enfocar o vista de aplicaciones',
+    'Focus, Minimize or Previews': 'Enfocar, minimizar o vistas previas', 'Focus, Minimize or App Spread': 'Enfocar, minimizar o vista de aplicaciones', 'Quit': 'Cerrar aplicación',
     'Shell Subsystem Customs': 'Personalización del Subsistema Shell', 'Theme Notifications Engine': 'Tematizar Motor de Notificaciones',
     'Theme System Popup Engine': 'Tematizar Motor de Popups', 'Propagate Accent to Shell Elements': 'Propagar Acento a Elementos del Shell',
     'Unified Shell Color Propagation': 'Propagación de Color Unificada del Shell', 'Apply Traffic Light Window Controls': 'Aplicar Controles "Traffic Light"',
@@ -146,6 +168,7 @@ const ES_MAP = {
     'Foreground Color': 'Color de Texto Primario',
     'Accent Color': 'Color de Acento (Secundario)',
     'Theme Sharing': 'Compartir Tema', 'Export to Code': 'Exportar a Código', 'Import from Code': 'Importar desde Código',
+    'Export Compact Share Code': 'Exportar código compacto para compartir', 'Generate a compact Base64 code for sharing a theme; JSON and TXT profiles remain editable.': 'Genera un código Base64 compacto para compartir un tema; los perfiles JSON y TXT siguen siendo editables.',
     'Paste theme code here:': 'Pega el código del tema aquí:', 'Copy this code:': 'Copia este código:',
     'Theme code is invalid.': 'El código del tema no es válido.', 'Theme applied successfully!': '¡Tema aplicado con éxito!',
     'Design Presets': 'Preajustes de Diseño', 'Search themes...': 'Buscar temas...', 'Featured Themes & Icons': 'Iconos y Temas Destacados',
@@ -161,20 +184,21 @@ const ES_MAP = {
     'Import Successful': 'Importación Exitosa', 'Import Failed': 'Importación Fallida',
     'The configuration profile has been applied correctly.': 'El perfil de configuración se ha aplicado correctamente.',
     'The configuration profile has been applied on a clean slate.': 'El perfil de configuración se ha aplicado sobre una base limpia.',
-    'Sync with Fedora System Accent Color': 'Sincronizar con el color de acento de Fedora',
+    'Sync Bar Border and Neon with GNOME Accent': 'Sincronizar borde y neón de la barra con el acento de GNOME',
     'Show Customization Widget Center in Bar': 'Mostrar Centro de Control Personalizado en la Barra',
-    'Pywal / Material You Sync': 'Sincronización con Pywal / Material You',
     'Sync Pywal Colors Manually': 'Sincronizar Paleta de Pywal',
     'Instantly extract and apply colors from your current Pywal palette.': 'Extrae y aplica de inmediato los colores de tu paleta activa de Pywal.',
     'Sync Now': 'Sincronizar',
     'Applied!': '¡Aplicado!',
     'Apply Palette to Bar': 'Aplicar Paleta a la Barra',
+    'Restore Bar Color Defaults': 'Restaurar colores predeterminados de la barra',
     'Pywal Palette Not Found': 'Paleta de Pywal no encontrada',
     'Please generate a Pywal color scheme first (e.g. run "wal -i wallpaper.jpg") before syncing.': 'Por favor, genera un esquema de colores de Pywal primero (ej. ejecutando "wal -i fondo.jpg") antes de sincronizar.',
     'OK': 'Aceptar',
     'Invalid Pywal Palette': 'Paleta de Pywal inválida',
     'The Pywal color file is invalid or contains too few colors.': 'El archivo de colores de Pywal no es válido o contiene muy pocos colores.',
     'Dynamic Focus Glow': 'Brillo Reactivo del Foco Dinámico',
+    'Takes effect the next time an automatic theme is applied': 'Se aplica la próxima vez que se genere un tema automático',
     'Neon Glow Intensity': 'Intensidad del Brillo Neón',
     'The palette auto-refreshes when the desktop background changes. Click any color to copy its Hex code.': 'La paleta se actualiza automáticamente al cambiar el fondo de pantalla. Haz clic en un color para copiar su código Hex.',
     'Icon Pack': 'Paquete de Iconos',
@@ -399,6 +423,8 @@ const ES_MAP = {
     'Require Pressure to Show': 'Requerir Presión para Mostrar',
     'Pressure Threshold': 'Umbral de Presión',
     'Animation Duration': 'Duración de Animación',
+    'Slide Animation When Hiding': 'Animación de Desplazamiento al Ocultar',
+    'Only controls the visual transition; Autohide and Intellihide remain separate.': 'Solo controla la transición visual; Auto-Ocultar e Inteliocultar siguen siendo independientes.',
     'Show Delay': 'Retraso al Mostrar',
     'Hide Delay': 'Retraso al Ocultar',
     'App Icons & Indicators': 'Iconos de Apps e Indicadores',
@@ -441,7 +467,9 @@ const ES_MAP = {
     'Minimum Alpha': 'Alpha Mínimo',
     'Maximum Alpha': 'Alpha Máximo',
     'Custom Background Color': 'Color de Fondo Personalizado',
-    'Apply Custom Theme (shrink)': 'Aplicar Tema Personalizado (contraer)',
+    'Apply Custom Theme': 'Aplicar Tema Personalizado',
+    'Shrink Custom Theme': 'Contraer Tema Personalizado',
+    'Dock Background Color': 'Color de Fondo del Dock',
     'Force Straight Corners': 'Forzar Esquinas Rectas',
 
     // Notification Icons translations
@@ -541,6 +569,16 @@ const ES_MAP = {
     'Show a banner message on the login screen': 'Mostrar un mensaje de banner en la pantalla de inicio',
     'Text to display as welcome message': 'Texto a mostrar como mensaje de bienvenida',
     'Tile Division Color': 'Color de división de mosaicos',
+    'Quick Settings Arrow Colors': 'Colores de las flechas de Ajustes rápidos',
+    'Open Quick Settings once to discover its expandable tiles. Shared keeps the existing secondary surface color.': 'Abre Ajustes rápidos una vez para detectar las píldoras con flecha. Compartido conserva el color de la superficie secundaria.',
+    'Arrow Color Mode': 'Modo de color de flechas',
+    'Shared': 'Compartido', 'Per Tile': 'Por píldora',
+    'No arrow buttons detected yet': 'Aún no se detectaron botones de flecha',
+    'Open Quick Settings, then return here; color controls appear automatically.': 'Abre Ajustes rápidos y vuelve aquí; los controles de color aparecerán automáticamente.',
+    'Reset Extension Preferences': 'Restablecer preferencias de la extensión',
+    'Reset Extension Preferences?': '¿Restablecer las preferencias de la extensión?',
+    'Reset saved settings for Bar Enhanced and its bundled modules; system themes and GDM files are not removed.': 'Restablece los ajustes guardados de Bar Enhanced y sus módulos; no elimina temas del sistema ni archivos de GDM.',
+    'Saved Bar Enhanced and bundled-module settings will be reset. Installed themes, wallpapers, and applied GDM files remain unchanged.': 'Se restablecerán los ajustes de Bar Enhanced y sus módulos. Los temas, fondos y archivos de GDM aplicados no se modifican.',
     'Trilands': 'Trilands',
     'Use this code to share your theme with others.': 'Usa este código para compartir tu tema con otros.',
     'Vertical': 'Vertical',
@@ -574,18 +612,14 @@ class BarEnhancedPrefs {
         this._interfaceSettings = interfaceSettings;
         this.path = path;
         this.timeoutId = null;
-        this.quoteTimeoutId = null;
-        this.quoteBlank = false;
-        this.quoteIdx = 0;
-        this.quotePause = false;
-        this.quotes = [];
         this.colorButtons = [];
         this.paletteButtons = [];
         this._settingsSignalIds = [];
+        this._dockSettingsSignalIds = [];
+        this._niSettingsSignalIds = [];
     }
 
     fill(window) {
-        this.loadQuotesFromFile();
         window.colorButtons = this.colorButtons;
         window.paletteButtons = this.paletteButtons;
 
@@ -604,7 +638,7 @@ class BarEnhancedPrefs {
         });
         bannerBox.append(titleLabel);
         const introGroup = new Adw.PreferencesGroup({
-            title: T('Architecture & Design'),
+            title: GLib.markup_escape_text(T('Architecture & Design'), -1),
             description: T('Open Bar allows you to theme the Top Bar, Pop-up Menus, Dash, Dock and the rest of the GNOME Shell environment.')
         });
         welcomePage.add(introGroup);
@@ -634,17 +668,19 @@ class BarEnhancedPrefs {
         autoPage.add(engineGroup);
         engineGroup.add(this.createSwitchRow('autotheme-refresh', T('Auto-Refresh on Wallpaper Change')));
         engineGroup.add(this.createSwitchRow('focus-glow', T('Dynamic Focus Glow')));
-        engineGroup.add(this.createSwitchRow('pywal-sync', T('Pywal / Material You Sync')));
+        engineGroup.add(this.createSwitchRow('pywal-sync', T('Pywal Sync'), '~/.cache/wal/colors'));
 
 
-        engineGroup.add(this.createSwitchRow('system-accent-sync', T('Sync with Fedora System Accent Color')));
+        engineGroup.add(this.createSwitchRow('system-accent-sync', T('Sync Bar Border and Neon with GNOME Accent')));
         engineGroup.add(this.createSwitchRow('show-dashboard', T('Show Customization Widget Center in Bar')));
         engineGroup.add(this.createSwitchRow('auto-bgalpha', T('Dynamic Opacity Calculation')));
         engineGroup.add(this.createSwitchRow('autofg-bar', T('Auto-Set Bar Foreground')));
         engineGroup.add(this.createSwitchRow('autofg-menu', T('Auto-Set Menu Foreground')));
         engineGroup.add(this.createSwitchRow('smbgoverride', T('Alternate Secondary Menu Color')));
-        engineGroup.add(this.createSwitchRow('accent-override', T('Manual Accent Override')));
-        const accentRow = new Adw.ActionRow({ title: T('Custom Accent Color') });
+        const nextAutoTheme = T('Takes effect the next time an automatic theme is applied');
+        engineGroup.add(this.createSwitchRow('accent-override', T('Manual Accent Override'), nextAutoTheme));
+        engineGroup.add(this.createSwitchRow('autotheme-active-tile-color', T('Sync Active Tile Color with Automatic Palette'), nextAutoTheme));
+        const accentRow = new Adw.ActionRow({ title: T('Custom Accent Color'), subtitle: nextAutoTheme });
         accentRow.add_suffix(this.createColorButton(window, 'accent-color'));
         engineGroup.add(accentRow);
 
@@ -657,14 +693,20 @@ class BarEnhancedPrefs {
         const darkModel = new Gtk.StringList(); darkOptions.forEach(opt => darkModel.append(opt[1])); darkRow.set_model(darkModel);
         const darkIdx = darkOptions.findIndex(opt => opt[0] === this._settings.get_string('autotheme-dark'));
         if (darkIdx !== -1) darkRow.set_selected(darkIdx);
-        darkRow.connect('notify::selected', () => this._settings.set_string('autotheme-dark', darkOptions[darkRow.get_selected()][0]));
+        darkRow.connect('notify::selected', () => {
+            const option = darkOptions[darkRow.get_selected()];
+            if (option) this._settings.set_string('autotheme-dark', option[0]);
+        });
         applyGroup.add(darkRow);
 
         const lightRow = new Adw.ComboRow({ title: T('Light Mode Base Theme') });
-        const lightModel = new Gtk.StringList(); darkOptions.forEach(opt => lightModel.append(opt[1])); lightRow.set_model(lightModel);
-        const lightIdx = darkOptions.findIndex(opt => opt[0] === this._settings.get_string('autotheme-light'));
+        const lightModel = new Gtk.StringList(); lightOptions.forEach(opt => lightModel.append(opt[1])); lightRow.set_model(lightModel);
+        const lightIdx = lightOptions.findIndex(opt => opt[0] === this._settings.get_string('autotheme-light'));
         if (lightIdx !== -1) lightRow.set_selected(lightIdx);
-        lightRow.connect('notify::selected', () => this._settings.set_string('autotheme-light', darkOptions[lightRow.get_selected()][0]));
+        lightRow.connect('notify::selected', () => {
+            const option = lightOptions[lightRow.get_selected()];
+            if (option) this._settings.set_string('autotheme-light', option[0]);
+        });
         applyGroup.add(lightRow);
 
         const autoBtn = new Gtk.Button({
@@ -717,12 +759,12 @@ class BarEnhancedPrefs {
         btnBox.append(applyPaletteBtn);
 
         const resetPaletteBtn = new Gtk.Button({
-            label: T('Restore GNOME Defaults'),
+            label: T('Restore Bar Color Defaults'),
             css_classes: ['pill', 'destructive-action'],
             halign: Gtk.Align.CENTER,
             margin_top: 12
         });
-        resetPaletteBtn.connect('clicked', () => this.resetToGnomeDefaults(window, resetPaletteBtn));
+        resetPaletteBtn.connect('clicked', () => this.resetBarColorDefaults(window, resetPaletteBtn));
 
         paletteBox.append(btnBox);
         paletteBox.append(resetPaletteBtn);
@@ -741,7 +783,7 @@ class BarEnhancedPrefs {
         // --- TOP BAR PAGE ---
         const barPage = new Adw.PreferencesPage({ title: T('Top Bar'), icon_name: 'view-paged-symbolic' });
         window.add(barPage);
-        const layoutGroup = new Adw.PreferencesGroup({ title: T('Architecture & Layout') });
+        const layoutGroup = new Adw.PreferencesGroup({ title: GLib.markup_escape_text(T('Architecture & Layout'), -1) });
         barPage.add(layoutGroup);
         layoutGroup.add(this.createComboRow('bartype', T('Bar Type'), [['Mainland', T('Mainland')], ['Floating', T('Floating')], ['Trilands', T('Trilands')], ['Islands', T('Islands')]]));
         layoutGroup.add(this.createComboRow('position', T('Edge Alignment'), [['Top', T('Top')], ['Bottom', T('Bottom')]]));
@@ -826,7 +868,7 @@ class BarEnhancedPrefs {
         fontRow.add_suffix(resetFontBtn);
         cGroup.add(fontRow);
 
-        const gGroup = new Adw.PreferencesGroup({ title: T('Gradients & Shadows') });
+        const gGroup = new Adw.PreferencesGroup({ title: GLib.markup_escape_text(T('Gradients & Shadows'), -1) });
         aesPage.add(gGroup);
         gGroup.add(this.createSwitchRow('gradient', T('Enable Color Gradients')));
         gGroup.add(this.createComboRow('gradient-direction', T('Direction'), [['horizontal', T('Horizontal')], ['vertical', T('Vertical')]]));
@@ -848,7 +890,7 @@ class BarEnhancedPrefs {
         // --- HIGHLIGHTS PAGE ---
         const highPage = new Adw.PreferencesPage({ title: T('Highlights'), icon_name: 'preferences-desktop-wallpaper-symbolic' });
         window.add(highPage);
-        const hGroup = new Adw.PreferencesGroup({ title: T('Focus & Interaction') });
+        const hGroup = new Adw.PreferencesGroup({ title: GLib.markup_escape_text(T('Focus & Interaction'), -1) });
         highPage.add(hGroup);
         hGroup.add(this.createSwitchRow('autohg-bar', T('Auto Contrast Calculation')));
         const hRow = new Adw.ActionRow({ title: T('Interaction Color') }); hRow.add_suffix(this.createColorButton(window, 'hcolor')); hGroup.add(hRow);
@@ -895,7 +937,65 @@ class BarEnhancedPrefs {
         mGroup.add(this.createScaleRow('mbgalpha', T('Background Transparency'), 0, 1, 0.01));
         mGroup.add(this.createSwitchRow('mbg-gradient', T('Surface Linear Gradient')));
         mGroup.add(this.createSwitchRow('smbgoverride', T('Secondary Palette Override')));
-        const smRow = new Adw.ActionRow({ title: T('Secondary Surface') }); smRow.add_suffix(this.createColorButton(window, 'smbgcolor')); mGroup.add(smRow);
+        const smRow = new Adw.ActionRow({
+            title: T('Secondary Surface'),
+            subtitle: T('Used by the Quick Settings menu arrow; enable the override to edit it.')
+        });
+        smRow.add_suffix(this.createColorButton(window, 'smbgcolor'));
+        this._settings.bind('smbgoverride', smRow, 'sensitive', Gio.SettingsBindFlags.DEFAULT);
+        mGroup.add(smRow);
+        const arrowGroup = new Adw.PreferencesGroup({
+            title: T('Quick Settings Arrow Colors'),
+            description: T('Open Quick Settings once to discover its expandable tiles. Shared keeps the existing secondary surface color.')
+        });
+        menuPage.add(arrowGroup);
+        arrowGroup.add(this.createComboRow('quick-settings-arrow-mode', T('Arrow Color Mode'), [
+            ['shared', T('Shared')], ['individual', T('Per Tile')]
+        ]));
+        const emptyArrowRow = new Adw.ActionRow({
+            title: T('No arrow buttons detected yet'),
+            subtitle: T('Open Quick Settings, then return here; color controls appear automatically.')
+        });
+        arrowGroup.add(emptyArrowRow);
+        const arrowRows = new Map();
+        const refreshArrowRows = () => {
+            const registry = this._settings.get_value('quick-settings-arrow-registry').deep_unpack();
+            for (const [id, row] of arrowRows) {
+                if (id in registry) continue;
+                arrowGroup.remove(row);
+                arrowRows.delete(id);
+            }
+            for (const [id, title] of Object.entries(registry).sort((a, b) => a[1].localeCompare(b[1]))) {
+                if (arrowRows.has(id) || !/^tile-[a-f0-9]+$/.test(id)) continue;
+                const row = new Adw.ActionRow({ title });
+                const button = new Gtk.ColorButton({ valign: Gtk.Align.CENTER });
+                const colors = this._settings.get_value('quick-settings-arrow-colors').deep_unpack();
+                const rgba = new Gdk.RGBA();
+                const shared = this._settings.get_strv('smbgcolor');
+                const fallback = `#${shared.slice(0, 3).map(value =>
+                    Math.round(Math.max(0, Math.min(1, Number(value))) * 255).toString(16).padStart(2, '0')).join('')}`;
+                rgba.parse(colors[id] || fallback);
+                button.set_rgba(rgba);
+                button.connect('color-set', () => {
+                    const current = this._settings.get_value('quick-settings-arrow-colors').deep_unpack();
+                    const color = button.get_rgba();
+                    const rgb = [color.red, color.green, color.blue].map(value =>
+                        Math.round(value * 255).toString(16).padStart(2, '0')).join('');
+                    current[id] = `#${rgb}`;
+                    this._settings.set_value('quick-settings-arrow-colors', new GLib.Variant('a{ss}', current));
+                    this.setTimeoutStyleReload();
+                });
+                row.add_suffix(button);
+                arrowGroup.add(row);
+                arrowRows.set(id, row);
+            }
+            const individual = this._settings.get_string('quick-settings-arrow-mode') === 'individual';
+            emptyArrowRow.set_visible(individual && arrowRows.size === 0);
+            for (const row of arrowRows.values()) row.set_visible(individual);
+        };
+        refreshArrowRows();
+        this._connectSettings('changed::quick-settings-arrow-registry', refreshArrowRows);
+        this._connectSettings('changed::quick-settings-arrow-mode', refreshArrowRows);
         const tileDivRow = new Adw.ActionRow({ title: T('Tile Division Color') }); tileDivRow.add_suffix(this.createColorButton(window, 'qtile-border')); mGroup.add(tileDivRow);
 
         const mBordGroup = new Adw.PreferencesGroup({ title: T('Popups Geometry') });
@@ -904,13 +1004,25 @@ class BarEnhancedPrefs {
         mBordGroup.add(this.createScaleRow('mbalpha', T('Outline Transparency'), 0, 1, 0.01));
         mBordGroup.add(this.createSwitchRow('autohg-menu', T('Dynamic Focus Calculation')));
         const mhRow = new Adw.ActionRow({ title: T('Focus Indicator') }); mhRow.add_suffix(this.createColorButton(window, 'mhcolor')); mBordGroup.add(mhRow);
-        const msRow = new Adw.ActionRow({ title: T('Active Indicator') }); msRow.add_suffix(this.createColorButton(window, 'mscolor')); mBordGroup.add(msRow);
+        const msRow = new Adw.ActionRow({
+            title: T('Active Tile Surface'),
+            subtitle: T('Color of enabled Quick Settings tiles, independent of the menu arrow.')
+        });
+        msRow.add_suffix(this.createColorButton(window, 'mscolor'));
+        mBordGroup.add(msRow);
         const mshRow = new Adw.ActionRow({ title: T('Cast Shadow Color') }); mshRow.add_suffix(this.createColorButton(window, 'mshcolor')); mBordGroup.add(mshRow);
         mBordGroup.add(this.createScaleRow('mshalpha', T('Cast Shadow Intensity'), 0, 1, 0.01));
         mBordGroup.add(this.createScaleRow('menu-radius', T('Panel Edge Rounding'), 0, 50));
         mBordGroup.add(this.createScaleRow('notif-radius', T('Calendar Block Rounding'), 0, 50));
         mBordGroup.add(this.createScaleRow('qtoggle-radius', T('Quick Settings Rounding'), 0, 50));
         mBordGroup.add(this.createScaleRow('slider-height', T('Adjustment Sliders Verticality'), 1, 20));
+        mBordGroup.add(this.createSwitchRow('slider-handle-color-override', T('Custom Slider Handle Color')));
+        const sliderHandleRow = new Adw.ActionRow({ title: T('Slider Handle Color') });
+        sliderHandleRow.add_suffix(this.createColorButton(window, 'slider-handle-color'));
+        this._settings.bind('slider-handle-color-override', sliderHandleRow, 'sensitive', Gio.SettingsBindFlags.DEFAULT);
+        mBordGroup.add(sliderHandleRow);
+        mBordGroup.add(this.createSwitchRow('menu-sync-system-accent', T('Use menu color as GNOME system accent')));
+
 
         // --- DASH & DOCK PAGE ---
         const dashPage = new Adw.PreferencesPage({ title: T('Dash & Dock'), icon_name: 'phone-symbolic' });
@@ -919,14 +1031,36 @@ class BarEnhancedPrefs {
         dashPage.add(dGroup);
         dGroup.add(this.createComboRow('dashdock-style', T('Color Synchronization'), [['Default', T('Native Theme')], ['Menu', T('Sync with Popups')], ['Bar', T('Sync with Top Bar')], ['Custom', T('Manual Color Specification')]]));
         const dbgRow = new Adw.ActionRow({ title: T('Manual Dock Surface') }); dbgRow.add_suffix(this.createColorButton(window, 'dbgcolor')); dGroup.add(dbgRow);
-        dGroup.add(this.createScaleRow('dbgalpha', T('Dock Transparency'), 0, 1, 0.01));
-        dGroup.add(this.createScaleRow('dbradius', T('Perimeter Rounding'), 0, 100));
-        dGroup.add(this.createScaleRow('disize', T('Forced Symbol Scale'), 16, 96));
-        dGroup.add(this.createSwitchRow('dborder', T('Render Dock Outline')));
-        dGroup.add(this.createSwitchRow('dshadow', T('Render Dock Projection Shadow')));
+        const badgeRow = new Adw.ActionRow({ title: T('Dock Notification Badge Color') });
+        badgeRow.add_suffix(this.createColorButton(window, 'dock-badge-color'));
+        dGroup.add(badgeRow);
+        const dockAlphaRow = this.createScaleRow('dbgalpha', T('Dock Transparency'), 0, 1, 0.01);
+        dGroup.add(dockAlphaRow);
+        const dockStyledRows = [
+            this.createScaleRow('dbradius', T('Perimeter Rounding'), 0, 100),
+            this.createScaleRow('disize', T('Forced Symbol Scale'), 16, 96),
+            this.createSwitchRow('dborder', T('Render Dock Outline')),
+            this.createSwitchRow('dshadow', T('Render Dock Projection Shadow')),
+        ];
+        for (const row of dockStyledRows)
+            dGroup.add(row);
+        const updateDockStyleSensitivity = () => {
+            const style = this._settings.get_string('dashdock-style');
+            dbgRow.sensitive = style === 'Custom';
+            dockAlphaRow.sensitive = style === 'Custom';
+            for (const row of dockStyledRows)
+                row.sensitive = style !== 'Default';
+        };
+        this._connectSettings('changed::dashdock-style', updateDockStyleSensitivity);
+        updateDockStyleSensitivity();
 
         // --- Native Dash to Dock Settings (Adwaita Style) ---
-        const dockSettings = this._extension.getSettings('org.gnome.shell.extensions.dash-to-dock');
+        const dockSettings = this._extension.getSettings('org.gnome.shell.extensions.bar-enhanced.dash-to-dock');
+        const connectDockSettings = (signal, callback) => {
+            const id = dockSettings.connect(signal, callback);
+            this._dockSettingsSignalIds.push(id);
+            return id;
+        };
 
         // Helper: create a switch row bound to dock settings
         const dockSwitch = (key, title, subtitle = '') => {
@@ -949,17 +1083,51 @@ class BarEnhancedPrefs {
             return row;
         };
 
+        // Dash to Dock stores these values as CSS color strings, unlike Bar
+        // Enhanced's RGB arrays. Keep the binding local to its private schema.
+        const dockColor = (key, title) => {
+            const row = new Adw.ActionRow({ title });
+            const button = new Gtk.ColorButton({ valign: Gtk.Align.CENTER });
+            const refresh = () => {
+                const color = new Gdk.RGBA();
+                if (!color.parse(dockSettings.get_string(key)))
+                    color.parse('#ffffff');
+                button.set_rgba(color);
+            };
+            refresh();
+            button.connect('color-set', () => {
+                dockSettings.set_string(key, button.get_rgba().to_string());
+            });
+            connectDockSettings(`changed::${key}`, refresh);
+            row.add_suffix(button);
+            return row;
+        };
+
+        const dockEnum = (key, title, labels, values = labels.map((_, index) => index)) => {
+            const row = new Adw.ComboRow({ title });
+            const model = new Gtk.StringList();
+            labels.forEach(label => model.append(T(label)));
+            row.set_model(model);
+            const refresh = () => {
+                const index = values.indexOf(dockSettings.get_enum(key));
+                if (index >= 0 && row.get_selected() !== index)
+                    row.set_selected(index);
+            };
+            refresh();
+            row.connect('notify::selected', () => {
+                const selected = values[row.get_selected()];
+                if (selected !== undefined && dockSettings.get_enum(key) !== selected)
+                    dockSettings.set_enum(key, selected);
+            });
+            connectDockSettings(`changed::${key}`, refresh);
+            return row;
+        };
+
         // --- Position & Layout ---
-        const posGroup = new Adw.PreferencesGroup({ title: T('Dock Position & Layout') });
+        const posGroup = new Adw.PreferencesGroup({ title: GLib.markup_escape_text(T('Dock Position & Layout'), -1) });
         dashPage.add(posGroup);
 
-        const posRow = new Adw.ComboRow({ title: T('Screen Position') });
-        const posModel = new Gtk.StringList();
-        [T('Top'), T('Right'), T('Bottom'), T('Left')].forEach(l => posModel.append(l));
-        posRow.set_model(posModel);
-        posRow.set_selected(dockSettings.get_enum('dock-position'));
-        posRow.connect('notify::selected', () => dockSettings.set_enum('dock-position', posRow.get_selected()));
-        posGroup.add(posRow);
+        posGroup.add(dockEnum('dock-position', T('Screen Position'), ['Top', 'Right', 'Bottom', 'Left']));
 
         posGroup.add(dockScale('dash-max-icon-size', T('Maximum Icon Size'), 16, 128));
         posGroup.add(dockScale('height-fraction', T('Dock Size Percentage'), 0.1, 1.0, 0.05));
@@ -981,23 +1149,20 @@ class BarEnhancedPrefs {
         behavGroup.add(dockSwitch('autohide', T('Autohide')));
         behavGroup.add(dockSwitch('intellihide', T('Intellihide (Dodge Windows)')));
 
-        const ihModeRow = new Adw.ComboRow({ title: T('Intellihide Mode') });
-        const ihModel = new Gtk.StringList();
-        [T('All Windows'), T('Focus App Windows'), T('Maximized Windows'), T('Always on Top')].forEach(l => ihModel.append(l));
-        ihModeRow.set_model(ihModel);
-        ihModeRow.set_selected(dockSettings.get_enum('intellihide-mode'));
-        ihModeRow.connect('notify::selected', () => dockSettings.set_enum('intellihide-mode', ihModeRow.get_selected()));
-        behavGroup.add(ihModeRow);
+        behavGroup.add(dockEnum('intellihide-mode', T('Intellihide Mode'),
+            ['All Windows', 'Focus App Windows', 'Maximized Windows', 'Always on Top']));
 
         behavGroup.add(dockSwitch('autohide-in-fullscreen', T('Autohide in Fullscreen')));
         behavGroup.add(dockSwitch('require-pressure-to-show', T('Require Pressure to Show')));
         behavGroup.add(dockScale('pressure-threshold', T('Pressure Threshold'), 0, 500));
+        behavGroup.add(dockSwitch('hide-animation', T('Slide Animation When Hiding'),
+            T('Only controls the visual transition; Autohide and Intellihide remain separate.')));
         behavGroup.add(dockScale('animation-time', T('Animation Duration'), 0, 1, 0.05));
         behavGroup.add(dockScale('show-delay', T('Show Delay'), 0, 1, 0.05));
         behavGroup.add(dockScale('hide-delay', T('Hide Delay'), 0, 1, 0.05));
 
         // --- App Icons & Indicators ---
-        const appiGroup = new Adw.PreferencesGroup({ title: T('App Icons & Indicators') });
+        const appiGroup = new Adw.PreferencesGroup({ title: GLib.markup_escape_text(T('App Icons & Indicators'), -1) });
         dashPage.add(appiGroup);
 
         appiGroup.add(dockSwitch('show-running', T('Show Running Apps')));
@@ -1016,37 +1181,36 @@ class BarEnhancedPrefs {
         appiGroup.add(dockSwitch('show-icons-emblems', T('Show Icon Emblems')));
         appiGroup.add(dockSwitch('show-icons-notifications-counter', T('Notifications Counter Badge')));
 
-        const runRow = new Adw.ComboRow({ title: T('Running Indicator Style') });
-        const runModel = new Gtk.StringList();
-        [T('Default'), T('Dots'), T('Squares'), T('Dashes'), T('Segmented'), T('Solid'), T('Ciliora'), T('Metro')].forEach(l => runModel.append(l));
-        runRow.set_model(runModel);
-        runRow.set_selected(dockSettings.get_enum('running-indicator-style'));
-        runRow.connect('notify::selected', () => dockSettings.set_enum('running-indicator-style', runRow.get_selected()));
-        appiGroup.add(runRow);
+        appiGroup.add(dockEnum('running-indicator-style', T('Running Indicator Style'),
+            ['Default', 'Dots', 'Squares', 'Dashes', 'Segmented', 'Solid', 'Ciliora', 'Metro', 'Binary', 'Dot']));
 
         appiGroup.add(dockSwitch('running-indicator-dominant-color', T('Use Dominant Color for Indicator')));
+        const indicatorColorsRow = dockSwitch('custom-theme-customize-running-dots', T('Customize Running Indicator Colors'));
+        appiGroup.add(indicatorColorsRow);
+        const indicatorColorRow = dockColor('custom-theme-running-dots-color', T('Running Indicator Color'));
+        const indicatorBorderRow = dockColor('custom-theme-running-dots-border-color', T('Running Indicator Border'));
+        const indicatorBorderWidthRow = dockScale('custom-theme-running-dots-border-width', T('Stroke Weight'), 0, 10);
+        indicatorColorsRow.bind_property('active', indicatorColorRow, 'sensitive', GObject.BindingFlags.DEFAULT | GObject.BindingFlags.SYNC_CREATE);
+        indicatorColorsRow.bind_property('active', indicatorBorderRow, 'sensitive', GObject.BindingFlags.DEFAULT | GObject.BindingFlags.SYNC_CREATE);
+        indicatorColorsRow.bind_property('active', indicatorBorderWidthRow, 'sensitive', GObject.BindingFlags.DEFAULT | GObject.BindingFlags.SYNC_CREATE);
+        appiGroup.add(indicatorColorRow);
+        appiGroup.add(indicatorBorderRow);
+        appiGroup.add(indicatorBorderWidthRow);
         appiGroup.add(dockSwitch('unity-backlit-items', T('Unity Backlit Items')));
         appiGroup.add(dockSwitch('apply-glossy-effect', T('Glossy Effect')));
 
         // --- Click & Scroll Actions ---
-        const actGroup = new Adw.PreferencesGroup({ title: T('Click & Scroll Actions') });
+        const actGroup = new Adw.PreferencesGroup({ title: GLib.markup_escape_text(T('Click & Scroll Actions'), -1) });
         dashPage.add(actGroup);
 
-        const clickRow = new Adw.ComboRow({ title: T('Click Action') });
-        const clickModel = new Gtk.StringList();
-        [T('Raise'), T('Minimize'), T('Launch'), T('Cycle'), T('Min or Overview'), T('Show Previews'), T('Min or Cycle'), T('Show App Spread')].forEach(l => clickModel.append(l));
-        clickRow.set_model(clickModel);
-        clickRow.set_selected(dockSettings.get_enum('click-action'));
-        clickRow.connect('notify::selected', () => dockSettings.set_enum('click-action', clickRow.get_selected()));
-        actGroup.add(clickRow);
+        actGroup.add(dockEnum('click-action', T('Click Action'), [
+            'Do Nothing', 'Minimize', 'Launch', 'Cycle', 'Minimize or Overview', 'Show Previews',
+            'Minimize or Previews', 'Focus or Previews', 'Focus or App Spread', 'Focus, Minimize or Previews',
+            'Focus, Minimize or App Spread', 'Quit',
+        ]));
 
-        const scrollRow = new Adw.ComboRow({ title: T('Scroll Action') });
-        const scrollModel = new Gtk.StringList();
-        [T('Do Nothing'), T('Cycle Windows'), T('Switch Workspace')].forEach(l => scrollModel.append(l));
-        scrollRow.set_model(scrollModel);
-        scrollRow.set_selected(dockSettings.get_enum('scroll-action'));
-        scrollRow.connect('notify::selected', () => dockSettings.set_enum('scroll-action', scrollRow.get_selected()));
-        actGroup.add(scrollRow);
+        actGroup.add(dockEnum('scroll-action', T('Scroll Action'),
+            ['Do Nothing', 'Cycle Windows', 'Switch Workspace']));
 
         actGroup.add(dockSwitch('hot-keys', T('Enable Keyboard Shortcuts')));
         actGroup.add(dockSwitch('scroll-to-focused-application', T('Scroll to Focused Application')));
@@ -1056,32 +1220,63 @@ class BarEnhancedPrefs {
         const appGroup2 = new Adw.PreferencesGroup({ title: T('Dock Appearance (Advanced)') });
         dashPage.add(appGroup2);
 
-        const transpRow = new Adw.ComboRow({ title: T('Transparency Mode') });
-        const transpModel = new Gtk.StringList();
-        [T('Default'), T('Fixed'), T('Adaptive'), T('Dynamic')].forEach(l => transpModel.append(l));
-        transpRow.set_model(transpModel);
-        transpRow.set_selected(dockSettings.get_enum('transparency-mode'));
-        transpRow.connect('notify::selected', () => dockSettings.set_enum('transparency-mode', transpRow.get_selected()));
-        appGroup2.add(transpRow);
+        appGroup2.add(dockEnum('transparency-mode', T('Transparency Mode'),
+            ['Default', 'Fixed', 'Dynamic'], [0, 1, 3]));
 
-        appGroup2.add(dockScale('background-opacity', T('Background Opacity'), 0, 1, 0.05));
-        appGroup2.add(dockSwitch('customize-alphas', T('Customize Min/Max Alpha')));
-        appGroup2.add(dockScale('min-alpha', T('Minimum Alpha'), 0, 1, 0.05));
-        appGroup2.add(dockScale('max-alpha', T('Maximum Alpha'), 0, 1, 0.05));
-        appGroup2.add(dockSwitch('custom-background-color', T('Custom Background Color')));
-        appGroup2.add(dockSwitch('apply-custom-theme', T('Apply Custom Theme (shrink)')));
-        appGroup2.add(dockSwitch('force-straight-corner', T('Force Straight Corners')));
+        const fixedOpacityRow = dockScale('background-opacity', T('Background Opacity'), 0, 1, 0.05);
+        appGroup2.add(fixedOpacityRow);
+        const dynamicOpacityRow = dockSwitch('customize-alphas', T('Customize Min/Max Alpha'));
+        appGroup2.add(dynamicOpacityRow);
+        const minAlphaRow = dockScale('min-alpha', T('Minimum Alpha'), 0, 1, 0.05);
+        const maxAlphaRow = dockScale('max-alpha', T('Maximum Alpha'), 0, 1, 0.05);
+        appGroup2.add(minAlphaRow);
+        appGroup2.add(maxAlphaRow);
+        const customDockColorRow = dockSwitch('custom-background-color', T('Custom Background Color'));
+        appGroup2.add(customDockColorRow);
+        const dockBackgroundColorRow = dockColor('background-color', T('Dock Background Color'));
+        appGroup2.add(dockBackgroundColorRow);
+        appGroup2.add(dockSwitch('apply-custom-theme', T('Apply Custom Theme')));
+        appGroup2.add(dockSwitch('custom-theme-shrink', T('Shrink Custom Theme')));
+        const straightCornerRow = dockSwitch('force-straight-corner', T('Force Straight Corners'));
+        appGroup2.add(straightCornerRow);
+        const updateAdvancedSensitivity = () => {
+            const builtIn = dockSettings.get_boolean('apply-custom-theme');
+            const mode = dockSettings.get_enum('transparency-mode');
+            fixedOpacityRow.sensitive = !builtIn && mode === 1;
+            dynamicOpacityRow.sensitive = !builtIn && mode === 3;
+            minAlphaRow.sensitive = maxAlphaRow.sensitive = !builtIn && mode === 3 &&
+                dockSettings.get_boolean('customize-alphas');
+            customDockColorRow.sensitive = !builtIn;
+            dockBackgroundColorRow.sensitive = !builtIn && dockSettings.get_boolean('custom-background-color');
+            straightCornerRow.sensitive = !builtIn;
+        };
+        for (const key of ['apply-custom-theme', 'transparency-mode', 'customize-alphas', 'custom-background-color'])
+            connectDockSettings(`changed::${key}`, updateAdvancedSensitivity);
+        updateAdvancedSensitivity();
 
         // --- SYSTEM INTEGRATION ---
         const sysPage = new Adw.PreferencesPage({ title: T('System'), icon_name: 'preferences-desktop-screensaver-symbolic' });
         window.add(sysPage);
         const sGroup = new Adw.PreferencesGroup({ title: T('Shell Subsystem Customs') });
         sysPage.add(sGroup);
-        sGroup.add(this.createSwitchRow('apply-menu-notif', T('Theme Notifications Engine')));
-        sGroup.add(this.createSwitchRow('apply-menu-shell', T('Theme System Popup Engine')));
-        sGroup.add(this.createSwitchRow('apply-accent-shell', T('Propagate Accent to Shell Elements')));
-        sGroup.add(this.createSwitchRow('apply-all-shell', T('Unified Shell Color Propagation')));
-        sGroup.add(this.createSwitchRow('traffic-light', T('Apply Traffic Light Window Controls')));
+        const notificationThemeRow = this.createSwitchRow('apply-menu-notif', T('Theme Notifications Engine'));
+        const popupThemeRow = this.createSwitchRow('apply-menu-shell', T('Theme System Popup Engine'));
+        const accentShellRow = this.createSwitchRow('apply-accent-shell', T('Propagate Accent to Shell Elements'));
+        const unifiedShellRow = this.createSwitchRow('apply-all-shell', T('Unified Shell Color Propagation'));
+        const appGridRow = this.createSwitchRow('theme-app-grid', T('Theme Application Grid'),
+            T('Leave disabled when V-Shell or another extension manages the overview grid.'));
+        [notificationThemeRow, popupThemeRow, accentShellRow, unifiedShellRow, appGridRow].forEach(row => sGroup.add(row));
+        const updateShellThemeDependencies = () => {
+            const unified = unifiedShellRow.active;
+            for (const row of [notificationThemeRow, popupThemeRow, accentShellRow])
+                row.sensitive = !unified;
+            appGridRow.sensitive = unified || accentShellRow.active;
+        };
+        unifiedShellRow.connect('notify::active', updateShellThemeDependencies);
+        accentShellRow.connect('notify::active', updateShellThemeDependencies);
+        updateShellThemeDependencies();
+        // GTK window CSS injection was removed; its old traffic-light setting
+        // is retained in the schema for existing profiles, but has no UI.
 
         // --- Notification Icons ---
         const niGroup = new Adw.PreferencesGroup({ title: T('Notification Icons in Top Bar') });
@@ -1091,6 +1286,9 @@ class BarEnhancedPrefs {
         niGroup.add(notifIconsRow);
 
         const niSettings = this._extension.getSettings('org.gnome.shell.extensions.notification-icons');
+        const connectNiSettings = (signal, callback) => {
+            this._niSettingsSignalIds.push(niSettings.connect(signal, callback));
+        };
 
         const niSwitch = (key, title, subtitle = '') => {
             const row = new Adw.SwitchRow({ title, subtitle });
@@ -1100,16 +1298,35 @@ class BarEnhancedPrefs {
         };
 
         niGroup.add(niSwitch('colored-icons', T('Colored Icons'), T('Show colored icons instead of monochrome')));
-        niGroup.add(niSwitch('notification-count', T('Count Badge'), T('Display number of unread notifications')));
-        niGroup.add(niSwitch('hide-count-when-one', T('Hide Single Count'), T('Hide badge when only one notification')));
+        const countRow = niSwitch('notification-count', T('Count Badge'), T('Display number of unread notifications'));
+        niGroup.add(countRow);
+        const hideSingleCountRow = new Adw.SwitchRow({ title: T('Hide Single Count'), subtitle: T('Hide badge when only one notification') });
+        niSettings.bind('hide-count-when-one', hideSingleCountRow, 'active', Gio.SettingsBindFlags.DEFAULT);
+        const updateHideSingleCountSensitivity = () => {
+            hideSingleCountRow.sensitive = notifIconsRow.active && countRow.active;
+        };
+        notifIconsRow.connect('notify::active', updateHideSingleCountSensitivity);
+        countRow.connect('notify::active', updateHideSingleCountSensitivity);
+        updateHideSingleCountSensitivity();
+        niGroup.add(hideSingleCountRow);
         niGroup.add(niSwitch('right-side', T('Right Side of Clock'), T('Show icons on the right side of the clock')));
 
         const niSizeRow = new Adw.ComboRow({ title: T('Notification Icon Size') });
         const niSizeModel = new Gtk.StringList();
         [T('Small (16px)'), T('Medium (18px)'), T('Large (20px)')].forEach(l => niSizeModel.append(l));
         niSizeRow.set_model(niSizeModel);
-        niSizeRow.set_selected(niSettings.get_int('icon-size'));
-        niSizeRow.connect('notify::selected', () => niSettings.set_int('icon-size', niSizeRow.get_selected()));
+        const refreshNiSize = () => {
+            const size = niSettings.get_int('icon-size');
+            if (size >= 0 && size < niSizeModel.get_n_items() && niSizeRow.get_selected() !== size)
+                niSizeRow.set_selected(size);
+        };
+        refreshNiSize();
+        niSizeRow.connect('notify::selected', () => {
+            const size = niSizeRow.get_selected();
+            if (size < niSizeModel.get_n_items() && niSettings.get_int('icon-size') !== size)
+                niSettings.set_int('icon-size', size);
+        });
+        connectNiSettings('changed::icon-size', refreshNiSize);
         notifIconsRow.bind_property('active', niSizeRow, 'sensitive', GObject.BindingFlags.DEFAULT | GObject.BindingFlags.SYNC_CREATE);
         niGroup.add(niSizeRow);
 
@@ -1117,16 +1334,26 @@ class BarEnhancedPrefs {
         const niDndModel = new Gtk.StringList();
         [T('Always Show'), T('Urgent Only'), T('Never Show')].forEach(l => niDndModel.append(l));
         niDndRow.set_model(niDndModel);
-        niDndRow.set_selected(niSettings.get_int('dnd-mode'));
-        niDndRow.connect('notify::selected', () => niSettings.set_int('dnd-mode', niDndRow.get_selected()));
+        const refreshNiDnd = () => {
+            const mode = niSettings.get_int('dnd-mode');
+            if (mode >= 0 && mode < niDndModel.get_n_items() && niDndRow.get_selected() !== mode)
+                niDndRow.set_selected(mode);
+        };
+        refreshNiDnd();
+        niDndRow.connect('notify::selected', () => {
+            const mode = niDndRow.get_selected();
+            if (mode < niDndModel.get_n_items() && niSettings.get_int('dnd-mode') !== mode)
+                niSettings.set_int('dnd-mode', mode);
+        });
+        connectNiSettings('changed::dnd-mode', refreshNiDnd);
         notifIconsRow.bind_property('active', niDndRow, 'sensitive', GObject.BindingFlags.DEFAULT | GObject.BindingFlags.SYNC_CREATE);
         niGroup.add(niDndRow);
 
         // --- Privacy Indicators Accent Color ---
-        const privacyGroup = new Adw.PreferencesGroup({ title: T('Privacy & Screen Indicators') });
+        const privacyGroup = new Adw.PreferencesGroup({ title: GLib.markup_escape_text(T('Privacy & Screen Indicators'), -1) });
         sysPage.add(privacyGroup);
 
-        const privacyAccentRow = this.createSwitchRow('privacy-accent-enabled', T('Enable Privacy Indicators Accent Color'), T('Apply accent colors to system privacy & sharing indicators'));
+        const privacyAccentRow = this.createSwitchRow('privacy-accent-enabled', T('Enable Privacy Indicators Accent Color'), GLib.markup_escape_text(T('Apply accent colors to system privacy & sharing indicators'), -1));
         privacyGroup.add(privacyAccentRow);
 
         const privacySwitch = (key, title, subtitle = '') => {
@@ -1135,11 +1362,20 @@ class BarEnhancedPrefs {
             return row;
         };
 
-        privacyGroup.add(privacySwitch('privacy-indicators', T('Color Privacy Indicators'), T('Apply accent color to camera, microphone, and location indicators')));
-        privacyGroup.add(privacySwitch('screen-sharing-indicator', T('Color Screen Sharing Indicator'), T('Apply accent color to the screen sharing indicator')));
-        privacyGroup.add(privacySwitch('screen-recording-indicator', T('Color Screen Recording Indicator'), T('Apply accent color to the screen recording indicator')));
-        privacyGroup.add(privacySwitch('privacy-blur', T('Glow Blur Background'), T('Use a glow blur background instead of a solid color block for sharing/recording')));
-        privacyGroup.add(privacySwitch('privacy-neutral', T('Neutral Color Mode'), T('Use neutral colors (white/dark grey) instead of accent colors')));
+        const privacyIndicatorsRow = privacySwitch('privacy-indicators', T('Color Privacy Indicators'), T('Apply accent color to camera, microphone, and location indicators'));
+        const sharingRow = privacySwitch('screen-sharing-indicator', T('Color Screen Sharing Indicator'), T('Apply accent color to the screen sharing indicator'));
+        const recordingRow = privacySwitch('screen-recording-indicator', T('Color Screen Recording Indicator'), T('Apply accent color to the screen recording indicator'));
+        const blurRow = privacySwitch('privacy-blur', T('Glow Blur Background'), T('Use a glow blur background instead of a solid color block for sharing/recording'));
+        const neutralRow = privacySwitch('privacy-neutral', T('Neutral Color Mode'), T('Use neutral colors (white/dark grey) instead of accent colors'));
+        [privacyIndicatorsRow, sharingRow, recordingRow, blurRow, neutralRow].forEach(row => privacyGroup.add(row));
+        const updatePrivacyDependencies = () => {
+            const enabled = privacyAccentRow.active;
+            blurRow.sensitive = enabled && (sharingRow.active || recordingRow.active);
+            neutralRow.sensitive = enabled && (privacyIndicatorsRow.active || sharingRow.active || recordingRow.active);
+        };
+        [privacyAccentRow, privacyIndicatorsRow, sharingRow, recordingRow].forEach(row =>
+            row.connect('notify::active', updatePrivacyDependencies));
+        updatePrivacyDependencies();
 
         const modGroup = new Adw.PreferencesGroup({ title: T('Integrated Modules'), description: T('Enable or disable integrated extensions.') });
         sysPage.add(modGroup);
@@ -1155,7 +1391,7 @@ class BarEnhancedPrefs {
             try {
                 fillMusicPillPreferences(window, this._extension.getSettings('org.gnome.shell.extensions.dynamic-music-pill'));
             } catch(e) {
-                log('Bar Enhanced: Error opening Music Pill prefs:', e);
+                console.error('Bar Enhanced: Error opening Music Pill prefs:', e);
                 const d = new Adw.MessageDialog({ transient_for: window, modal: true, heading: 'Error', body: String(e) });
                 d.add_response('ok', 'OK'); d.connect('response', () => d.destroy()); d.present();
             }
@@ -1163,6 +1399,12 @@ class BarEnhancedPrefs {
         musicRow.add_suffix(musicBtn);
         modGroup.add(musicRow);
         modGroup.add(immersiveMusicRow);
+        const updateImmersiveSensitivity = () => {
+            immersiveMusicRow.sensitive = musicRow.active || this._settings.get_boolean('hydro-media-enabled');
+        };
+        musicRow.connect('notify::active', updateImmersiveSensitivity);
+        this._connectSettings('changed::hydro-media-enabled', updateImmersiveSensitivity);
+        updateImmersiveSensitivity();
 
         const vitalsRow = this.createSwitchRow('vitals-enabled', T('Vitals'), T('System hardware monitors'));
         const vitalsBtn = new Gtk.Button({ icon_name: 'preferences-system-symbolic', tooltip_text: T('Configure Vitals'), valign: Gtk.Align.CENTER, css_classes: ['flat', 'circular'] });
@@ -1170,7 +1412,7 @@ class BarEnhancedPrefs {
             try {
                 fillVitalsPreferences(window, this._extension);
             } catch(e) {
-                log('Bar Enhanced: Error opening Vitals prefs:', e);
+                console.error('Bar Enhanced: Error opening Vitals prefs:', e);
                 const d = new Adw.MessageDialog({ transient_for: window, modal: true, heading: 'Error', body: String(e) });
                 d.add_response('ok', 'OK'); d.connect('response', () => d.destroy()); d.present();
             }
@@ -1184,7 +1426,7 @@ class BarEnhancedPrefs {
             try {
                 fillBluetoothBatteryPreferences(window, this._settings);
             } catch(e) {
-                log('Bar Enhanced: Error opening Bluetooth Battery prefs:', e);
+                console.error('Bar Enhanced: Error opening Bluetooth Battery prefs:', e);
                 const d = new Adw.MessageDialog({ transient_for: window, modal: true, heading: 'Error', body: String(e) });
                 d.add_response('ok', 'OK'); d.connect('response', () => d.destroy()); d.present();
             }
@@ -1198,7 +1440,7 @@ class BarEnhancedPrefs {
             try {
                 fillHydroWidgetsPreferences(window, this._settings, T);
             } catch(e) {
-                log('Bar Enhanced: Error opening Hydro-Widgets prefs:', e);
+                console.error('Bar Enhanced: Error opening Hydro-Widgets prefs:', e);
                 const d = new Adw.MessageDialog({ transient_for: window, modal: true, heading: 'Error', body: String(e) });
                 d.add_response('ok', 'OK'); d.connect('response', () => d.destroy()); d.present();
             }
@@ -1229,7 +1471,7 @@ class BarEnhancedPrefs {
                 const module = await import(uri);
                 module.openGdmCenter(window, this._extension, this.path, T);
             } catch (e) {
-                log("BarEnhanced: Error launching GDM Center:", e);
+                console.error("BarEnhanced: Error launching GDM Center:", e);
                 try {
                     const dialog = new Adw.MessageDialog({
                         transient_for: window,
@@ -1241,7 +1483,7 @@ class BarEnhancedPrefs {
                     dialog.connect('response', () => dialog.destroy());
                     dialog.present();
                 } catch (e2) {
-                    log(e2);
+                    console.error(e2);
                 }
             }
         });
@@ -1270,7 +1512,9 @@ class BarEnhancedPrefs {
         const iconIdx = icons.indexOf(this._interfaceSettings.get_string('icon-theme'));
         if (iconIdx !== -1) iconRow.set_selected(iconIdx);
         iconRow.connect('notify::selected', () => {
-            this._interfaceSettings.set_string('icon-theme', icons[iconRow.get_selected()]);
+            const selectedIcon = icons[iconRow.get_selected()];
+            if (selectedIcon)
+                this._interfaceSettings.set_string('icon-theme', selectedIcon);
         });
         assetGroup.add(iconRow);
 
@@ -1282,8 +1526,10 @@ class BarEnhancedPrefs {
         if (gtkIdx !== -1) gtkRow.set_selected(gtkIdx);
         gtkRow.connect('notify::selected', () => {
             const selectedTheme = gtkThemes[gtkRow.get_selected()];
+            if (!selectedTheme)
+                return;
             this._interfaceSettings.set_string('gtk-theme', selectedTheme);
-            this.applyGtk4ThemeEcosystem(selectedTheme);
+            void this.applyGtk4ThemeEcosystem(selectedTheme);
         });
         assetGroup.add(gtkRow);
 
@@ -1306,7 +1552,7 @@ class BarEnhancedPrefs {
         this._settings.bind('hydro-wallpaper-enabled', wpEnableRow, 'active', Gio.SettingsBindFlags.DEFAULT);
         wpGroup.add(wpEnableRow);
 
-        const wpStoreRow = new Adw.ActionRow({ title: T('Wallpaper Store'), subtitle: T('Browse Animated & Static Wallpapers') });
+        const wpStoreRow = new Adw.ActionRow({ title: T('Wallpaper Store'), subtitle: GLib.markup_escape_text(T('Browse Animated & Static Wallpapers'), -1) });
         const wpStoreBtn = new Gtk.Button({ label: T('Open Store'), valign: Gtk.Align.CENTER, css_classes: ['pill'] });
         wpStoreBtn.connect('clicked', () => openWallpaperStoreModal(window, this._settings, T, this._getSoupSession()));
         wpStoreRow.add_suffix(wpStoreBtn); wpGroup.add(wpStoreRow);
@@ -1322,7 +1568,10 @@ class BarEnhancedPrefs {
 
         const shareGroup = new Adw.PreferencesGroup({ title: T('Theme Sharing') });
         adminPage.add(shareGroup);
-        const codeExpRow = new Adw.ActionRow({ title: T('Export to Code'), subtitle: T('Generate a shareable text string of your style.') });
+        const codeExpRow = new Adw.ActionRow({
+            title: T('Export Compact Share Code'),
+            subtitle: T('Generate a compact Base64 code for sharing a theme; JSON and TXT profiles remain editable.')
+        });
         const codeExpBtn = new Gtk.Button({ label: T('Export'), valign: Gtk.Align.CENTER, css_classes: ['pill'] });
         codeExpBtn.connect('clicked', () => this.exportToCode(window));
         codeExpRow.add_suffix(codeExpBtn); shareGroup.add(codeExpRow);
@@ -1331,7 +1580,7 @@ class BarEnhancedPrefs {
         codeImpBtn.connect('clicked', () => this.importFromCode(window));
         codeImpRow.add_suffix(codeImpBtn); shareGroup.add(codeImpRow);
 
-        const resRow = new Adw.ActionRow({ title: T('System Factory Reset'), subtitle: T('Revert to enterprise baseline defaults.') });
+        const resRow = new Adw.ActionRow({ title: T('Reset Extension Preferences'), subtitle: T('Reset saved settings for Bar Enhanced and its bundled modules; system themes and GDM files are not removed.') });
         const resBtn = new Gtk.Button({ label: T('Factory Reset'), valign: Gtk.Align.CENTER, css_classes: ['destructive-action', 'pill'] });
         resBtn.connect('clicked', () => this.resetSettingsDialog(window)); resRow.add_suffix(resBtn); adminGroup.add(resRow);
 
@@ -1342,6 +1591,14 @@ class BarEnhancedPrefs {
                 try { this._settings.disconnect(id); } catch (e) {}
             });
             this._settingsSignalIds = [];
+            this._dockSettingsSignalIds.forEach(id => {
+                try { dockSettings.disconnect(id); } catch (e) {}
+            });
+            this._dockSettingsSignalIds = [];
+            this._niSettingsSignalIds.forEach(id => {
+                try { niSettings.disconnect(id); } catch (e) {}
+            });
+            this._niSettingsSignalIds = [];
         });
     }
 
@@ -1389,8 +1646,15 @@ class BarEnhancedPrefs {
         const currentIndex = options.findIndex(opt => opt[0] === currentId);
         if (currentIndex !== -1) row.set_selected(currentIndex);
         row.connect('notify::selected', () => {
-            this._settings.set_string(key, options[row.get_selected()][0]);
+            const option = options[row.get_selected()];
+            if (!option) return;
+            this._settings.set_string(key, option[0]);
             this.setTimeoutStyleReload();
+        });
+        this._connectSettings(`changed::${key}`, () => {
+            const index = options.findIndex(option => option[0] === this._settings.get_string(key));
+            if (index >= 0 && row.get_selected() !== index)
+                row.set_selected(index);
         });
         return row;
     }
@@ -1489,37 +1753,10 @@ class BarEnhancedPrefs {
         this.timeoutId = setTimeout(() => { this.triggerStyleReload(); this.timeoutId = null; }, 400);
     }
 
-    loadQuotesFromFile() {
-        try {
-            const f = Gio.File.new_for_path(this.path + '/media/BarEnhancedQuotes.txt');
-            const [ok, c] = f.load_contents(null);
-            const q = new TextDecoder('utf-8').decode(c);
-            this.quotes = q.split('\n').map(x => x.split(/(?=~)/g));
-            for (let i = this.quotes.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [this.quotes[i], this.quotes[j]] = [this.quotes[j], this.quotes[i]];
-            }
-        } catch (e) { this.quotes = [["Welcome to Bar Enhanced", " - MrVanguardia"]]; }
-    }
-
-    setQuoteLabel(l) {
-        if (this.quotePause) return;
-        if (this.quoteBlank) l.label = '';
-        else {
-            if (this.quoteIdx >= this.quotes.length) this.quoteIdx = 0;
-            l.label = `<span size="medium" allow_breaks="true">${this.quotes[this.quoteIdx][0]}\n${this.quotes[this.quoteIdx++][1]}</span>`;
-        }
-        const t = this.quoteBlank ? 500 : 10500;
-        if (this.quoteTimeoutId) clearTimeout(this.quoteTimeoutId);
-        this.quoteTimeoutId = setTimeout(() => this.setQuoteLabel(l), t);
-        this.quoteBlank = !this.quoteBlank;
-    }
-
     _setTypedValue(settings, key, value) {
         try {
             const schemaKey = settings.get_settings_schema().get_key(key);
             const type = schemaKey.get_value_type().dup_string();
-            log(`Bar Enhanced: Setting ${key} (type ${type}) to ${JSON.stringify(value)}`);
 
             if (type === 'b') settings.set_boolean(key, Boolean(value));
             else if (type === 's') settings.set_string(key, String(value));
@@ -1529,8 +1766,25 @@ class BarEnhancedPrefs {
                 settings.set_value(key, new GLib.Variant(type, value));
             }
         } catch (e) {
-            log(`Bar Enhanced: Failed to set ${key}: ${e}`);
+            console.error(`Bar Enhanced: Failed to set ${key}: ${e}`);
         }
+    }
+
+    _getSortedKeys(settings, excludedKeys = []) {
+        return settings.list_keys()
+            .filter(key => !excludedKeys.includes(key))
+            .sort((a, b) => a.localeCompare(b));
+    }
+
+    _sortProfileValue(value) {
+        if (Array.isArray(value))
+            return value.map(item => this._sortProfileValue(item));
+        if (value && typeof value === 'object') {
+            return Object.fromEntries(Object.keys(value)
+                .sort((a, b) => a.localeCompare(b))
+                .map(key => [key, this._sortProfileValue(value[key])]));
+        }
+        return value;
     }
 
     importSettings(window) {
@@ -1540,21 +1794,20 @@ class BarEnhancedPrefs {
             transient_for: window,
             modal: true
         });
-        f.connect('response', (s, r) => {
+        f.connect('response', async (s, r) => {
             if (r == Gtk.ResponseType.ACCEPT) {
                 try {
                     const file = f.get_file();
                     if (!file) return;
 
-                    const [success, contents] = GLib.file_get_contents(file.get_path());
-                    if (success) {
+                    const [contents] = await file.load_contents_async(null);
+                    if (contents) {
                         const rawContent = new TextDecoder().decode(contents);
 
                         try {
                             const data = JSON.parse(rawContent);
                             const allKeys = this._settings.list_keys();
 
-                            log('Bar Enhanced: Starting JSON import...');
                             this._settings.set_boolean('import-export', true);
 
                             // 1. Import main settings
@@ -1572,7 +1825,7 @@ class BarEnhancedPrefs {
                             let dockData = data['dash-to-dock'];
                             if (dockData) {
                                 try {
-                                    const dockSettings = this._extension.getSettings('org.gnome.shell.extensions.dash-to-dock');
+                                    const dockSettings = this._extension.getSettings('org.gnome.shell.extensions.bar-enhanced.dash-to-dock');
                                     const dockKeys = dockSettings.list_keys();
                                     Object.keys(dockData).forEach(k => {
                                         if (dockKeys.includes(k)) {
@@ -1580,7 +1833,7 @@ class BarEnhancedPrefs {
                                         }
                                     });
                                 } catch (e) {
-                                    log('Bar Enhanced: Failed to import Dash-to-dock settings:', e);
+                                    console.error('Bar Enhanced: Failed to import Dash-to-dock settings:', e);
                                 }
                             }
 
@@ -1596,7 +1849,7 @@ class BarEnhancedPrefs {
                                         }
                                     });
                                 } catch (e) {
-                                    log('Bar Enhanced: Failed to import Notification-icons settings:', e);
+                                    console.error('Bar Enhanced: Failed to import Notification-icons settings:', e);
                                 }
                             }
 
@@ -1612,7 +1865,7 @@ class BarEnhancedPrefs {
                                         }
                                     });
                                 } catch (e) {
-                                    log('Bar Enhanced: Failed to import Dynamic Music Pill settings:', e);
+                                    console.error('Bar Enhanced: Failed to import Dynamic Music Pill settings:', e);
                                 }
                             }
 
@@ -1627,7 +1880,7 @@ class BarEnhancedPrefs {
                                         }
                                     });
                                 } catch (e) {
-                                    log('Bar Enhanced: Failed to import Vitals settings:', e);
+                                    console.error('Bar Enhanced: Failed to import Vitals settings:', e);
                                 }
                             }
 
@@ -1644,13 +1897,12 @@ class BarEnhancedPrefs {
                                             }
                                         });
                                     } catch (e) {
-                                        log(`Bar Enhanced: Failed to import GDM ${sub} settings:`, e);
+                                        console.error(`Bar Enhanced: Failed to import GDM ${sub} settings:`, e);
                                     }
                                 });
                             }
 
                             GLib.timeout_add(GLib.PRIORITY_DEFAULT, 800, () => {
-                                log('Bar Enhanced: Releasing Silent Mode and reloading...');
                                 this._settings.set_boolean('import-export', false);
                                 this.triggerStyleReload();
                                 return GLib.SOURCE_REMOVE;
@@ -1667,7 +1919,6 @@ class BarEnhancedPrefs {
                             d.show();
 
                         } catch (jsonErr) {
-                            log('Bar Enhanced: Applying TXT profile...');
                             this._settings.set_boolean('import-export', true);
 
                             const lines = rawContent.split('\n');
@@ -1679,8 +1930,8 @@ class BarEnhancedPrefs {
                                     const section = line.substring(1, line.length - 1).trim();
                                     if (section === 'org.gnome.shell.extensions.bar-enhanced') {
                                         currentSettings = this._settings;
-                                    } else if (section === 'org.gnome.shell.extensions.dash-to-dock') {
-                                        try { currentSettings = this._extension.getSettings('org.gnome.shell.extensions.dash-to-dock'); } catch(e) { currentSettings = null; }
+                                    } else if (section === 'org.gnome.shell.extensions.bar-enhanced.dash-to-dock') {
+                                        try { currentSettings = this._extension.getSettings('org.gnome.shell.extensions.bar-enhanced.dash-to-dock'); } catch(e) { currentSettings = null; }
                                     } else if (section === 'org.gnome.shell.extensions.notification-icons') {
                                         try { currentSettings = this._extension.getSettings('org.gnome.shell.extensions.notification-icons'); } catch(e) { currentSettings = null; }
                                     } else if (section === 'org.gnome.shell.extensions.vitals') {
@@ -1704,7 +1955,7 @@ class BarEnhancedPrefs {
                                             currentSettings.set_value(key, variant);
                                         }
                                     } catch (e) {
-                                        log(`Bar Enhanced: Failed to parse TXT key ${key}: ${e}`);
+                                        console.error(`Bar Enhanced: Failed to parse TXT key ${key}: ${e}`);
                                     }
                                 }
                             });
@@ -1717,7 +1968,7 @@ class BarEnhancedPrefs {
                         }
                     }
                 } catch (e) {
-                    log('Bar Enhanced: Import failed: ' + e);
+                    console.error('Bar Enhanced: Import failed: ' + e);
                 }
             }
         });
@@ -1780,48 +2031,47 @@ class BarEnhancedPrefs {
                         };
                         
                         // 1. Export main settings
-                        this._settings.list_keys().forEach(k => {
-                            if (!['import-export', 'default-font'].includes(k))
-                                data.main[k] = this._settings.get_value(k).deep_unpack();
+                        this._getSortedKeys(this._settings, ['import-export', 'default-font']).forEach(k => {
+                            data.main[k] = this._settings.get_value(k).deep_unpack();
                         });
                         
                         // 2. Export Dash to Dock settings
                         try {
-                            const dockSettings = this._extension.getSettings('org.gnome.shell.extensions.dash-to-dock');
-                            dockSettings.list_keys().forEach(k => {
+                            const dockSettings = this._extension.getSettings('org.gnome.shell.extensions.bar-enhanced.dash-to-dock');
+                            this._getSortedKeys(dockSettings).forEach(k => {
                                 data['dash-to-dock'][k] = dockSettings.get_value(k).deep_unpack();
                             });
                         } catch (e) {
-                            log('Bar Enhanced: Dash-to-dock settings not available for export:', e);
+                            console.error('Bar Enhanced: Dash-to-dock settings not available for export:', e);
                         }
 
                         // 3. Export Notification Icons settings
                         try {
                             const niSettings = this._extension.getSettings('org.gnome.shell.extensions.notification-icons');
-                            niSettings.list_keys().forEach(k => {
+                            this._getSortedKeys(niSettings).forEach(k => {
                                 data['notification-icons'][k] = niSettings.get_value(k).deep_unpack();
                             });
                         } catch (e) {
-                            log('Bar Enhanced: Notification-icons settings not available for export:', e);
+                            console.error('Bar Enhanced: Notification-icons settings not available for export:', e);
                         }
 
                         // 3.5 Export Music Pill and Vitals settings
                         try {
                             const musicSettings = this._extension.getSettings('org.gnome.shell.extensions.dynamic-music-pill');
-                            musicSettings.list_keys().forEach(k => {
+                            this._getSortedKeys(musicSettings).forEach(k => {
                                 data['dynamic-music-pill'][k] = musicSettings.get_value(k).deep_unpack();
                             });
                         } catch (e) {
-                            log('Bar Enhanced: Dynamic Music Pill settings not available for export:', e);
+                            console.error('Bar Enhanced: Dynamic Music Pill settings not available for export:', e);
                         }
 
                         try {
                             const vitalsSettings = this._extension.getSettings('org.gnome.shell.extensions.vitals');
-                            vitalsSettings.list_keys().forEach(k => {
+                            this._getSortedKeys(vitalsSettings).forEach(k => {
                                 data['vitals'][k] = vitalsSettings.get_value(k).deep_unpack();
                             });
                         } catch (e) {
-                            log('Bar Enhanced: Vitals settings not available for export:', e);
+                            console.error('Bar Enhanced: Vitals settings not available for export:', e);
                         }
 
                         // 4. Export GDM settings
@@ -1834,30 +2084,28 @@ class BarEnhancedPrefs {
                             try {
                                 const subSettings = this._extension.getSettings('org.gnome.shell.extensions.bar-enhanced.gdm.' + sub);
                                 data.gdm[sub] = {};
-                                subSettings.list_keys().forEach(k => {
+                                this._getSortedKeys(subSettings).forEach(k => {
                                     data.gdm[sub][k] = subSettings.get_value(k).deep_unpack();
                                 });
                             } catch (e) {
-                                log(`Bar Enhanced: GDM ${sub} settings not available for export:`, e);
+                                console.error(`Bar Enhanced: GDM ${sub} settings not available for export:`, e);
                             }
                         });
 
-                        content = JSON.stringify(data, null, 4);
+                        content = JSON.stringify(this._sortProfileValue(data), null, 4) + '\n';
                     } else {
                         // Manual dconf-style generation for reliability
                         let lines = ['[org.gnome.shell.extensions.bar-enhanced]'];
-                        this._settings.list_keys().forEach(k => {
-                            if (!['import-export', 'default-font'].includes(k)) {
-                                let val = this._settings.get_value(k).print(true);
-                                lines.push(`${k}=${val}`);
-                            }
+                        this._getSortedKeys(this._settings, ['import-export', 'default-font']).forEach(k => {
+                            let val = this._settings.get_value(k).print(true);
+                            lines.push(`${k}=${val}`);
                         });
 
                         // Dash to Dock
                         try {
-                            const dockSettings = this._extension.getSettings('org.gnome.shell.extensions.dash-to-dock');
-                            lines.push('\n[org.gnome.shell.extensions.dash-to-dock]');
-                            dockSettings.list_keys().forEach(k => {
+                            const dockSettings = this._extension.getSettings('org.gnome.shell.extensions.bar-enhanced.dash-to-dock');
+                            lines.push('\n[org.gnome.shell.extensions.bar-enhanced.dash-to-dock]');
+                            this._getSortedKeys(dockSettings).forEach(k => {
                                 let val = dockSettings.get_value(k).print(true);
                                 lines.push(`${k}=${val}`);
                             });
@@ -1867,7 +2115,7 @@ class BarEnhancedPrefs {
                         try {
                             const niSettings = this._extension.getSettings('org.gnome.shell.extensions.notification-icons');
                             lines.push('\n[org.gnome.shell.extensions.notification-icons]');
-                            niSettings.list_keys().forEach(k => {
+                            this._getSortedKeys(niSettings).forEach(k => {
                                 let val = niSettings.get_value(k).print(true);
                                 lines.push(`${k}=${val}`);
                             });
@@ -1883,7 +2131,7 @@ class BarEnhancedPrefs {
                             try {
                                 const subSettings = this._extension.getSettings('org.gnome.shell.extensions.bar-enhanced.gdm.' + sub);
                                 lines.push(`\n[org.gnome.shell.extensions.bar-enhanced.gdm.${sub}]`);
-                                subSettings.list_keys().forEach(k => {
+                                this._getSortedKeys(subSettings).forEach(k => {
                                     let val = subSettings.get_value(k).print(true);
                                     lines.push(`${k}=${val}`);
                                 });
@@ -1894,7 +2142,7 @@ class BarEnhancedPrefs {
                         try {
                             const vitalsSettings = this._extension.getSettings('org.gnome.shell.extensions.vitals');
                             lines.push('\n[org.gnome.shell.extensions.vitals]');
-                            vitalsSettings.list_keys().forEach(k => {
+                            this._getSortedKeys(vitalsSettings).forEach(k => {
                                 let val = vitalsSettings.get_value(k).print(true);
                                 lines.push(`${k}=${val}`);
                             });
@@ -1903,7 +2151,7 @@ class BarEnhancedPrefs {
                         try {
                             const musicSettings = this._extension.getSettings('org.gnome.shell.extensions.dynamic-music-pill');
                             lines.push('\n[org.gnome.shell.extensions.dynamic-music-pill]');
-                            musicSettings.list_keys().forEach(k => {
+                            this._getSortedKeys(musicSettings).forEach(k => {
                                 let val = musicSettings.get_value(k).print(true);
                                 lines.push(`${k}=${val}`);
                             });
@@ -1913,9 +2161,8 @@ class BarEnhancedPrefs {
                     }
 
                     GLib.file_set_contents(path, content);
-                    log(`Bar Enhanced: Profile successfully saved as ${isJson ? 'JSON' : 'TXT'} to ${path}`);
                 } catch (e) {
-                    log('Bar Enhanced: Export failed: ' + e);
+                    console.error('Bar Enhanced: Export failed: ' + e);
                 }
             }
         });
@@ -1957,11 +2204,28 @@ class BarEnhancedPrefs {
     }
 
     resetSettingsDialog(window) {
-        let d = new Gtk.MessageDialog({ modal: true, text: T("Reset Environment?"), secondary_text: T("All customizations will be purged."), transient_for: window });
+        let d = new Gtk.MessageDialog({ modal: true, text: T("Reset Extension Preferences?"), secondary_text: T("Saved Bar Enhanced and bundled-module settings will be reset. Installed themes, wallpapers, and applied GDM files remain unchanged."), transient_for: window });
         d.add_button(T("Cancel"), Gtk.ResponseType.CANCEL); d.add_button(T("Reset"), Gtk.ResponseType.YES);
         d.connect("response", (d, r) => {
             if (r == Gtk.ResponseType.YES) {
-                this._settings.list_keys().forEach(k => { if (!['import-export', 'default-font'].includes(k)) this._settings.reset(k); });
+                const schemas = [
+                    'org.gnome.shell.extensions.bar-enhanced.dash-to-dock',
+                    'org.gnome.shell.extensions.notification-icons',
+                    'org.gnome.shell.extensions.dynamic-music-pill',
+                    'org.gnome.shell.extensions.vitals',
+                    ...['accessibility', 'appearance', 'fonts', 'main', 'misc', 'mouse',
+                        'night-light', 'pointing', 'power', 'sound', 'tools', 'top-bar',
+                        'touchpad', 'window-state'].map(sub => `org.gnome.shell.extensions.bar-enhanced.gdm.${sub}`)
+                ];
+                for (const settings of [this._settings, ...schemas.map(schema => {
+                    try { return this._extension.getSettings(schema); }
+                    catch (e) { console.warn(`Bar Enhanced: Cannot reset ${schema}: ${e}`); return null; }
+                }).filter(Boolean)]) {
+                    for (const key of settings.list_keys()) {
+                        if (settings !== this._settings || !['import-export', 'default-font'].includes(key))
+                            settings.reset(key);
+                    }
+                }
                 this.setTimeoutStyleReload();
             }
             d.destroy();
@@ -1970,10 +2234,9 @@ class BarEnhancedPrefs {
     }
 
     exportToCode(window) {
-        log('Bar Enhanced: Generating theme code...');
         try {
             let data = { main: {}, enhanced: {} };
-            const allKeys = this._settings.list_keys();
+            const allKeys = this._getSortedKeys(this._settings);
             allKeys.forEach(k => {
                 if (['import-export', 'default-font'].includes(k)) return;
                 const val = this._settings.get_value(k).deep_unpack();
@@ -1984,7 +2247,7 @@ class BarEnhancedPrefs {
                 }
             });
 
-            const json = JSON.stringify(data);
+            const json = JSON.stringify(this._sortProfileValue(data));
             const bytes = new TextEncoder().encode(json);
             const code = GLib.base64_encode(bytes);
 
@@ -2026,7 +2289,7 @@ class BarEnhancedPrefs {
                         const clipboard = Gdk.Display.get_default().get_clipboard();
                         clipboard.set_content(Gdk.ContentProvider.new_for_value(code));
                     } catch (err) {
-                        log('Bar Enhanced: Clipboard error: ' + err);
+                        console.error('Bar Enhanced: Clipboard error: ' + err);
                     }
                 }
                 d.destroy();
@@ -2034,12 +2297,11 @@ class BarEnhancedPrefs {
 
             d.show();
         } catch (e) {
-            log('Bar Enhanced: Export to Code failed: ' + e);
+            console.error('Bar Enhanced: Export to Code failed: ' + e);
         }
     }
 
     importFromCode(window) {
-        log('Bar Enhanced: Opening theme import dialog...');
         try {
             let d = new Adw.MessageDialog({
                 transient_for: window,
@@ -2065,15 +2327,13 @@ class BarEnhancedPrefs {
                         const code = entry.get_buffer().get_text().trim();
                         if (!code) return;
 
-                        log('Bar Enhanced: Decoding theme code...');
                         const decodedBytes = GLib.base64_decode(code);
                         const json = new TextDecoder().decode(decodedBytes);
                         const data = JSON.parse(json);
 
                         this._applyParsedJSONProfile(data);
-                        log('Bar Enhanced: Theme code applied successfully');
                     } catch (e) {
-                        log('Bar Enhanced: Import from Code failed: ' + e);
+                        console.error('Bar Enhanced: Import from Code failed: ' + e);
                     }
                 }
                 d.destroy();
@@ -2081,7 +2341,7 @@ class BarEnhancedPrefs {
 
             d.show();
         } catch (e) {
-            log('Bar Enhanced: Import from Code dialog failed: ' + e);
+            console.error('Bar Enhanced: Import from Code dialog failed: ' + e);
         }
     }
 
@@ -2107,7 +2367,6 @@ class BarEnhancedPrefs {
         });
 
         GLib.timeout_add(GLib.PRIORITY_DEFAULT, 800, () => {
-            log('Bar Enhanced: Releasing Silent Mode and reloading...');
             this._settings.set_boolean('import-export', false);
             this.triggerStyleReload();
             return GLib.SOURCE_REMOVE;
@@ -2162,7 +2421,7 @@ class BarEnhancedPrefs {
 
     downloadAndInstall(url, name, type, callback) {
         if (!/^https:\/\//i.test(url || '')) {
-            log('Refusing to download a theme from a non-HTTPS URL.');
+            console.error('Refusing to download a theme from a non-HTTPS URL.');
             if (callback) callback(false);
             return;
         }
@@ -2188,7 +2447,7 @@ class BarEnhancedPrefs {
                     if (callback) callback(success);
                 });
             } catch (e) {
-                log('Download failed:', e);
+                console.error('Download failed:', e);
                 try { Gio.File.new_for_path(tempPath).delete(null); } catch (deleteError) {}
                 if (callback) callback(false);
             }
@@ -2214,30 +2473,52 @@ class BarEnhancedPrefs {
                     throw new Error(`Extraction exited with status ${p.get_exit_status()}`);
                 if (callback) callback(true);
             } catch (e) {
-                log('Extraction failed:', e);
+                console.error('Extraction failed:', e);
                 if (callback) callback(false);
             }
         });
     }
 
-    applyGtk4ThemeEcosystem(themeName) {
+    async _fileExists(file) {
+        try {
+            await file.query_info_async(
+                Gio.FILE_ATTRIBUTE_STANDARD_TYPE,
+                Gio.FileQueryInfoFlags.NONE,
+                GLib.PRIORITY_DEFAULT,
+                null);
+            return true;
+        } catch (e) {
+            if (e.matches(Gio.IOErrorEnum, Gio.IOErrorEnum.NOT_FOUND))
+                return false;
+            throw e;
+        }
+    }
+
+    async _ensureDirectory(directory) {
+        try {
+            await directory.make_directory_async(GLib.PRIORITY_DEFAULT, null);
+        } catch (e) {
+            if (!e.matches(Gio.IOErrorEnum, Gio.IOErrorEnum.EXISTS))
+                throw e;
+        }
+    }
+
+    async applyGtk4ThemeEcosystem(themeName) {
         try {
             const configDir = GLib.get_user_config_dir();
             const gtk4ConfigDir = Gio.File.new_for_path(`${configDir}/gtk-4.0`);
-            if (!gtk4ConfigDir.query_exists(null)) {
-                gtk4ConfigDir.make_directory_with_parents(null);
-            }
+            await this._ensureDirectory(gtk4ConfigDir);
 
             const localThemePath = `${GLib.get_home_dir()}/.local/share/themes/${themeName}/gtk-4.0`;
             const legacyThemePath = `${GLib.get_home_dir()}/.themes/${themeName}/gtk-4.0`;
             const systemThemePath = `/usr/share/themes/${themeName}/gtk-4.0`;
 
             let sourceDir = null;
-            if (Gio.File.new_for_path(localThemePath).query_exists(null)) {
+            if (await this._fileExists(Gio.File.new_for_path(localThemePath))) {
                 sourceDir = localThemePath;
-            } else if (Gio.File.new_for_path(legacyThemePath).query_exists(null)) {
+            } else if (await this._fileExists(Gio.File.new_for_path(legacyThemePath))) {
                 sourceDir = legacyThemePath;
-            } else if (Gio.File.new_for_path(systemThemePath).query_exists(null)) {
+            } else if (await this._fileExists(Gio.File.new_for_path(systemThemePath))) {
                 sourceDir = systemThemePath;
             }
 
@@ -2245,14 +2526,19 @@ class BarEnhancedPrefs {
 
             if (sourceDir) {
                 // Back up original user css if it exists and is not ours
-                if (gtkCssFile.query_exists(null)) {
+                if (await this._fileExists(gtkCssFile)) {
                     try {
-                        const [contents] = gtkCssFile.load_contents(null);
+                        const [contents] = await gtkCssFile.load_contents_async(null);
                         const decoder = new TextDecoder('utf-8');
                         const contentsStr = decoder.decode(contents);
                         if (!contentsStr.includes('/*** Bar Enhanced GTK CSS ***/') && !contentsStr.includes('/*** GTK4 Theme Ecosystem ***/')) {
                             const backupFile = Gio.File.new_for_path(`${configDir}/gtk-4.0/gtk_backup_user.css`);
-                            gtkCssFile.copy(backupFile, Gio.FileCopyFlags.OVERWRITE, null, null);
+                            await gtkCssFile.copy_async(
+                                backupFile,
+                                Gio.FileCopyFlags.OVERWRITE,
+                                GLib.PRIORITY_DEFAULT,
+                                null,
+                                null);
                         }
                     } catch (err) { }
                 }
@@ -2264,21 +2550,26 @@ class BarEnhancedPrefs {
                     ['bash', '-c', script, 'bar-enhanced-gtk4', configDir, sourceDir],
                     Gio.SubprocessFlags.NONE
                 );
-                proc.wait_async(null, (p, res) => {
+                proc.wait_async(null, async (p, res) => {
                     try {
                         p.wait_finish(res);
                         if (!p.get_successful())
                             throw new Error(`GTK4 theme copy exited with status ${p.get_exit_status()}`);
                         // Add our header so we know it's injected
-                        if (gtkCssFile.query_exists(null)) {
-                            const [contents] = gtkCssFile.load_contents(null);
+                        if (await this._fileExists(gtkCssFile)) {
+                            const [contents] = await gtkCssFile.load_contents_async(null);
                             const decoder = new TextDecoder('utf-8');
                             let contentsStr = decoder.decode(contents);
                             if (!contentsStr.includes('/*** GTK4 Theme Ecosystem ***/')) {
                                 contentsStr = `/*** GTK4 Theme Ecosystem ***/\n` + contentsStr;
                                 const encoder = new TextEncoder();
                                 const bytes = encoder.encode(contentsStr);
-                                gtkCssFile.replace_contents(bytes, null, false, Gio.FileCreateFlags.REPLACE_DESTINATION, null);
+                                await gtkCssFile.replace_contents_async(
+                                    bytes,
+                                    null,
+                                    false,
+                                    Gio.FileCreateFlags.REPLACE_DESTINATION,
+                                    null);
                             }
                         }
                     } catch (e) { }
@@ -2290,23 +2581,28 @@ class BarEnhancedPrefs {
                     ['bash', '-c', script, 'bar-enhanced-gtk4', configDir],
                     Gio.SubprocessFlags.NONE
                 );
-                proc.wait_async(null, (p, res) => {
+                proc.wait_async(null, async (p, res) => {
                     try {
                         p.wait_finish(res);
                         if (!p.get_successful())
                             throw new Error(`GTK4 theme cleanup exited with status ${p.get_exit_status()}`);
                         // Restore user's backup if it exists
                         const backupFile = Gio.File.new_for_path(`${configDir}/gtk-4.0/gtk_backup_user.css`);
-                        if (backupFile.query_exists(null)) {
+                        if (await this._fileExists(backupFile)) {
                             try {
-                                backupFile.move(gtkCssFile, Gio.FileCopyFlags.OVERWRITE, null, null);
+                                await backupFile.move_async(
+                                    gtkCssFile,
+                                    Gio.FileCopyFlags.OVERWRITE,
+                                    GLib.PRIORITY_DEFAULT,
+                                    null,
+                                    null);
                             } catch (err) { }
                         }
                     } catch (e) { }
                 });
             }
         } catch (e) {
-            log('Error applying GTK4 theme:', e);
+            console.error('Error applying GTK4 theme:', e);
         }
     }
 
@@ -2438,7 +2734,7 @@ class BarEnhancedPrefs {
                 const data = rawData ? (Array.isArray(rawData) ? rawData : [rawData]) : [];
                 this.renderThemeList(container, loadingLabel, iconRow, data, requestState);
             } catch (e) {
-                log('searchOnlineThemes exception:', e);
+                console.error('searchOnlineThemes exception:', e);
                 if (loadingLabel.get_parent()) loadingLabel.set_label(T('No results or API error.'));
             }
         });
@@ -2482,7 +2778,7 @@ class BarEnhancedPrefs {
                         allThemes = [...allThemes, ...items];
                     }
                 } catch (e) {
-                    log('fetchOnlineThemes exception:', e);
+                    console.error('fetchOnlineThemes exception:', e);
                 }
 
                 completed++;
@@ -2495,18 +2791,13 @@ class BarEnhancedPrefs {
     }
 
     getGnomeShellVersion() {
-        try {
-            let [res, stdout, stderr, status] = GLib.spawn_command_line_sync('gnome-shell --version');
-            if (res) {
-                const output = new TextDecoder().decode(stdout).trim();
-                const match = output.match(/(\d+\.?\d*)/);
-                if (match) {
-                    const parts = match[1].split('.');
-                    return parts[0];
-                }
-            }
-        } catch (e) { }
-        return '45';
+        // Preferences run outside GNOME Shell and cannot import shell/misc/config.js.
+        // This value labels themes in the store; use the supported version
+        // declared by this extension without blocking the UI on a subprocess.
+        const versions = this.metadata['shell-version'] ?? [];
+        const majors = versions.map(version => Number.parseInt(version, 10))
+            .filter(Number.isFinite);
+        return String(Math.max(0, ...majors) || 45);
     }
 
     checkCompatibility(item, gnomeMajorVersion) {
@@ -2624,7 +2915,7 @@ class BarEnhancedPrefs {
                         const paintable = Gdk.Texture.new_for_pixbuf(pixbuf);
                         picture.set_from_paintable(paintable);
                     } catch (e) {
-                        log('IMAGE FETCH/CONVERSION ERROR for ' + name + ' (URL: ' + preview + '): ' + e);
+                        console.error('IMAGE FETCH/CONVERSION ERROR for ' + name + ' (URL: ' + preview + '): ' + e);
                     }
                 });
             }
@@ -2720,142 +3011,30 @@ class BarEnhancedPrefs {
     }
     applyExtractedPalette(window, btn) {
         try {
-            // Helper to compute contrast color (white or dark) based on background RGB
-            const getContrastColor = (rVal, gVal, bVal) => {
-                const Y = 0.299 * rVal + 0.587 * gVal + 0.114 * bVal;
-                // If light background, return dark text. Else, return white text.
-                return Y > 130 ? ['0.100', '0.100', '0.100'] : ['1.000', '1.000', '1.000'];
+            const readPaletteColor = key => {
+                const channels = this._settings.get_strv(key).map(Number);
+                if (channels.length !== 3 || channels.some(value => !Number.isInteger(value) || value < 0 || value > 255))
+                    throw new Error(`Invalid extracted palette color: ${key}`);
+                return channels;
             };
+            const background = readPaletteColor('palette1');
+            const border = readPaletteColor('palette3');
+            const normalized = color => color.map(value => (value / 255).toFixed(3));
+            const foreground = background[0] * 0.299 + background[1] * 0.587 + background[2] * 0.114 > 130
+                ? ['0.100', '0.100', '0.100'] : ['1.000', '1.000', '1.000'];
 
-            // Pause stylesheet reload during multi-setting changes
             this._settings.set_boolean('pause-reload', true);
-
-            // Copy palette1-12 to candy1-12, dark-candy1-12, and light-candy1-12
-            for (let i = 1; i <= 12; i++) {
-                const c = this._settings.get_strv(`palette${i}`);
-                if (c && c.length === 3) {
-                    let r = (parseInt(c[0]) / 255.0).toFixed(3);
-                    let g = (parseInt(c[1]) / 255.0).toFixed(3);
-                    let b = (parseInt(c[2]) / 255.0).toFixed(3);
-
-                    this._settings.set_strv(`candy${i}`, [r, g, b]);
-                    this._settings.set_strv(`dark-candy${i}`, [r, g, b]);
-                    this._settings.set_strv(`light-candy${i}`, [r, g, b]);
+            try {
+                for (const prefix of ['', 'dark-', 'light-']) {
+                    this._settings.set_strv(`${prefix}bgcolor`, normalized(background));
+                    this._settings.set_strv(`${prefix}iscolor`, normalized(background));
+                    this._settings.set_strv(`${prefix}fgcolor`, foreground);
+                    this._settings.set_strv(`${prefix}bcolor`, normalized(border));
                 }
-            }
-
-            // Set background color to primary palette color and compute bar foreground contrast
-            const bg = this._settings.get_strv('palette1');
-            if (bg && bg.length === 3) {
-                let r = (parseInt(bg[0]) / 255.0).toFixed(3);
-                let g = (parseInt(bg[1]) / 255.0).toFixed(3);
-                let b = (parseInt(bg[2]) / 255.0).toFixed(3);
-
-                this._settings.set_strv('bgcolor', [r, g, b]);
-                this._settings.set_strv('iscolor', [r, g, b]);
-                this._settings.set_strv('dark-bgcolor', [r, g, b]);
-                this._settings.set_strv('dark-iscolor', [r, g, b]);
-                this._settings.set_strv('light-bgcolor', [r, g, b]);
-                this._settings.set_strv('light-iscolor', [r, g, b]);
-
-                // Calculate and apply bar foreground (text) contrast
-                const fg = getContrastColor(parseInt(bg[0]), parseInt(bg[1]), parseInt(bg[2]));
-                this._settings.set_strv('fgcolor', fg);
-                this._settings.set_strv('dark-fgcolor', fg);
-                this._settings.set_strv('light-fgcolor', fg);
-
-                // Apply primary palette color to popups / menu background
-                this._settings.set_strv('mbgcolor', [r, g, b]);
-                this._settings.set_strv('dark-mbgcolor', [r, g, b]);
-                this._settings.set_strv('light-mbgcolor', [r, g, b]);
-
-                // Calculate popups / menu foreground (text) contrast
-                const mfg = getContrastColor(parseInt(bg[0]), parseInt(bg[1]), parseInt(bg[2]));
-                this._settings.set_strv('mfgcolor', mfg);
-                this._settings.set_strv('dark-mfgcolor', mfg);
-                this._settings.set_strv('light-mfgcolor', mfg);
-            }
-
-            // Apply secondary palette color to menu tiles / secondary surfaces background
-            const smbg = this._settings.get_strv('palette2') || this._settings.get_strv('palette1');
-            if (smbg && smbg.length === 3) {
-                let r = (parseInt(smbg[0]) / 255.0).toFixed(3);
-                let g = (parseInt(smbg[1]) / 255.0).toFixed(3);
-                let b = (parseInt(smbg[2]) / 255.0).toFixed(3);
-                this._settings.set_strv('smbgcolor', [r, g, b]);
-                this._settings.set_strv('dark-smbgcolor', [r, g, b]);
-                this._settings.set_strv('light-smbgcolor', [r, g, b]);
-            }
-
-            // Set border color to tertiary or secondary palette color
-            const border = this._settings.get_strv('palette3') || this._settings.get_strv('palette2');
-            if (border && border.length === 3) {
-                let r = (parseInt(border[0]) / 255.0).toFixed(3);
-                let g = (parseInt(border[1]) / 255.0).toFixed(3);
-                let b = (parseInt(border[2]) / 255.0).toFixed(3);
-                this._settings.set_strv('bcolor', [r, g, b]);
-                this._settings.set_strv('dark-bcolor', [r, g, b]);
-                this._settings.set_strv('light-bcolor', [r, g, b]);
-
-                // Also apply this color to menu border outline
-                this._settings.set_strv('mbcolor', [r, g, b]);
-                this._settings.set_strv('dark-mbcolor', [r, g, b]);
-                this._settings.set_strv('light-mbcolor', [r, g, b]);
-            }
-
-            // Enable manual accent override and set custom accent color
-            this._settings.set_boolean('accent-override', true);
-            const acc = this._settings.get_strv('palette2') || this._settings.get_strv('palette1');
-            if (acc && acc.length === 3) {
-                let r = (parseInt(acc[0]) / 255.0).toFixed(3);
-                let g = (parseInt(acc[1]) / 255.0).toFixed(3);
-                let b = (parseInt(acc[2]) / 255.0).toFixed(3);
-                this._settings.set_strv('accent-color', [r, g, b]);
-                this._settings.set_strv('dark-accent-color', [r, g, b]);
-                this._settings.set_strv('light-accent-color', [r, g, b]);
-
-                // Set menu active toggles color (mscolor) to this accent color!
-                this._settings.set_strv('mscolor', [r, g, b]);
-                this._settings.set_strv('dark-mscolor', [r, g, b]);
-                this._settings.set_strv('light-mscolor', [r, g, b]);
-            }
-
-            // Set menu hover indicators color (mhcolor) to tertiary palette color or accent
-            const hoverCol = this._settings.get_strv('palette3') || this._settings.get_strv('palette2');
-            if (hoverCol && hoverCol.length === 3) {
-                let r = (parseInt(hoverCol[0]) / 255.0).toFixed(3);
-                let g = (parseInt(hoverCol[1]) / 255.0).toFixed(3);
-                let b = (parseInt(hoverCol[2]) / 255.0).toFixed(3);
-                this._settings.set_strv('mhcolor', [r, g, b]);
-                this._settings.set_strv('dark-mhcolor', [r, g, b]);
-                this._settings.set_strv('light-mhcolor', [r, g, b]);
-            }
-
-            // Set system GTK headerbar and sidebars custom colors to primary palette color
-            const hscd = this._settings.get_strv('palette1');
-            if (hscd && hscd.length === 3) {
-                let r = (parseInt(hscd[0]) / 255.0).toFixed(3);
-                let g = (parseInt(hscd[1]) / 255.0).toFixed(3);
-                let b = (parseInt(hscd[2]) / 255.0).toFixed(3);
-                this._settings.set_strv('hscd-color', [r, g, b]);
-                this._settings.set_strv('dark-hscd-color', [r, g, b]);
-                this._settings.set_strv('light-hscd-color', [r, g, b]);
-
-                this._settings.set_strv('vw-color', [r, g, b]);
-                this._settings.set_strv('dark-vw-color', [r, g, b]);
-                this._settings.set_strv('light-vw-color', [r, g, b]);
-            }
-
-            // Automatically enable system-wide GTK3 / GTK4 theme injection!
-            this._settings.set_boolean('apply-gtk', true);
-
-            // Wait 150ms for all GSettings changes to synchronize to GNOME Shell,
-            // then unpause and trigger a full CSS compilation and stylesheet reload!
-            GLib.timeout_add(GLib.PRIORITY_DEFAULT, 150, () => {
+            } finally {
                 this._settings.set_boolean('pause-reload', false);
                 this._settings.set_boolean('trigger-reload', !this._settings.get_boolean('trigger-reload'));
-                return GLib.SOURCE_REMOVE;
-            });
+            }
 
             // Show a temporary success state on the button
             const oldLabel = btn.get_label();
@@ -2867,52 +3046,21 @@ class BarEnhancedPrefs {
                 return GLib.SOURCE_REMOVE;
             });
         } catch (e) {
-            log('Error applying extracted palette:', e);
+            console.error('Error applying extracted palette:', e);
         }
     }
-    resetToGnomeDefaults(window, btn) {
+    resetBarColorDefaults(window, btn) {
         try {
-            // Pause stylesheet reload during multi-setting changes
             this._settings.set_boolean('pause-reload', true);
-
-            // List of keys modified by the wallpaper customizer
-            const keysToReset = [
-                'bgcolor', 'dark-bgcolor', 'light-bgcolor',
-                'iscolor', 'dark-iscolor', 'light-iscolor',
-                'fgcolor', 'dark-fgcolor', 'light-fgcolor',
-                'mbgcolor', 'dark-mbgcolor', 'light-mbgcolor',
-                'mfgcolor', 'dark-mfgcolor', 'light-mfgcolor',
-                'smbgcolor', 'dark-smbgcolor', 'light-smbgcolor',
-                'bcolor', 'dark-bcolor', 'light-bcolor',
-                'mbcolor', 'dark-mbcolor', 'light-mbcolor',
-                'accent-override',
-                'accent-color', 'dark-accent-color', 'light-accent-color',
-                'mscolor', 'dark-mscolor', 'light-mscolor',
-                'mhcolor', 'dark-mhcolor', 'light-mhcolor',
-                'hscd-color', 'dark-hscd-color', 'light-hscd-color',
-                'vw-color', 'dark-vw-color', 'light-vw-color',
-                'apply-gtk'
-            ];
-
-            // Reset candy color slots candy1-12, dark-candy1-12, light-candy1-12
-            for (let i = 1; i <= 12; i++) {
-                keysToReset.push(`candy${i}`);
-                keysToReset.push(`dark-candy${i}`);
-                keysToReset.push(`light-candy${i}`);
-            }
-
-            // Perform the resets
-            keysToReset.forEach(k => {
-                this._settings.reset(k);
-            });
-
-            // Wait 150ms for all GSettings changes to synchronize to GNOME Shell,
-            // then unpause and trigger a full CSS compilation and stylesheet reload!
-            GLib.timeout_add(GLib.PRIORITY_DEFAULT, 150, () => {
+            try {
+                for (const prefix of ['', 'dark-', 'light-']) {
+                    for (const key of ['bgcolor', 'iscolor', 'fgcolor', 'bcolor'])
+                        this._settings.reset(`${prefix}${key}`);
+                }
+            } finally {
                 this._settings.set_boolean('pause-reload', false);
                 this._settings.set_boolean('trigger-reload', !this._settings.get_boolean('trigger-reload'));
-                return GLib.SOURCE_REMOVE;
-            });
+            }
 
             // Show a temporary success state on the button
             const oldLabel = btn.get_label();
@@ -2924,7 +3072,7 @@ class BarEnhancedPrefs {
                 return GLib.SOURCE_REMOVE;
             });
         } catch (e) {
-            log('Error restoring GNOME defaults:', e);
+            console.error('Error restoring bar color defaults:', e);
         }
     }
 
@@ -2934,7 +3082,7 @@ class BarEnhancedPrefs {
             const module = await import(uri);
             module.openGdmCenter(parentWindow, this._extension, this.path, T);
         } catch (e) {
-            log("BarEnhanced: Error launching GDM Center:", e);
+            console.error("BarEnhanced: Error launching GDM Center:", e);
             try {
                 const dialog = new Adw.MessageDialog({
                     transient_for: parentWindow,
@@ -2946,653 +3094,9 @@ class BarEnhancedPrefs {
                 dialog.connect('response', () => dialog.destroy());
                 dialog.present();
             } catch (e2) {
-                log(e2);
+                console.error(e2);
             }
         }
-        return;
-
-        const dialog = new Adw.Window({
-            title: T('GDM Login Screen Customizer'),
-            transient_for: parentWindow,
-            modal: true,
-            default_width: 500,
-            default_height: 600,
-            resizable: true
-        });
-
-        const mainBox = new Gtk.Box({ orientation: Gtk.Orientation.VERTICAL });
-        dialog.set_content(mainBox);
-
-        const header = new Adw.HeaderBar();
-        mainBox.append(header);
-
-        // Make body scrollable
-        const scrolledWindow = new Gtk.ScrolledWindow({
-            vexpand: true,
-            hexpand: true,
-            propagate_natural_height: true
-        });
-        mainBox.append(scrolledWindow);
-
-        const clamp = new Adw.Clamp({
-            maximum_size: 460,
-            tightening_threshold: 400
-        });
-        scrolledWindow.set_child(clamp);
-
-        const list = new Gtk.Box({
-            orientation: Gtk.Orientation.VERTICAL,
-            spacing: 12,
-            margin_top: 24,
-            margin_bottom: 24,
-            margin_start: 16,
-            margin_end: 16
-        });
-        clamp.set_child(list);
-
-        const introLabel = new Gtk.Label({
-            label: `<b><span size="large">${T('Configure GDM Login & Lock Screen')}</span></b>\n<span size="small" alpha="70%">${T('Changes require administrative privileges (auth prompt).')}</span>`,
-            use_markup: true,
-            justify: Gtk.Justification.CENTER,
-            margin_bottom: 12
-        });
-        list.append(introLabel);
-
-        // Group 1: Background
-        const bgGroup = new Adw.PreferencesGroup({ title: T('Background & Layout') });
-        list.append(bgGroup);
-
-        const wpRow = new Adw.ActionRow({
-            title: T('Login Screen Background'),
-            subtitle: T('Not configured (GNOME Default)')
-        });
-        bgGroup.add(wpRow);
-
-        let selectedWallpaperPath = '';
-
-        const selectWpBtn = new Gtk.Button({
-            label: T('Select Image...'),
-            valign: Gtk.Align.CENTER,
-            css_classes: ['pill']
-        });
-        selectWpBtn.connect('clicked', () => {
-            const fileDialog = new Gtk.FileDialog({
-                title: T('Select Login Background Wallpaper'),
-                filters: this.createImageFilter()
-            });
-            fileDialog.open(dialog, null, (obj, res) => {
-                try {
-                    const file = obj.open_finish(res);
-                    if (file) {
-                        selectedWallpaperPath = file.get_path();
-                        wpRow.set_subtitle(selectedWallpaperPath);
-                    }
-                } catch (e) {
-                    log('Error selecting file:', e);
-                }
-            });
-        });
-        wpRow.add_suffix(selectWpBtn);
-
-        const useDesktopRow = new Adw.ActionRow({
-            title: T('Use Desktop Wallpaper'),
-            subtitle: T('Automatically apply your active desktop wallpaper to login screen')
-        });
-        bgGroup.add(useDesktopRow);
-
-        const useDesktopBtn = new Gtk.Button({
-            label: T('Sync Wallpaper'),
-            valign: Gtk.Align.CENTER,
-            css_classes: ['pill']
-        });
-        useDesktopBtn.connect('clicked', () => {
-            try {
-                const bgSettings = new Gio.Settings({ schema_id: 'org.gnome.desktop.background' });
-                let wpUri = bgSettings.get_string('picture-uri');
-                if (wpUri.startsWith('file://')) {
-                    selectedWallpaperPath = wpUri.substring(7);
-                    wpRow.set_subtitle(selectedWallpaperPath);
-                } else if (wpUri.startsWith('/')) {
-                    selectedWallpaperPath = wpUri;
-                    wpRow.set_subtitle(selectedWallpaperPath);
-                } else {
-                    wpRow.set_subtitle(T('Unsupported image type or empty'));
-                }
-            } catch (e) {
-                log('Error getting desktop wallpaper:', e);
-            }
-        });
-        useDesktopRow.add_suffix(useDesktopBtn);
-
-        // Group 2: Password dialog box transparency and color
-        const lockGroup = new Adw.PreferencesGroup({ title: T('Password Dialog Card Customization') });
-        list.append(lockGroup);
-
-        const customAuthBoxRow = new Adw.SwitchRow({
-            title: T('Enable Custom Password Box Style'),
-            subtitle: T('Make GDM password entry box transparent with custom color')
-        });
-        lockGroup.add(customAuthBoxRow);
-
-        const authBoxColorRow = new Adw.ActionRow({
-            title: T('Password Box Color'),
-            subtitle: T('Choose custom background color for the password box')
-        });
-        lockGroup.add(authBoxColorRow);
-
-        const colorDialog = new Gtk.ColorDialog();
-        const colorBtn = new Gtk.ColorDialogButton({
-            dialog: colorDialog,
-            valign: Gtk.Align.CENTER
-        });
-        const defaultColor = new Gdk.RGBA();
-        defaultColor.parse('rgba(0,0,0,0.5)');
-        colorBtn.set_rgba(defaultColor);
-        authBoxColorRow.add_suffix(colorBtn);
-
-        const authBoxOpacityRow = new Adw.ActionRow({
-            title: T('Password Box Opacity'),
-            subtitle: T('Control transparency level (0% to 100%)')
-        });
-        lockGroup.add(authBoxOpacityRow);
-
-        const opacityScale = new Gtk.Scale({
-            orientation: Gtk.Orientation.HORIZONTAL,
-            adjustment: new Gtk.Adjustment({ lower: 0, upper: 100, step_increment: 1, page_increment: 10, value: 50 }),
-            valign: Gtk.Align.CENTER,
-            hexpand: true,
-            draw_value: true
-        });
-        opacityScale.set_size_request(150, -1);
-        authBoxOpacityRow.add_suffix(opacityScale);
-
-        // Connect switch row to sensitivity of customization options
-        customAuthBoxRow.connect('notify::active', () => {
-            let active = customAuthBoxRow.get_active();
-            authBoxColorRow.set_sensitive(active);
-            authBoxOpacityRow.set_sensitive(active);
-        });
-        authBoxColorRow.set_sensitive(false);
-        authBoxOpacityRow.set_sensitive(false);
-
-        // Group 3: Interface Tweaks
-        const shellGroup = new Adw.PreferencesGroup({ title: T('GDM Interface Tweaks') });
-        list.append(shellGroup);
-
-        const showSecondsRow = new Adw.SwitchRow({
-            title: T('Show Clock Seconds'),
-            subtitle: T('Display seconds in GDM top bar clock')
-        });
-        shellGroup.add(showSecondsRow);
-
-        const showDateRow = new Adw.SwitchRow({
-            title: T('Show Clock Date'),
-            subtitle: T('Display date in GDM top bar clock')
-        });
-        showDateRow.set_active(true);
-        shellGroup.add(showDateRow);
-
-        const disableButtonsRow = new Adw.SwitchRow({
-            title: T('Hide Power & Restart Buttons'),
-            subtitle: T('Prevent powering down from lock/login screen')
-        });
-        shellGroup.add(disableButtonsRow);
-
-        const disableUserListRow = new Adw.SwitchRow({
-            title: T('Disable User List'),
-            subtitle: T('Hide the user list on the login screen')
-        });
-        shellGroup.add(disableUserListRow);
-
-        // Group 4: Welcome Message & Logo
-        const bannerGroup = new Adw.PreferencesGroup({ title: T('Welcome Message & Logo') });
-        list.append(bannerGroup);
-
-        const welcomeRow = new Adw.SwitchRow({
-            title: T('Enable Welcome Message'),
-            subtitle: T('Show a banner message on the login screen')
-        });
-        bannerGroup.add(welcomeRow);
-
-        const welcomeTextRow = new Adw.ActionRow({
-            title: T('Message Text'),
-            subtitle: T('Text to display as welcome message')
-        });
-        const welcomeEntry = new Gtk.Entry({
-            valign: Gtk.Align.CENTER,
-            hexpand: true,
-            max_width_chars: 30
-        });
-        welcomeTextRow.add_suffix(welcomeEntry);
-        bannerGroup.add(welcomeTextRow);
-
-        // Bind visibility/sensitivity
-        welcomeRow.connect('notify::active', () => {
-            welcomeTextRow.set_sensitive(welcomeRow.get_active());
-        });
-        welcomeTextRow.set_sensitive(false);
-
-        const logoRow = new Adw.ActionRow({
-            title: T('Login Screen Logo'),
-            subtitle: T('Not configured')
-        });
-        bannerGroup.add(logoRow);
-
-        let selectedLogoPath = '';
-
-        const selectLogoBtn = new Gtk.Button({
-            label: T('Select Logo...'),
-            valign: Gtk.Align.CENTER,
-            css_classes: ['pill']
-        });
-        selectLogoBtn.connect('clicked', () => {
-            const fileDialog = new Gtk.FileDialog({
-                title: T('Select Login Screen Logo'),
-                filters: this.createImageFilter()
-            });
-            fileDialog.open(dialog, null, (obj, res) => {
-                try {
-                    const file = obj.open_finish(res);
-                    if (file) {
-                        selectedLogoPath = file.get_path();
-                        logoRow.set_subtitle(selectedLogoPath);
-                    }
-                } catch (e) {
-                    log('Error selecting file:', e);
-                }
-            });
-        });
-        logoRow.add_suffix(selectLogoBtn);
-
-        const clearLogoBtn = new Gtk.Button({
-            icon_name: 'edit-clear-symbolic',
-            valign: Gtk.Align.CENTER,
-            css_classes: ['flat', 'circular']
-        });
-        clearLogoBtn.connect('clicked', () => {
-            selectedLogoPath = '';
-            logoRow.set_subtitle(T('Not configured'));
-        });
-        logoRow.add_suffix(clearLogoBtn);
-
-        // Group 4: Buttons
-        const actionBox = new Gtk.Box({
-            orientation: Gtk.Orientation.VERTICAL,
-            spacing: 12,
-            margin_top: 16
-        });
-        list.append(actionBox);
-
-        const advBtn = new Gtk.Button({
-            label: T('Open Advanced GDM Center'),
-            css_classes: ['pill']
-        });
-        advBtn.connect('clicked', async () => {
-            try {
-                const uri = 'file://' + this.path + '/bar-enhanced-gdm-app/main.js';
-                const module = await import(uri);
-                module.openGdmCenter(window, this._extension, this.path, T);
-            } catch (e) {
-                log("BarEnhanced: Error launching Advanced GDM Center:", e);
-            }
-        });
-        actionBox.append(advBtn);
-
-        const applyBtn = new Gtk.Button({
-            label: T('Apply Changes to GDM'),
-            css_classes: ['pill', 'suggested-action']
-        });
-        actionBox.append(applyBtn);
-
-        const resetBtn = new Gtk.Button({
-            label: T('Restore GNOME Default GDM'),
-            css_classes: ['pill', 'destructive-action']
-        });
-        actionBox.append(resetBtn);
-
-        const statusLabel = new Gtk.Label({
-            label: '',
-            use_markup: true,
-            halign: Gtk.Align.CENTER,
-            margin_top: 8
-        });
-        actionBox.append(statusLabel);
-
-        // Load existing GDM Customizer settings if configured
-        let gdmFile = Gio.File.new_for_path('/etc/dconf/db/gdm.d/01-bar-enhanced');
-        if (gdmFile.query_exists(null)) {
-            try {
-                let [, contents] = gdmFile.load_contents(null);
-                let text = new TextDecoder().decode(contents);
-
-                // Parse wallpaper picture-uri and original path
-                let origMatch = text.match(/# original-path='(.+)'/);
-                let wpMatch = text.match(/picture-uri='file:\/\/(.+)'/);
-
-                if (origMatch && origMatch[1]) {
-                    selectedWallpaperPath = origMatch[1];
-                    wpRow.set_subtitle(selectedWallpaperPath);
-                } else if (wpMatch && wpMatch[1]) {
-                    selectedWallpaperPath = wpMatch[1];
-                    wpRow.set_subtitle(selectedWallpaperPath);
-                }
-
-                // Parse clock-show-seconds
-                let secondsMatch = text.match(/clock-show-seconds=(true|false)/);
-                if (secondsMatch && secondsMatch[1]) {
-                    showSecondsRow.set_active(secondsMatch[1] === 'true');
-                }
-
-                // Parse clock-show-date
-                let dateMatch = text.match(/clock-show-date=(true|false)/);
-                if (dateMatch && dateMatch[1]) {
-                    showDateRow.set_active(dateMatch[1] === 'true');
-                }
-
-                // Parse disable-restart-buttons
-                let disableMatch = text.match(/disable-restart-buttons=(true|false)/);
-                if (disableMatch && disableMatch[1]) {
-                    disableButtonsRow.set_active(disableMatch[1] === 'true');
-                }
-
-                // Parse disable-user-list
-                let disableUserListMatch = text.match(/disable-user-list=(true|false)/);
-                if (disableUserListMatch && disableUserListMatch[1]) {
-                    disableUserListRow.set_active(disableUserListMatch[1] === 'true');
-                }
-
-                // Parse banner message
-                let bannerEnableMatch = text.match(/banner-message-enable=(true|false)/);
-                if (bannerEnableMatch && bannerEnableMatch[1]) {
-                    welcomeRow.set_active(bannerEnableMatch[1] === 'true');
-                    welcomeTextRow.set_sensitive(bannerEnableMatch[1] === 'true');
-                }
-
-                let bannerTextMatch = text.match(/banner-message-text='(.*?)'/);
-                if (bannerTextMatch && bannerTextMatch[1]) {
-                    welcomeEntry.set_text(bannerTextMatch[1]);
-                }
-
-                // Parse original logo path
-                let origLogoMatch = text.match(/# original-logo-path='(.*?)'/);
-                if (origLogoMatch && origLogoMatch[1]) {
-                    selectedLogoPath = origLogoMatch[1];
-                    logoRow.set_subtitle(selectedLogoPath);
-                }
-            } catch (e) {
-                log('BarEnhanced: Error loading GDM configuration file:', e);
-            }
-        }
-
-        // Load GDM theme custom styles if present
-        let cssFile = Gio.File.new_for_path('/usr/share/themes/BarEnhancedGdm/gnome-shell/gnome-shell.css');
-        if (cssFile.query_exists(null)) {
-            customAuthBoxRow.set_active(true);
-            authBoxColorRow.set_sensitive(true);
-            authBoxOpacityRow.set_sensitive(true);
-            try {
-                let [, contents] = cssFile.load_contents(null);
-                let text = new TextDecoder().decode(contents);
-                let rgbaMatch = text.match(/rgba\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*([\d.]+)\s*\)/);
-                if (rgbaMatch) {
-                    let r = parseInt(rgbaMatch[1]) / 255.0;
-                    let g = parseInt(rgbaMatch[2]) / 255.0;
-                    let b = parseInt(rgbaMatch[3]) / 255.0;
-                    let a = parseFloat(rgbaMatch[4]);
-
-                    let rgba = new Gdk.RGBA();
-                    rgba.red = r;
-                    rgba.green = g;
-                    rgba.blue = b;
-                    rgba.alpha = 1.0;
-                    colorBtn.set_rgba(rgba);
-
-                    opacityScale.set_value(Math.round(a * 100.0));
-                }
-            } catch (e) {
-                log('BarEnhanced: Error loading GDM CSS custom styles:', e);
-            }
-        }
-
-        applyBtn.connect('clicked', () => {
-            if (!selectedWallpaperPath) {
-                statusLabel.set_label(`<span color="red">⚠️ ${T('Please select a wallpaper or sync active background.')}</span>`);
-                return;
-            }
-
-            statusLabel.set_label(`⏳ <b>${T('Authenticating and applying settings...')}</b>`);
-            applyBtn.set_sensitive(false);
-            resetBtn.set_sensitive(false);
-
-            const wallPath = selectedWallpaperPath;
-            const seconds = showSecondsRow.get_active() ? 'true' : 'false';
-            const date = showDateRow.get_active() ? 'true' : 'false';
-            const disableButtons = disableButtonsRow.get_active() ? 'true' : 'false';
-            const disableUserList = disableUserListRow.get_active() ? 'true' : 'false';
-            const welcomeEnable = welcomeRow.get_active() ? 'true' : 'false';
-
-            // This value is written into a dconf single-quoted literal, not a
-            // shell command. Keep it to one line and escape dconf's quoting.
-            const dconfString = value => String(value || '')
-                .replace(/[\r\n]/g, ' ')
-                .replace(/\\/g, '\\\\')
-                .replace(/'/g, "\\'");
-            const welcomeTextSafe = dconfString(welcomeEntry.get_text());
-            const safeWallComment = String(wallPath || '').replace(/[\r\n]/g, ' ');
-            const safeLogoComment = String(selectedLogoPath || '').replace(/[\r\n]/g, ' ');
-
-            let themeScript = '';
-            let dconfThemeKey = '';
-
-            let customStyleContent = '';
-            try {
-                let userRuntimeDir = GLib.get_user_runtime_dir();
-                let pathsToTry = [
-                    `${userRuntimeDir}/io.github.mrvanguardia.barEnhanced/bar-enhanced.css`,
-                    `${userRuntimeDir}/io.github.mrvanguardia.barEnhanced/stylesheet.css`,
-                    `${GLib.get_home_dir()}/.local/share/gnome-shell/extensions/bar-enhanced@mrvanguardia/stylesheet.css`
-                ];
-                let localStyleFile = null;
-                for (let path of pathsToTry) {
-                    let f = Gio.File.new_for_path(path);
-                    if (f.query_exists(null)) {
-                        localStyleFile = f;
-                        break;
-                    }
-                }
-                if (localStyleFile && localStyleFile.query_exists(null)) {
-                    let [, contents] = localStyleFile.load_contents(null);
-                    customStyleContent = new TextDecoder().decode(contents);
-                }
-            } catch (e) {
-                log('BarEnhanced: Error reading local stylesheet for GDM theme:', e);
-            }
-
-            let authBoxCss = '';
-            if (customAuthBoxRow.get_active()) {
-                let rgba = colorBtn.get_rgba();
-                let r = Math.round(rgba.red * 255);
-                let g = Math.round(rgba.green * 255);
-                let b = Math.round(rgba.blue * 255);
-                let a = (opacityScale.get_value() / 100.0).toFixed(2);
-                authBoxCss = `
-.login-dialog {
-    background-color: rgba(${r}, ${g}, ${b}, ${a}) !important;
-    -st-background-blur: true;
-}
-`;
-            }
-
-            themeScript = `
-mkdir -p /usr/share/themes/BarEnhancedGdm/gnome-shell
-cat << 'EOF' > /usr/share/themes/BarEnhancedGdm/gnome-shell/gnome-shell.css
-@import url("resource:///org/gnome/shell/theme/gnome-shell.css");
-
-${authBoxCss}
-
-${customStyleContent}
-EOF
-chmod 755 /usr/share/themes/BarEnhancedGdm
-chmod 755 /usr/share/themes/BarEnhancedGdm/gnome-shell
-chmod 644 /usr/share/themes/BarEnhancedGdm/gnome-shell/gnome-shell.css
-`;
-            dconfThemeKey = "shell-theme='BarEnhancedGdm'";
-
-            const script = `
-${themeScript}
-
-# Copy background to a globally readable location for GDM
-mkdir -p /usr/share/backgrounds
-WALLPAPER_DEST="/usr/share/backgrounds/bar-enhanced-gdm-bg"
-WALLPAPER_PATH="$1"
-LOGO_PATH="$2"
-if [ -f "$WALLPAPER_PATH" ]; then
-    cp "$WALLPAPER_PATH" "$WALLPAPER_DEST"
-    chmod 644 "$WALLPAPER_DEST"
-fi
-
-# Copy logo to a globally readable location for GDM
-LOGO_DEST="/usr/share/backgrounds/bar-enhanced-gdm-logo"
-if [ -n "$LOGO_PATH" ] && [ -f "$LOGO_PATH" ]; then
-    cp "$LOGO_PATH" "$LOGO_DEST"
-    chmod 644 "$LOGO_DEST"
-    LOGO_DCONF="logo='file://$LOGO_DEST'"
-else
-    rm -f "$LOGO_DEST"
-    LOGO_DCONF="logo=''"
-fi
-
-if [ -f /etc/dconf/profile/gdm ] && [ ! -f /etc/dconf/profile/gdm.bar-enhanced-backup ]; then
-    cp -p /etc/dconf/profile/gdm /etc/dconf/profile/gdm.bar-enhanced-backup
-fi
-if [ ! -f /etc/dconf/profile/gdm ]; then
-mkdir -p /etc/dconf/profile
-cat << 'EOF' > /etc/dconf/profile/gdm
-user-db:user
-system-db:gdm
-file-db:/usr/share/gdm/greeter-dconf-defaults
-EOF
-fi
-
-mkdir -p /etc/dconf/db/gdm.d
-cat << 'EOF' > /etc/dconf/db/gdm.d/01-bar-enhanced
-[org/gnome/desktop/background]
-# original-path='${safeWallComment}'
-picture-uri='file:///usr/share/backgrounds/bar-enhanced-gdm-bg'
-picture-uri-dark='file:///usr/share/backgrounds/bar-enhanced-gdm-bg'
-picture-options='zoom'
-
-[org/gnome/desktop/interface]
-clock-show-seconds=${seconds}
-clock-show-date=${date}
-${dconfThemeKey}
-
-[org/gnome/login-screen]
-disable-restart-buttons=${disableButtons}
-disable-user-list=${disableUserList}
-banner-message-enable=${welcomeEnable}
-banner-message-text='${welcomeTextSafe}'
-${LOGO_DCONF}
-# original-logo-path='${safeLogoComment}'
-EOF
-dconf update
-`;
-
-            try {
-                let proc = Gio.Subprocess.new(
-                    ['pkexec', 'bash', '-c', script, 'bar-enhanced-gdm', wallPath, selectedLogoPath],
-                    Gio.SubprocessFlags.NONE
-                );
-                proc.wait_async(null, (obj, res) => {
-                    try {
-                        obj.wait_finish(res);
-                        const status = obj.get_exit_status();
-                        if (status === 0) {
-                            statusLabel.set_label(`<span color="green">✅ <b>${T('GDM customized successfully!')}</b></span>`);
-                        } else {
-                            statusLabel.set_label(`<span color="red">❌ ${T('Authentication failed or declined.')}</span>`);
-                        }
-                    } catch (e) {
-                        statusLabel.set_label(`<span color="red">❌ ${T('Error running customized GDM profile.')}</span>`);
-                    }
-                    applyBtn.set_sensitive(true);
-                    resetBtn.set_sensitive(true);
-                });
-            } catch (e) {
-                log(e);
-                statusLabel.set_label(`<span color="red">❌ ${T('Execution failed.')}</span>`);
-                applyBtn.set_sensitive(true);
-                resetBtn.set_sensitive(true);
-            }
-        });
-
-        resetBtn.connect('clicked', () => {
-            statusLabel.set_label(`⏳ <b>${T('Authenticating and restoring GNOME defaults...')}</b>`);
-            applyBtn.set_sensitive(false);
-            resetBtn.set_sensitive(false);
-
-            const script = `
-rm -rf /usr/share/themes/BarEnhancedGdm
-rm -f /usr/share/backgrounds/bar-enhanced-gdm-bg
-rm -f /usr/share/backgrounds/bar-enhanced-gdm-logo
-rm -f /etc/dconf/db/gdm.d/01-bar-enhanced
-if [ -f /etc/dconf/profile/gdm.bar-enhanced-backup ]; then
-    mv -f /etc/dconf/profile/gdm.bar-enhanced-backup /etc/dconf/profile/gdm
-else
-    rm -f /etc/dconf/profile/gdm
-fi
-dconf update
-`;
-
-            try {
-                let proc = Gio.Subprocess.new(
-                    ['pkexec', 'bash', '-c', script],
-                    Gio.SubprocessFlags.NONE
-                );
-                proc.wait_async(null, (obj, res) => {
-                    try {
-                        obj.wait_finish(res);
-                        const status = obj.get_exit_status();
-                        if (status === 0) {
-                            wpRow.set_subtitle(T('Not configured (GNOME Default)'));
-                            selectedWallpaperPath = '';
-                            showSecondsRow.set_active(false);
-                            showDateRow.set_active(true);
-                            disableButtonsRow.set_active(false);
-                            customAuthBoxRow.set_active(false);
-                            statusLabel.set_label(`<span color="green">✅ <b>${T('GDM restored to default successfully!')}</b></span>`);
-                        } else {
-                            statusLabel.set_label(`<span color="red">❌ ${T('Authentication failed or declined.')}</span>`);
-                        }
-                    } catch (e) {
-                        statusLabel.set_label(`<span color="red">❌ ${T('Error restoring default GDM profile.')}</span>`);
-                    }
-                    applyBtn.set_sensitive(true);
-                    resetBtn.set_sensitive(true);
-                });
-            } catch (e) {
-                log(e);
-                statusLabel.set_label(`<span color="red">❌ ${T('Execution failed.')}</span>`);
-                applyBtn.set_sensitive(true);
-                resetBtn.set_sensitive(true);
-            }
-        });
-
-
-        dialog.present();
-
-
-    }
-
-    createImageFilter() {
-        const filter = new Gtk.FileFilter();
-        filter.set_name(T('Images'));
-        filter.add_mime_type('image/png');
-        filter.add_mime_type('image/jpeg');
-        filter.add_mime_type('image/webp');
-        const list = new Gio.ListStore({ item_type: Gtk.FileFilter });
-        list.append(filter);
-        return list;
     }
 }
 

@@ -81,7 +81,7 @@ export function openGdmCenter(parentWindow, extension, extensionPath, T) {
         try {
             script = generateDconfScript(extension);
         } catch(e) {
-            log("BarEnhanced: Error generating GDM script:", e);
+            console.error('BarEnhanced: failed to generate GDM script:', e.message);
             let errToast = new Adw.Toast({ title: `❌ Script error: ${e.message || e}` });
             win.add_toast(errToast);
             applyInProgress = false;
@@ -110,13 +110,13 @@ export function openGdmCenter(parentWindow, extension, extensionPath, T) {
                 } catch(e) {
                     let errToast = new Adw.Toast({ title: `❌ Wait error: ${e.message || e}` });
                     win.add_toast(errToast);
-                    log("BarEnhanced: Error waiting GDM apply process:", e);
+                    console.error('BarEnhanced: failed while waiting for GDM apply process:', e.message);
                 } finally {
                     applyInProgress = false;
                 }
             });
         } catch(e) {
-            log("BarEnhanced: Error launching pkexec:", e);
+            console.error('BarEnhanced: failed to launch privileged GDM operation:', e.message);
             let errToast = new Adw.Toast({ title: `❌ Launch error: ${e.message || e}` });
             win.add_toast(errToast);
             applyInProgress = false;
@@ -188,7 +188,7 @@ fi
                     }
                 });
             } catch(e) {
-                log(e);
+                console.error('BarEnhanced: failed to start monitor-layout operation:', e.message);
             }
         });
     }
@@ -260,7 +260,7 @@ echo "GDM restored successfully"
                     }
                 });
             } catch(e) {
-                log(e);
+                console.error('BarEnhanced: failed to start GDM restore operation:', e.message);
             }
         });
     }

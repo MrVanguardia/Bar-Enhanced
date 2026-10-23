@@ -1,7 +1,5 @@
 import GLib from 'gi://GLib';
 import Gio from 'gi://Gio';
-import Clutter from 'gi://Clutter';
-import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
 export class WallpaperManager {
     constructor(extension) {
@@ -11,11 +9,8 @@ export class WallpaperManager {
         this._enabled = false;
         
         this._settingsSignals = [];
-        this._bgActor = null;
-        this._parallaxSignalId = 0;
-        this._parallaxSetupId = 0;
-        this._layoutSignalId = 0;
         this._videoPath = null;
+        this._videoProcess = null;
     }
 
     enable() {
@@ -25,47 +20,7 @@ export class WallpaperManager {
         this._settingsSignals.push(this.settings.connect('changed::hydro-wallpaper-enabled', this._sync.bind(this)));
         this._settingsSignals.push(this.settings.connect('changed::hydro-wallpaper-uri', this._sync.bind(this)));
         this._settingsSignals.push(this.settings.connect('changed::hydro-wallpaper-type', this._sync.bind(this)));
-        this._layoutSignalId = Main.layoutManager.connect('monitors-changed', () => this._scheduleParallax());
-        
         this._sync();
-    }
-
-    _setupParallax() {
-        if (!this._enabled || this._parallaxSignalId || !Main.layoutManager?._backgroundGroup)
-            return;
-
-        const primary = Main.layoutManager.primaryMonitor;
-        const background = Main.layoutManager._backgroundGroup.get_children().find(actor => {
-            const [x, y] = actor.get_transformed_position();
-            return primary && x <= primary.x && y <= primary.y &&
-                x + actor.width >= primary.x + primary.width &&
-                y + actor.height >= primary.y + primary.height;
-        });
-        if (!background)
-            return;
-
-        this._bgActor = background;
-        this._bgActor.set_scale(1.05, 1.05);
-        this._bgActor.set_pivot_point(0.5, 0.5);
-        this._parallaxSignalId = global.stage.connect('captured-event', (actor, event) => {
-            if (!this._enabled || !this._bgActor || event.type() !== Clutter.EventType.MOTION)
-                return Clutter.EVENT_PROPAGATE;
-
-            const [x, y] = event.get_coords();
-            const monitor = Main.layoutManager.primaryMonitor;
-            if (!monitor || !monitor.width || !monitor.height)
-                return Clutter.EVENT_PROPAGATE;
-
-            const nx = ((x - monitor.x) / monitor.width) * 2 - 1;
-            const ny = ((y - monitor.y) / monitor.height) * 2 - 1;
-            this._bgActor.ease({
-                translation_x: -nx * 20,
-                translation_y: -ny * 20,
-                duration: 100,
-                mode: Clutter.AnimationMode.EASE_OUT_QUAD,
-            });
-            return Clutter.EVENT_PROPAGATE;
-        });
     }
 
     disable() {
@@ -76,57 +31,14 @@ export class WallpaperManager {
             this.settings.disconnect(id);
         }
         this._settingsSignals = [];
-        if (this._layoutSignalId) {
-            Main.layoutManager.disconnect(this._layoutSignalId);
-            this._layoutSignalId = 0;
-        }
-        if (this._parallaxSetupId) {
-            GLib.Source.remove(this._parallaxSetupId);
-            this._parallaxSetupId = 0;
-        }
-
-        this._teardownParallax();
-
         this._stopVideo();
-    }
-
-    _teardownParallax() {
-        if (this._parallaxSignalId) {
-            try {
-                global.stage.disconnect(this._parallaxSignalId);
-            } catch (e) {
-                console.warn(`BarEnhanced: Could not disconnect parallax listener: ${e.message}`);
-            }
-            this._parallaxSignalId = 0;
-        }
-        if (this._bgActor) {
-            this._bgActor.set_scale(1.0, 1.0);
-            this._bgActor.remove_all_transitions();
-            this._bgActor.set_translation(0, 0, 0);
-            this._bgActor = null;
-        }
-    }
-
-    _scheduleParallax() {
-        if (this._parallaxSetupId) {
-            GLib.Source.remove(this._parallaxSetupId);
-            this._parallaxSetupId = 0;
-        }
-        if (!this._enabled || !this.settings.get_boolean('hydro-wallpaper-enabled') ||
-            this.settings.get_string('hydro-wallpaper-type') !== 'image')
-            return;
-        this._parallaxSetupId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 250, () => {
-            this._parallaxSetupId = 0;
-            this._teardownParallax();
-            this._setupParallax();
-            return GLib.SOURCE_REMOVE;
-        });
+        this.settings = null;
+        this.extension = null;
     }
 
     _sync() {
         if (!this.settings.get_boolean('hydro-wallpaper-enabled')) {
             this._stopVideo();
-            this._teardownParallax();
             return;
         }
 
@@ -134,15 +46,12 @@ export class WallpaperManager {
         const uri = this.settings.get_string('hydro-wallpaper-uri');
 
         if (type === 'video' && uri) {
-            this._teardownParallax();
             this._playVideo(uri);
         } else if (type === 'image' && uri) {
             this._stopVideo();
             this._setImageWallpaper(uri);
-            this._scheduleParallax();
         } else {
             this._stopVideo();
-            this._teardownParallax();
         }
     }
 
@@ -181,6 +90,9 @@ export class WallpaperManager {
     }
 
     _stopVideo() {
+        if (!this._videoProcess && !this._videoPath)
+            return;
+
         try {
             Gio.Subprocess.new(
                 [this._scriptPath, 'stop'],

@@ -130,7 +130,7 @@ export class DesktopIconsUsableAreaClass {
             this._emID = 0;
         }
         if (this._timedMarginsID) {
-            GLib.source_remove(this._timedMarginsID);
+            GLib.Source.remove(this._timedMarginsID);
             this._timedMarginsID = 0;
         }
         this._margins = null;
@@ -139,7 +139,7 @@ export class DesktopIconsUsableAreaClass {
 
     _changedMargins() {
         if (this._timedMarginsID)
-            GLib.source_remove(this._timedMarginsID);
+            GLib.Source.remove(this._timedMarginsID);
 
         this._timedMarginsID = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 100, () => {
             this._sendMarginsToAll();

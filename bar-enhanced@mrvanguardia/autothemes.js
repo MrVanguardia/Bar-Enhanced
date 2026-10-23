@@ -16,8 +16,7 @@
  * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
-/* exported autoApplyBGPalette() onModeChange() */
-
+/* exported autoApplyBGPalette() onModeChange() applyAutomaticOpacity() */
 import * as Utils from './utils.js';
 
 const getHSP = Utils.getHSP;
@@ -34,10 +33,14 @@ const hexToRgb = Utils.hexToRgb;
 
 const DEBUG = false;
 
-function dlog(...args) {
-    if(DEBUG) {
-        log(...args);
-    }
+export function applyAutomaticOpacity(obar) {
+    const settings = obar._settings;
+    if (!settings.get_boolean('auto-bgalpha'))
+        return;
+    const barType = settings.get_string('bartype');
+    settings.set_double('boxalpha', 0);
+    settings.set_double('bgalpha', barType === 'Mainland' || barType === 'Floating' ? 0.95 : 0);
+    settings.set_double('isalpha', 0.95);
 }
 
 // Auto-Theming: Select colors from color palette as per theme & dark/light mode (Gets called separately for dark/light)
@@ -939,9 +942,7 @@ export function autoApplyBGPalette(obar, requestMode) {
         obar._settings.set_boolean('autohg-menu',           true);
         obar._settings.set_boolean('autotheme-font',        false);
         obar._settings.set_boolean('autotheme-refresh',     false);
-        obar._settings.set_boolean('b-gradient',            false);
         obar._settings.set_boolean('bg-change',             false);
-        obar._settings.set_boolean('bg-gradient',           false);
         obar._settings.set_boolean('bgpalette',             true);
         obar._settings.set_boolean('border-wmax',           true);
         obar._settings.set_boolean('buttonbg-wmax',         true);
@@ -1688,22 +1689,14 @@ export function autoApplyBGPalette(obar, requestMode) {
     let menuHighlightColor = menuBorderColor;
 
 
-    let bgcolorWmax, bgcolor, bgalpha, iscolor, isalpha, bgcolor2, shcolor, hcolor, halpha, bcolor, balpha,
+    let bgcolorWmax, bgcolor, iscolor, bgcolor2, shcolor, hcolor, halpha, bcolor, balpha,
     mbgcolor, mbgalpha, smbgcolor, smbgalpha, mbcolor, mbalpha, mhcolor, mhalpha, mshcolor, mshalpha, mscolor, msalpha;
 
     let bartype = obar._settings.get_string('bartype');
-    let autobgAlpha = obar._settings.get_boolean('auto-bgalpha');
 
     // BAR
     bgcolor = getStrv(barBgColor);
-    if(bartype == 'Mainland' || bartype == 'Floating') {
-        bgalpha = 0.95;
-    }
-    else {
-        bgalpha = 0;
-    }
     iscolor = getStrv(barBgColor);
-    isalpha = 0.95;
     bgcolor2 = getStrv(smbgColor);
     bcolor = getStrv(barBorderColor);
     // hcolor = getStrv(barHighlight);
@@ -1725,11 +1718,7 @@ export function autoApplyBGPalette(obar, requestMode) {
     // BAR
     if(bartype == 'Trilands' || bartype == 'Islands')
         obar._settings.set_boolean('shadow', false);
-    if(autobgAlpha) {
-        obar._settings.set_double('boxalpha', 0);
-        obar._settings.set_double('bgalpha', bgalpha);
-        obar._settings.set_double('isalpha', isalpha);
-    }
+    applyAutomaticOpacity(obar);
     obar._settings.set_double('fgalpha', 1.0);
     // obar._settings.set_boolean('autofg-bar', true);
     obar._settings.set_boolean('autohg-bar', true);
@@ -1745,6 +1734,8 @@ export function autoApplyBGPalette(obar, requestMode) {
                     mbgcolor, smbgcolor, mbcolor, mshcolor, mscolor, mscolor, mscolor, mscolor];
 
     for(let i = 0; i < colorKeys.length; i++) {
+        if (colorKeys[i] == 'mscolor' && !obar._settings.get_boolean('autotheme-active-tile-color'))
+            continue;
         obar._settings.set_strv(requestMode+'-'+colorKeys[i], colors[i]);
         if((requestMode == 'dark' && currentMode == 'prefer-dark') ||
             (requestMode == 'light' && currentMode != 'prefer-dark'))
@@ -1772,7 +1763,7 @@ export function onModeChange(obar) {
     obar._settings.set_string('color-scheme', currentMode); // Save mode for preferences
     let prefix = (currentMode == 'prefer-dark') ? 'dark-' : 'light-';
     let colorKeys = ['boxcolor', 'bgcolor', 'bgcolor2', 'iscolor', 'shcolor', 'bcolor', 'bgcolor-wmax', 'accent-color', 'winbcolor',
-                    'mbgcolor', 'smbgcolor', 'mbcolor', 'mshcolor', 'mscolor', 'fgcolor', 'hcolor', 'mfgcolor', 'mhcolor', 'hscd-color', 'vw-color'];
+                    'mbgcolor', 'smbgcolor', 'mbcolor', 'mshcolor', 'mscolor', 'fgcolor', 'hcolor', 'mfgcolor', 'mhcolor', 'hscd-color', 'vw-color', 'slider-handle-color', 'dock-badge-color'];
     for(let i = 0; i < colorKeys.length; i++) {
         obar._settings.set_strv(colorKeys[i], obar._settings.get_strv(prefix+colorKeys[i]));
         // dlog('saving to key: ', colorKeys[i], ' from key ', prefix+colorKeys[i]);

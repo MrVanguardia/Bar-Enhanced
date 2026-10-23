@@ -15,7 +15,6 @@ import {
     Utils,
 } from './imports.js';
 
-const {signals: Signals} = imports;
 
 /*
  * DEFAULT:  transparency given by theme
@@ -239,6 +238,8 @@ export class ThemeManager {
     updateCustomTheme() {
         if (this._destroyed)
             throw new Error(`Impossible to update a destroyed ${this.constructor.name}`);
+        if (!this._dash._background.get_stage())
+            return;
         this._updateCustomStyleClasses();
         this._updateDashOpacity();
         this._updateDashColor();
@@ -322,7 +323,7 @@ export class ThemeManager {
         ]));
     }
 }
-Signals.addSignalMethods(ThemeManager.prototype);
+Utils.addSignalMethods(ThemeManager.prototype);
 
 /**
  * The following class is based on the following upstream commit:
@@ -577,4 +578,4 @@ class Transparency {
         }
     }
 }
-Signals.addSignalMethods(Transparency.prototype);
+Utils.addSignalMethods(Transparency.prototype);

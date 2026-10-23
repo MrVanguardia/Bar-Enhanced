@@ -170,7 +170,7 @@ export const DockDash = GObject.registerClass({
             name: 'dashtodockDashContainer',
             x_align: Clutter.ActorAlign.CENTER,
             y_align: Clutter.ActorAlign.CENTER,
-            vertical: !this._isHorizontal,
+            orientation: this._isHorizontal ? Clutter.Orientation.HORIZONTAL : Clutter.Orientation.VERTICAL,
             y_expand: this._isHorizontal,
             x_expand: !this._isHorizontal,
         });
@@ -190,13 +190,13 @@ export const DockDash = GObject.registerClass({
             name: 'dashtodockBoxContainer',
             x_align: Clutter.ActorAlign.FILL,
             y_align: Clutter.ActorAlign.FILL,
-            vertical: !this._isHorizontal,
+            orientation: this._isHorizontal ? Clutter.Orientation.HORIZONTAL : Clutter.Orientation.VERTICAL,
         });
         this._boxContainer.add_style_class_name(Theming.PositionStyleClass[this._position]);
 
         const rtl = Clutter.get_default_text_direction() === Clutter.TextDirection.RTL;
         this._box = new St.BoxLayout({
-            vertical: !this._isHorizontal,
+            orientation: this._isHorizontal ? Clutter.Orientation.HORIZONTAL : Clutter.Orientation.VERTICAL,
             clip_to_allocation: false,
             ...!this._isHorizontal ? {layout_manager: new DockDashIconsVerticalLayout()} : {},
             x_align: rtl ? Clutter.ActorAlign.END : Clutter.ActorAlign.START,
@@ -324,12 +324,12 @@ export const DockDash = GObject.registerClass({
         this.iconAnimator.destroy();
 
         if (this._requiresVisibilityTimeout) {
-            GLib.source_remove(this._requiresVisibilityTimeout);
+            GLib.Source.remove(this._requiresVisibilityTimeout);
             delete this._requiresVisibilityTimeout;
         }
 
         if (this._ensureActorVisibilityTimeoutId) {
-            GLib.source_remove(this._ensureActorVisibilityTimeoutId);
+            GLib.Source.remove(this._ensureActorVisibilityTimeoutId);
             delete this._ensureActorVisibilityTimeoutId;
         }
     }
@@ -508,7 +508,7 @@ export const DockDash = GObject.registerClass({
                     return GLib.SOURCE_REMOVE;
                 });
         } else if (this._ensureActorVisibilityTimeoutId) {
-            GLib.source_remove(this._ensureActorVisibilityTimeoutId);
+            GLib.Source.remove(this._ensureActorVisibilityTimeoutId);
             this._ensureActorVisibilityTimeoutId = 0;
         }
     }
@@ -580,7 +580,7 @@ export const DockDash = GObject.registerClass({
         this.requiresVisibility = true;
 
         if (this._requiresVisibilityTimeout)
-            GLib.source_remove(this._requiresVisibilityTimeout);
+            GLib.Source.remove(this._requiresVisibilityTimeout);
 
         this._requiresVisibilityTimeout = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT,
             DASH_VISIBILITY_TIMEOUT, () => {

@@ -1,30 +1,9 @@
-#!/bin/bash
-# Script to package the GNOME Extension for EGO (extensions.gnome.org)
-# It excludes unnecessary build artifacts and source files.
+#!/usr/bin/env bash
+# Compatibility entry point for the canonical release package.
+set -euo pipefail
 
-EXT_NAME="bar-enhanced@mrvanguardia"
-ZIP_NAME="${EXT_NAME}.zip"
-
-echo "Packing extension into $ZIP_NAME..."
-
-cd "$EXT_NAME" || exit
-
-# Create the zip file excluding the specified files and directories
-zip -rq "../$ZIP_NAME" . \
-    -x "*.po" \
-    -x "*.pot" \
-    -x "*/po/*" \
-    -x "*/po" \
-    -x "*/*/po/*" \
-    -x "*/*/po" \
-    -x "*POTFILES.in" \
-    -x "*/*POTFILES.in" \
-    -x "schemas/gschemas.compiled" \
-    -x "*.md" \
-    -x "LICENSE" \
-    -x "*.sh" \
-    -x "*.git*"
-
-cd ..
-
-echo "Done! You can upload $ZIP_NAME to extensions.gnome.org."
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+bash "$ROOT_DIR/tools/package-extension.sh" "$ROOT_DIR"
+cp "$ROOT_DIR/bar-enhanced@mrvanguardia.shell-extension.zip" \
+    "$ROOT_DIR/bar-enhanced@mrvanguardia.zip"
+printf 'Created %s\n' "$ROOT_DIR/bar-enhanced@mrvanguardia.zip"

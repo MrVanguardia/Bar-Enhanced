@@ -12,12 +12,35 @@ import {
     Docking,
 } from './imports.js';
 
-const Gi = imports['_' + 'gi'];
+// GJS does not expose hook_up_vfunc_symbol through gi://GObject. This is the
+// sole compatibility bridge retained for vfunc restoration in the embedded
+// dock; all ordinary modules use ESM module syntax.
+const Gi = imports['_gi'];
+
 
 export const SignalsHandlerFlags = Object.freeze({
     NONE: 0,
     CONNECT_AFTER: 1,
 });
+
+export function addSignalMethods(prototype) {
+    prototype.connect = function(signal, callback) {
+        this._d2dSignalHandlers ??= new Map();
+        this._d2dNextSignalId ??= 1;
+        const id = this._d2dNextSignalId++;
+        this._d2dSignalHandlers.set(id, {signal, callback});
+        return id;
+    };
+    prototype.disconnect = function(id) {
+        this._d2dSignalHandlers?.delete(id);
+    };
+    prototype.emit = function(signal, ...args) {
+        for (const entry of this._d2dSignalHandlers?.values() ?? []) {
+            if (entry.signal === signal)
+                entry.callback(this, ...args);
+        }
+    };
+}
 
 const GENERIC_KEY = Symbol('generic');
 

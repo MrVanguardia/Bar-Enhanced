@@ -11,7 +11,6 @@ import {
     Utils,
 } from './imports.js';
 
-const {signals: Signals} = imports;
 
 // A good compromise between reactivity and efficiency; to be tuned.
 const INTELLIHIDE_CHECK_INTERVAL = 100;
@@ -122,7 +121,7 @@ export class Intellihide {
         this._trackedWindows.clear();
 
         if (this._checkOverlapTimeoutId > 0) {
-            GLib.source_remove(this._checkOverlapTimeoutId);
+            GLib.Source.remove(this._checkOverlapTimeoutId);
             this._checkOverlapTimeoutId = 0;
         }
     }
@@ -337,4 +336,4 @@ export class Intellihide {
     }
 }
 
-Signals.addSignalMethods(Intellihide.prototype);
+Utils.addSignalMethods(Intellihide.prototype);

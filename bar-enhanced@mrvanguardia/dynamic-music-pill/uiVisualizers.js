@@ -178,6 +178,8 @@ const CavaVisualizer = GObject.registerClass(
 
         _cleanup() {
             this._engine.unsubscribe(this._engineCallback);
+            this._engineCallback = null;
+            this._engine = null;
         }
     });
 

@@ -28,7 +28,7 @@ export function buildSoundTab(extension, extensionPath, T) {
             }
         }
     } catch (e) {
-        log("BarEnhanced: Error reading sound themes:", e);
+        console.error('BarEnhanced: failed to read sound themes:', e.message);
     }
 
     const themeModel = Gtk.StringList.new(soundThemes);

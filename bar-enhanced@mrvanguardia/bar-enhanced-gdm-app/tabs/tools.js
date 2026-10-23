@@ -57,7 +57,7 @@ export function buildToolsTab(extension, extensionPath, T) {
                 }
             });
         } catch(e) {
-            log(e);
+            console.error('BarEnhanced: GDM tool action failed:', e.message);
         }
     });
 

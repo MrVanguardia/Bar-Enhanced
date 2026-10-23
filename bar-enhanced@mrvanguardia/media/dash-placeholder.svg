@@ -1,4 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="#FFFFFF">
-  <circle cx="12" cy="12" r="12" opacity="0.3"/>
-  <circle cx="12" cy="12" r="4"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" aria-label="Dock placeholder">
+  <rect x="2.5" y="2.5" width="19" height="19" rx="6" stroke="#7BA9D9" stroke-opacity=".7"/>
+  <rect x="6" y="8" width="12" height="2" rx="1" fill="#4B9DFF"/>
+  <rect x="6" y="13" width="12" height="2" rx="1" fill="#AFC7DF"/>
 </svg>

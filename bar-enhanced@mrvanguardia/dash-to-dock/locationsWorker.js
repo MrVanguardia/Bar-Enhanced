@@ -2,8 +2,9 @@
 
 import GLib from 'gi://GLib';
 import Gio from 'gi://Gio';
+import System from 'system';
 
-const GJS_SUPPORTS_FILE_IFACE_PROMISES = imports.system.version >= 17101;
+const GJS_SUPPORTS_FILE_IFACE_PROMISES = System.version >= 17101;
 
 if (GJS_SUPPORTS_FILE_IFACE_PROMISES)
     Gio._promisify(Gio.File.prototype, 'query_default_handler_async');
@@ -73,7 +74,7 @@ async function mainAsync(argv) {
         return e.code ? e.code : GLib.MAXUINT8;
     } finally {
         if (launchMaxWaitId)
-            GLib.source_remove(launchMaxWaitId);
+            GLib.Source.remove(launchMaxWaitId);
     }
 
     return 0;
@@ -88,4 +89,4 @@ function main(args) {
     return ret;
 }
 
-imports.system.exit(main(ARGV));
+System.exit(main(ARGV));

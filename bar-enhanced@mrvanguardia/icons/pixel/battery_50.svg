@@ -1,1 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" enable-background="new 0 0 24 24" height="24" viewBox="0 0 24 24" width="24"><g><rect fill="none" height="24" width="24"/></g><g><path d="M17,5v16c0,0.55-0.45,1-1,1H8c-0.55,0-1-0.45-1-1V5c0-0.55,0.45-1,1-1h2V2h4v2h2C16.55,4,17,4.45,17,5z M15,6H9v4h6V6z"/></g></svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round" aria-label="Battery half full">
+  <rect x="3" y="7" width="17" height="10" rx="2.5" stroke="#4B9DFF" stroke-width="2"/>
+  <path d="M22 10v4" stroke="#4B9DFF" stroke-width="2"/>
+  <path d="M6.5 10.5h5v3h-5z" fill="#4B9DFF"/>
+</svg>

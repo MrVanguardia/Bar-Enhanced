@@ -7,16 +7,9 @@
   "gettext-domain": "bar-enhanced",
   "name": "Bar Enhanced",
   "settings-schema": "org.gnome.shell.extensions.bar-enhanced",
-  "shell-version": [
-    "45",
-    "46",
-    "47",
-    "48",
-    "49",
-    "50"
-  ],
+  "shell-version": ["50", "51"],
   "url": "https://github.com/mrvanguardia/bar-enhanced",
   "uuid": "bar-enhanced@mrvanguardia",
-  "version": 47,
-  "version-name": "4.7.0"
+  "version": 51,
+  "version-name": "4.8.0"
 }

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <schemalist gettext-domain="gnome-shell-extensions">
-  <enum id='org.gnome.shell.extensions.dash-to-dock.clickAction'>
+  <enum id='org.gnome.shell.extensions.bar-enhanced.dash-to-dock.clickAction'>
     <value value='0' nick='skip'/>
     <value value='1' nick='minimize'/>
     <value value='2' nick='launch'/>
@@ -14,31 +14,31 @@
     <value value='10' nick='focus-minimize-or-appspread'/>
     <value value='11' nick='quit'/>
   </enum>
-  <enum id='org.gnome.shell.extensions.dash-to-dock.scrollAction'>
+  <enum id='org.gnome.shell.extensions.bar-enhanced.dash-to-dock.scrollAction'>
     <value value='0' nick='do-nothing'/>
     <value value='1' nick='cycle-windows'/>
     <value value='2' nick='switch-workspace'/>
   </enum>
   <!-- this is mean to Match StSide. LEFT and RIGHT actual position in reversed in
        rtl languages -->
-  <enum id='org.gnome.shell.extensions.dash-to-dock.position'>
+  <enum id='org.gnome.shell.extensions.bar-enhanced.dash-to-dock.position'>
     <value value='0' nick='TOP'/>
     <value value='1' nick='RIGHT'/>
     <value value='2' nick='BOTTOM'/>
     <value value='3' nick='LEFT'/>
   </enum>
-  <enum id='org.gnome.shell.extensions.dash-to-dock.intellihide-mode'>
+  <enum id='org.gnome.shell.extensions.bar-enhanced.dash-to-dock.intellihide-mode'>
     <value value='0' nick='ALL_WINDOWS'/>
     <value value='1' nick='FOCUS_APPLICATION_WINDOWS'/>
     <value value='2' nick='MAXIMIZED_WINDOWS'/>
     <value value='3' nick='ALWAYS_ON_TOP'/>
   </enum>
-  <enum id='org.gnome.shell.extensions.dash-to-dock.transparency-mode'>
+  <enum id='org.gnome.shell.extensions.bar-enhanced.dash-to-dock.transparency-mode'>
     <value value='0' nick='DEFAULT'/>
     <value value='1' nick='FIXED'/>
     <value value='3' nick='DYNAMIC'/>
   </enum>
-    <enum id='org.gnome.shell.extensions.dash-to-dock.running-indicator-style'>
+    <enum id='org.gnome.shell.extensions.bar-enhanced.dash-to-dock.running-indicator-style'>
     <value value='0' nick='DEFAULT'/>
     <value value='1' nick='DOTS'/>
     <value value='2' nick='SQUARES'/>
@@ -50,8 +50,8 @@
     <value value='8' nick='BINARY'/>
     <value value='9' nick='DOT'/>
   </enum>
-  <schema path="/org/gnome/shell/extensions/dash-to-dock/" id="org.gnome.shell.extensions.dash-to-dock">
-    <key name="dock-position" enum="org.gnome.shell.extensions.dash-to-dock.position">
+  <schema path="/org/gnome/shell/extensions/bar-enhanced/dash-to-dock/" id="org.gnome.shell.extensions.bar-enhanced.dash-to-dock">
+    <key name="dock-position" enum="org.gnome.shell.extensions.bar-enhanced.dash-to-dock.position">
       <default>'BOTTOM'</default>
       <summary>Dock position</summary>
       <description>Dock is shown on the Left, Right, Top or Bottom side of the screen.</description>
@@ -60,6 +60,11 @@
       <default>0.2</default>
       <summary>Animation time</summary>
       <description>Sets the time duration of the autohide effect.</description>
+    </key>
+    <key type="b" name="hide-animation">
+      <default>true</default>
+      <summary>Animate dock when hiding</summary>
+      <description>Slide the dock out when it hides. This changes only the visual transition; autohide and intellihide remain independent visibility rules.</description>
     </key>
     <key type="d" name="show-delay">
       <default>0.25</default>
@@ -86,12 +91,12 @@
       <summary>Dash background color.</summary>
       <description>Customize the background color of the dash.</description>
     </key>
-    <key name="transparency-mode" enum="org.gnome.shell.extensions.dash-to-dock.transparency-mode">
+    <key name="transparency-mode" enum="org.gnome.shell.extensions.bar-enhanced.dash-to-dock.transparency-mode">
       <default>'DEFAULT'</default>
       <summary>Transparency mode for the dock</summary>
       <description>FIXED: constant transparency. DYNAMIC: dock takes the opaque style only when windows are close to it.</description>
     </key>
-    <key name="running-indicator-style" enum="org.gnome.shell.extensions.dash-to-dock.running-indicator-style">
+    <key name="running-indicator-style" enum="org.gnome.shell.extensions.bar-enhanced.dash-to-dock.running-indicator-style">
       <default>'DEFAULT'</default>
       <summary>...</summary>
       <description>DEFAULT: .... DOTS: ....</description>
@@ -131,7 +136,7 @@
       <summary>Dock dodges windows</summary>
       <description>Enable or disable intellihide mode</description>
     </key>
-    <key name="intellihide-mode" enum="org.gnome.shell.extensions.dash-to-dock.intellihide-mode">
+    <key name="intellihide-mode" enum="org.gnome.shell.extensions.bar-enhanced.dash-to-dock.intellihide-mode">
       <default>'FOCUS_APPLICATION_WINDOWS'</default>
       <summary>Define which windows are considered for intellihide.</summary>
       <description></description>
@@ -193,8 +198,8 @@
     </key>
     <key type="b" name="custom-theme-shrink">
       <default>false</default>
-      <summary>TODO</summary>
-      <description>TODO</description>
+      <summary>Shrink the dash</summary>
+      <description>Save space by reducing the dock padding and border radius.</description>
     </key>
     <key type="b" name="custom-theme-customize-running-dots">
       <default>false</default>
@@ -340,27 +345,27 @@
       <default>true</default>
       <summary>Activate only one window</summary>
     </key>
-    <key name="click-action" enum="org.gnome.shell.extensions.dash-to-dock.clickAction">
+    <key name="click-action" enum="org.gnome.shell.extensions.bar-enhanced.dash-to-dock.clickAction">
       <default>'cycle-windows'</default>
       <summary>Action when clicking on a running app</summary>
       <description>Set the action that is executed when clicking on the icon of a running application</description>
     </key>
-    <key name="scroll-action" enum="org.gnome.shell.extensions.dash-to-dock.scrollAction">
+    <key name="scroll-action" enum="org.gnome.shell.extensions.bar-enhanced.dash-to-dock.scrollAction">
       <default>'do-nothing'</default>
       <summary>Action when scrolling app</summary>
       <description>Set the action that is executed when scrolling on the application icon</description>
     </key>
-    <key name="shift-click-action" enum="org.gnome.shell.extensions.dash-to-dock.clickAction">
+    <key name="shift-click-action" enum="org.gnome.shell.extensions.bar-enhanced.dash-to-dock.clickAction">
       <default>'minimize'</default>
       <summary>Action when shift+clicking on a running app</summary>
       <description>Set the action that is executed when shift+clicking on the icon of a running application</description>
     </key>
-    <key name="middle-click-action" enum="org.gnome.shell.extensions.dash-to-dock.clickAction">
+    <key name="middle-click-action" enum="org.gnome.shell.extensions.bar-enhanced.dash-to-dock.clickAction">
       <default>'launch'</default>
       <summary>Action when clicking on a running app</summary>
       <description>Set the action that is executed when middle-clicking on the icon of a running application</description>
     </key>
-    <key name="shift-middle-click-action" enum="org.gnome.shell.extensions.dash-to-dock.clickAction">
+    <key name="shift-middle-click-action" enum="org.gnome.shell.extensions.bar-enhanced.dash-to-dock.clickAction">
       <default>'launch'</default>
       <summary>Action when clicking on a running app</summary>
       <description>Set the action that is executed when shift+middle-clicking on the icon of a running application</description>

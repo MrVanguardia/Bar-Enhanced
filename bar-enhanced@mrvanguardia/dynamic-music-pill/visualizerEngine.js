@@ -1,6 +1,8 @@
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 
+Gio._promisify(Gio.File.prototype, 'replace_contents_async', 'replace_contents_finish');
+
 export class SharedVisualizerEngine {
     static _instance = null;
 
@@ -27,6 +29,8 @@ export class SharedVisualizerEngine {
         this._silentFrames = 0;
         this._rollingMax = 2000;
         this._restartId = null;
+        this._starting = false;
+        this._generation = 0;
     }
 
     subscribe(callback) {
@@ -66,8 +70,10 @@ export class SharedVisualizerEngine {
         return false;
     }
 
-    startCava() {
-        if (this._cavaProcess) return;
+    async startCava() {
+        if (this._cavaProcess || this._starting) return;
+        this._starting = true;
+        const generation = this._generation;
         try {
             if (!GLib.find_program_in_path('cava')) return;
 
@@ -93,7 +99,18 @@ export class SharedVisualizerEngine {
                       `channels = mono\n` +
                       `raw_target = /dev/stdout\n`;
 
-            GLib.file_set_contents(tmpConfig, new TextEncoder().encode(cfg));
+            const configFile = Gio.File.new_for_path(tmpConfig);
+            await configFile.replace_contents_async(
+                new TextEncoder().encode(cfg), null, false,
+                Gio.FileCreateFlags.REPLACE_DESTINATION, null);
+
+            // The asynchronous write can finish after the last subscriber has
+            // gone away (or after disable()).  Do not revive Cava in that
+            // later lifecycle generation.
+            if (generation !== this._generation || !this._hasPlayingSubscribers()) {
+                this._removeTmpConfig(tmpConfig);
+                return;
+            }
             this._tmpConfigPath = tmpConfig;
 
             let launcher = new Gio.SubprocessLauncher({
@@ -124,8 +141,8 @@ export class SharedVisualizerEngine {
                 }
                 this._stdout = null;
                 this._cavaProcess = false;
-                if (this._tmpConfigPath) {
-                    try { Gio.File.new_for_path(this._tmpConfigPath).delete(null); } catch (e) {}
+                if (this._tmpConfigPath === tmpConfig) {
+                    this._removeTmpConfig(tmpConfig);
                     this._tmpConfigPath = null;
                 }
                 if (this._hasPlayingSubscribers() && !this._restartId) {
@@ -137,7 +154,20 @@ export class SharedVisualizerEngine {
                 }
             });
         } catch (e) {
-            log("[Dynamic Music Pill] Shared Cava error: " + e.message);
+            console.error(`Dynamic Music Pill: failed to start Cava: ${e.message}`);
+        } finally {
+            this._starting = false;
+        }
+    }
+
+    _removeTmpConfig(path) {
+        if (!path)
+            return;
+        try {
+            Gio.File.new_for_path(path).delete_async(
+                GLib.PRIORITY_DEFAULT, null, () => {});
+        } catch (e) {
+            // A failed cleanup must not keep the audio visualizer alive.
         }
     }
 
@@ -217,12 +247,13 @@ export class SharedVisualizerEngine {
     _broadcast(data, isSilent) {
         for (let cb of this._subscribers.keys()) {
             try { cb(data, isSilent); } catch (e) {
-                log('[Dynamic Music Pill] Visualizer subscriber error: ' + e.message);
+                console.error(`Dynamic Music Pill: visualizer subscriber failed: ${e.message}`);
             }
         }
     }
 
     stopCava() {
+        this._generation++;
         if (this._restartId) {
             GLib.Source.remove(this._restartId);
             this._restartId = null;
@@ -240,10 +271,7 @@ export class SharedVisualizerEngine {
             this._stdout = null;
         }
         if (this._tmpConfigPath) {
-            try {
-                let file = Gio.File.new_for_path(this._tmpConfigPath);
-                if (file.query_exists(null)) file.delete(null);
-            } catch (e) { }
+            this._removeTmpConfig(this._tmpConfigPath);
             this._tmpConfigPath = null;
         }
         this._cavaProcess = false;

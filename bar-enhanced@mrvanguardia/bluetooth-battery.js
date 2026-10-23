@@ -1,12 +1,15 @@
 import GObject from 'gi://GObject';
 import St from 'gi://St';
 import Clutter from 'gi://Clutter';
-import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 import GnomeBluetooth from 'gi://GnomeBluetooth?version=3.0';
-import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
 import { gettext as _ } from 'resource:///org/gnome/shell/extensions/extension.js';
+
+function batteryPercentage(device) {
+    const value = device.battery_percentage ?? device['battery-percentage'];
+    return Number.isFinite(value) && value >= 0 && value <= 100 ? value : null;
+}
 
 export var BluetoothBatteryButton = GObject.registerClass({
     GTypeName: 'BarEnhancedBluetoothBatteryButton',
@@ -19,7 +22,7 @@ export var BluetoothBatteryButton = GObject.registerClass({
 
         // Container for panel button to stack icon and battery bar vertically
         this.panelBox = new St.BoxLayout({
-            vertical: true,
+            orientation: Clutter.Orientation.VERTICAL,
             style_class: 'bar-enhanced-bt-panel-box',
             x_align: Clutter.ActorAlign.CENTER,
             y_align: Clutter.ActorAlign.CENTER
@@ -52,13 +55,13 @@ export var BluetoothBatteryButton = GObject.registerClass({
 
         // Main container
         this.mainBox = new St.BoxLayout({
-            vertical: true,
+            orientation: Clutter.Orientation.VERTICAL,
             style_class: 'bar-enhanced-bt-container'
         });
         this.menu.box.add_child(this.mainBox);
 
         // Header
-        let headerBox = new St.BoxLayout({ vertical: false, style_class: 'bar-enhanced-bt-header' });
+        let headerBox = new St.BoxLayout({ orientation: Clutter.Orientation.HORIZONTAL, style_class: 'bar-enhanced-bt-header' });
         let headerLabel = new St.Label({
             text: _('Bluetooth Devices'),
             x_expand: true,
@@ -70,7 +73,7 @@ export var BluetoothBatteryButton = GObject.registerClass({
 
         // Devices container
         this.devicesBox = new St.BoxLayout({
-            vertical: true,
+            orientation: Clutter.Orientation.VERTICAL,
             style_class: 'bar-enhanced-bt-devices'
         });
         this.mainBox.add_child(this.devicesBox);
@@ -89,14 +92,8 @@ export var BluetoothBatteryButton = GObject.registerClass({
                 });
             }
         } catch (e) {
-            log('BarEnhanced: Error instantiating GnomeBluetooth Client - ' + e);
+            console.error(`BarEnhanced: unable to initialize the Bluetooth client: ${e.message}`);
         }
-
-        // Backup timer to ensure updates are periodically checked (10 seconds)
-        this._backupTimeoutId = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, 10, () => {
-            this._updateDevices();
-            return GLib.SOURCE_CONTINUE;
-        });
 
         // Defer initial device update to avoid clutter mapping/allocation pass issues
         this._queueDeviceUpdate();
@@ -129,7 +126,6 @@ export var BluetoothBatteryButton = GObject.registerClass({
         this._deviceSignals = [];
 
         if (!this._devicesModel) {
-            log('BarEnhanced Bluetooth: _devicesModel is not initialized.');
             return;
         }
 
@@ -156,8 +152,8 @@ export var BluetoothBatteryButton = GObject.registerClass({
 
         let lowestBattery = null;
         for (let dev of connectedDevices) {
-            let battery = dev.battery_percentage !== undefined ? dev.battery_percentage : dev['battery-percentage'];
-            if (battery !== undefined && battery !== null && battery >= 0) {
+            let battery = batteryPercentage(dev);
+            if (battery !== null) {
                 if (lowestBattery === null || battery < lowestBattery) {
                     lowestBattery = battery;
                 }
@@ -166,7 +162,7 @@ export var BluetoothBatteryButton = GObject.registerClass({
 
         if (lowestBattery !== null && lowestBattery >= 0) {
             this.panelBatteryBarBg.visible = true;
-            let fillWidth = Math.max(1, Math.round((lowestBattery / 100) * 16));
+            let fillWidth = Math.round((lowestBattery / 100) * 16);
             this.panelBatteryBarFill.set_style(`width: ${fillWidth}px;`);
 
             this.panelBatteryBarFill.remove_style_class_name('bar-enhanced-bt-panel-bar-fill-green');
@@ -184,8 +180,6 @@ export var BluetoothBatteryButton = GObject.registerClass({
             this.panelBatteryBarBg.visible = false;
         }
 
-        log(`Bar Enhanced Bluetooth: Found ${connectedDevices.length} connected devices.`);
-
         this.devicesBox.destroy_all_children();
 
         if (connectedDevices.length === 0) {
@@ -200,11 +194,9 @@ export var BluetoothBatteryButton = GObject.registerClass({
         for (let dev of connectedDevices) {
             let name = dev.alias || dev.name || _('Unknown Device');
             let iconName = dev.icon || 'bluetooth-active-symbolic';
-            let battery = dev.battery_percentage !== undefined ? dev.battery_percentage : dev['battery-percentage'];
-            log(`Bar Enhanced Bluetooth Device: ${name}, connected: ${dev.connected}, battery: ${battery}`);
-
+            let battery = batteryPercentage(dev);
             let itemBox = new St.BoxLayout({
-                vertical: false,
+                orientation: Clutter.Orientation.HORIZONTAL,
                 style_class: 'bar-enhanced-bt-device-item'
             });
 
@@ -225,9 +217,9 @@ export var BluetoothBatteryButton = GObject.registerClass({
             itemBox.add_child(label);
 
             // Battery
-            if (battery > 0) {
+            if (battery !== null) {
                 let batteryBox = new St.BoxLayout({
-                    vertical: false,
+                    orientation: Clutter.Orientation.HORIZONTAL,
                     style_class: 'bar-enhanced-bt-battery-box'
                 });
 
@@ -241,7 +233,7 @@ export var BluetoothBatteryButton = GObject.registerClass({
                 let progressBarFill = new St.BoxLayout({
                     style_class: 'bar-enhanced-bt-progress-fill'
                 });
-                progressBarFill.set_style(`width: ${Math.max(1, (battery / 100) * 60)}px;`);
+                progressBarFill.set_style(`width: ${Math.round((battery / 100) * 60)}px;`);
                 
                 progressBarContainer.add_child(progressBarFill);
                 batteryBox.add_child(progressBarContainer);
@@ -290,10 +282,6 @@ export var BluetoothBatteryButton = GObject.registerClass({
             GLib.Source.remove(this._visibilityIdleId);
             this._visibilityIdleId = null;
         }
-        if (this._backupTimeoutId) {
-            GLib.Source.remove(this._backupTimeoutId);
-            this._backupTimeoutId = null;
-        }
         if (this._deviceSignals) {
             for (let sig of this._deviceSignals) {
                 try {
@@ -308,6 +296,10 @@ export var BluetoothBatteryButton = GObject.registerClass({
             this._devicesModel.disconnect(this._itemsChangedId);
             this._itemsChangedId = null;
         }
+        this._devicesModel = null;
+        this._client = null;
+        this._settings = null;
+        this._extensionObject = null;
         super.destroy();
     }
 });

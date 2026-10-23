@@ -35,6 +35,7 @@ import * as LayoutManager from 'resource:///org/gnome/shell/ui/layout.js';
 import * as Config from 'resource:///org/gnome/shell/misc/config.js';
 import { Extension, gettext as _ } from 'resource:///org/gnome/shell/extensions/extension.js';
 import * as Quantize from './quantize.js';
+import * as Utils from './utils.js';
 import * as AutoThemes from './autothemes.js';
 import * as StyleSheets from './stylesheets.js';
 import { DockManager } from './dash-to-dock/docking.js';
@@ -82,6 +83,27 @@ const T = (text) => {
 };
 
 Gio._promisify(Gio.File.prototype, "copy_async", "copy_finish");
+Gio._promisify(Gio.File.prototype, 'make_directory_async', 'make_directory_finish');
+Gio._promisify(Gio.File.prototype, 'enumerate_children_async', 'enumerate_children_finish');
+Gio._promisify(Gio.FileEnumerator.prototype, 'next_files_async', 'next_files_finish');
+Gio._promisify(Gio.FileEnumerator.prototype, 'close_async', 'close_finish');
+
+/**
+ * Recursively create a directory without using the synchronous Gio helper.
+ * Gio.File has no asynchronous recursive-directory API on GNOME 50.
+ */
+async function ensureDirectoryAsync(directory, cancellable) {
+    const parent = directory.get_parent();
+    if (parent)
+        await ensureDirectoryAsync(parent, cancellable);
+
+    try {
+        await directory.make_directory_async(GLib.PRIORITY_LOW, cancellable);
+    } catch (e) {
+        if (!e.matches?.(Gio.IOErrorEnum, Gio.IOErrorEnum.EXISTS))
+            throw e;
+    }
+}
 
 // ConnectManager class to manage connections for events to trigger BarEnhanced style updates
 // This class is modified from Floating Panel extension (Thanks Aylur!)
@@ -159,7 +181,7 @@ const BarEnhancedDashboard = GObject.registerClass(
 
             // Build Glassmorphic container
             let widgetBox = new St.BoxLayout({
-                vertical: true,
+                orientation: Clutter.Orientation.VERTICAL,
                 style_class: 'bar-enhanced-dashboard-menu'
             });
 
@@ -184,8 +206,8 @@ const BarEnhancedDashboard = GObject.registerClass(
             widgetBox.add_child(layoutTitle);
 
             // Grid rows for layout selection
-            let row1 = new St.BoxLayout({ vertical: false, style_class: 'bar-enhanced-dashboard-row' });
-            let row2 = new St.BoxLayout({ vertical: false, style_class: 'bar-enhanced-dashboard-row' });
+            let row1 = new St.BoxLayout({ orientation: Clutter.Orientation.HORIZONTAL, style_class: 'bar-enhanced-dashboard-row' });
+            let row2 = new St.BoxLayout({ orientation: Clutter.Orientation.HORIZONTAL, style_class: 'bar-enhanced-dashboard-row' });
             widgetBox.add_child(row1);
             widgetBox.add_child(row2);
 
@@ -286,9 +308,6 @@ const BarEnhancedDashboard = GObject.registerClass(
             pywalSyncBtn.connect('clicked', () => {
                 let active = !this.obar._settings.get_boolean('pywal-sync');
                 this.obar._settings.set_boolean('pywal-sync', active);
-                if (active) {
-                    this.obar._syncWithPywal();
-                }
             });
 
             this._settingsSignals.push(this.obar._settings.connect('changed::pywal-sync', updatePywalSyncBtn));
@@ -390,6 +409,7 @@ class TopbarNotification extends St.BoxLayout {
         this._icons = new Map();
         this._signals = [];
         this._dndSignals = [];
+        this._sourceCountSignals = new Map();
         this._dndMode = this._niSettings.get_int('dnd-mode');
         this._coloredIcons = this._niSettings.get_boolean('colored-icons');
         this._notificationCount = this._niSettings.get_boolean('notification-count');
@@ -418,6 +438,7 @@ class TopbarNotification extends St.BoxLayout {
     }
     _onSourceAdded(tray, source) {
         if (!source) return;
+        this._watchSourceCount(source);
         const sourceId = this._getSourceId(source);
         if (!this._shouldShowInDND(source)) return;
         if (!this._icons.has(sourceId)) {
@@ -428,6 +449,7 @@ class TopbarNotification extends St.BoxLayout {
     }
     _onSourceRemoved(tray, source) {
         if (!source) return;
+        this._unwatchSourceCount(source);
         const sourceId = this._getSourceId(source);
         const icon = this._icons.get(sourceId);
         if (icon) {
@@ -528,6 +550,21 @@ class TopbarNotification extends St.BoxLayout {
         if (wasDndActive !== this._isDndActive) this._updateAllSources();
     }
     _onDndStateChanged() { this._updateDndState(); }
+    _watchSourceCount(source) {
+        if (this._sourceCountSignals.has(source)) return;
+        const id = source.connect('notify::count', () => {
+            if (this._isDndActive && this._dndMode === 1)
+                this._updateAllSources();
+        });
+        this._sourceCountSignals.set(source, id);
+    }
+    _unwatchSourceCount(source) {
+        const id = this._sourceCountSignals.get(source);
+        if (id !== undefined) {
+            source.disconnect(id);
+            this._sourceCountSignals.delete(source);
+        }
+    }
     _shouldShowInDND(source) {
         if (!this._isDndActive) return true;
         const dndMode = this._niSettings.get_int('dnd-mode');
@@ -556,6 +593,7 @@ class TopbarNotification extends St.BoxLayout {
         const sources = Main.messageTray.getSources();
         sources.forEach(source => {
             if (!source) return;
+            this._watchSourceCount(source);
             const sourceId = this._getSourceId(source);
             if (!this._shouldShowInDND(source)) return;
             if (!this._icons.has(sourceId)) {
@@ -586,6 +624,8 @@ class TopbarNotification extends St.BoxLayout {
     destroy() {
         if (this._signals) { this._signals.forEach(s => { if (s) Main.messageTray.disconnect(s); }); this._signals = []; }
         if (this._dndSignals && this._dndSettings) { this._dndSignals.forEach(s => { if (s) this._dndSettings.disconnect(s); }); this._dndSignals = []; this._dndSettings = null; }
+        for (const source of this._sourceCountSignals.keys())
+            this._unwatchSourceCount(source);
         this._icons.forEach(icon => this._destroyIcon(icon));
         this._icons.clear();
         super.destroy();
@@ -604,6 +644,51 @@ export default class BarEnhanced extends Extension {
         this._injections = [];
         this._windowBlurSignals = null;
         this._windowBlurBackgrounds = null;
+        this._lifecycleGeneration = 0;
+    }
+
+    async _copyRuntimeAssets(sourceDir, destinationDir, cancellable) {
+        try {
+            await ensureDirectoryAsync(destinationDir, cancellable);
+        } catch (e) {
+            if (!cancellable.is_cancelled())
+                console.error(`BarEnhanced: failed to create runtime assets directory: ${e.message}`);
+            return;
+        }
+
+        let enumerator = null;
+        try {
+            enumerator = await sourceDir.enumerate_children_async(
+                Gio.FILE_ATTRIBUTE_STANDARD_NAME,
+                Gio.FileQueryInfoFlags.NOFOLLOW_SYMLINKS,
+                GLib.PRIORITY_LOW,
+                cancellable);
+            while (!cancellable.is_cancelled()) {
+                const files = await enumerator.next_files_async(32, GLib.PRIORITY_LOW, cancellable);
+                if (files.length === 0)
+                    break;
+                await Promise.all(files.map(info => {
+                    const src = sourceDir.get_child(info.get_name());
+                    const dst = destinationDir.get_child(info.get_name());
+                    return src.copy_async(dst,
+                        Gio.FileCopyFlags.OVERWRITE | Gio.FileCopyFlags.TARGET_DEFAULT_PERMS,
+                        GLib.PRIORITY_LOW,
+                        cancellable,
+                        null);
+                }));
+            }
+        } catch (e) {
+            if (!cancellable.is_cancelled())
+                console.error(`BarEnhanced: failed to copy runtime assets: ${e.message}`);
+        } finally {
+            if (enumerator) {
+                try {
+                    await enumerator.close_async(GLib.PRIORITY_LOW, cancellable);
+                } catch (e) {
+                    // A cancelled enumerator has no resources left to retain.
+                }
+            }
+        }
     }
 
     // Generate a color palette from desktop background image
@@ -618,13 +703,13 @@ export default class BarEnhanced extends Extension {
                 ? Gio.File.new_for_uri(pictureUri)
                 : Gio.File.new_for_path(pictureUri);
         } catch (e) {
-            log('BarEnhanced: Invalid background URI: ' + pictureUri);
+            console.error(`BarEnhanced: invalid background URI: ${pictureUri}`);
             return [null, null];
         }
         let path = pictureFile.get_path();
 
-        if (!path || !pictureFile.query_exists(null)) {
-            log('BarEnhanced: Background image is not a readable local file: ' + pictureUri);
+        if (!path) {
+            console.error(`BarEnhanced: background image is not a readable local file: ${pictureUri}`);
             return [null, null];
         }
 
@@ -695,12 +780,22 @@ export default class BarEnhanced extends Extension {
 
         return [ranked.map(item => item.color), ranked.map(item => item.count)];
         } catch (e) {
-            log('BarEnhanced: Error in getPaletteFromImage: ' + e);
+            console.error(`BarEnhanced: palette extraction failed: ${e.message}`);
             return [null, null];
         }
     }
 
     backgroundPalette() {
+        // A palette-only update is misleading when auto-refresh is enabled but
+        // neither mode has a base theme (for example after applying a Vanguard
+        // preset). Use the non-destructive Color theme for both modes.
+        const autoRefresh = this._settings.get_boolean('autotheme-refresh');
+        if (autoRefresh && !this._settings.get_boolean('pywal-sync') &&
+            this._settings.get_string('autotheme-dark') === 'Select Theme' &&
+            this._settings.get_string('autotheme-light') === 'Select Theme') {
+            this._settings.set_string('autotheme-dark', 'Color');
+            this._settings.set_string('autotheme-light', 'Color');
+        }
         // Get the latest background image file (from picture-uri and picture-uri-dark)
         let pictureUriDark = this._settings.get_string('dark-bguri');
         let pictureUriLight = this._settings.get_string('light-bguri');
@@ -723,7 +818,7 @@ export default class BarEnhanced extends Extension {
 
             // Save palette and counts to settings
             if (!palette12?.length || !count12?.length) {
-                log('BarEnhanced: Palette extraction produced no usable colours for ' + pictureUri);
+                console.error(`BarEnhanced: palette extraction returned no usable colours for ${pictureUri}`);
                 continue;
             }
 
@@ -756,13 +851,12 @@ export default class BarEnhanced extends Extension {
             }
 
             // Apply auto theme for new background palette if auto-refresh enabled and theme set for this iteration (darklight)
-            const autoRefresh = this._settings.get_boolean('autotheme-refresh');
             let theme;
             if (darklight == 'dark')
                 theme = this._settings.get_string('autotheme-dark');
             else
                 theme = this._settings.get_string('autotheme-light');
-            if (autoRefresh && theme != 'Select Theme') {
+            if (autoRefresh && !this._settings.get_boolean('pywal-sync') && theme != 'Select Theme') {
                 // log('Auto theme refresh for ', darklight);
                 AutoThemes.autoApplyBGPalette(this, darklight);
             }
@@ -800,7 +894,7 @@ export default class BarEnhanced extends Extension {
             theme.unload_stylesheet(stylesheet);
         }
         catch (e) {
-            log('BarEnhanced: Error unloading stylesheet: ', e);
+            console.error('BarEnhanced: failed to unload stylesheet', e);
         }
     }
 
@@ -811,30 +905,38 @@ export default class BarEnhanced extends Extension {
             theme.load_stylesheet(stylesheet);
         }
         catch (e) {
-            log('BarEnhanced: Error loading stylesheet: ', e);
+            console.error('BarEnhanced: failed to load stylesheet', e);
         }
     }
 
     loadDashToDockStylesheet() {
+        if (this._dashToDockStylesheetLoaded)
+            return;
+
         const theme = this.themeContext.get_theme();
         const stylesheet = Gio.File.new_for_path(GLib.build_filenamev([this.path, 'dash-to-dock', 'dash-to-dock.css']));
         try {
             theme.load_stylesheet(stylesheet);
+            this._dashToDockStylesheetLoaded = true;
         }
         catch (e) {
-            log('BarEnhanced: Error loading dash-to-dock stylesheet: ', e);
+            console.error('BarEnhanced: failed to load embedded dock stylesheet', e);
         }
     }
 
     unloadDashToDockStylesheet() {
+        if (!this._dashToDockStylesheetLoaded)
+            return;
+
         const theme = this.themeContext.get_theme();
         const stylesheet = Gio.File.new_for_path(GLib.build_filenamev([this.path, 'dash-to-dock', 'dash-to-dock.css']));
         try {
             theme.unload_stylesheet(stylesheet);
         }
         catch (e) {
-            log('BarEnhanced: Error unloading dash-to-dock stylesheet: ', e);
+            console.error('BarEnhanced: failed to unload embedded dock stylesheet', e);
         }
+        this._dashToDockStylesheetLoaded = false;
     }
 
     reloadStylesheet() {
@@ -855,16 +957,16 @@ export default class BarEnhanced extends Extension {
     }
 
     // Add or remove 'openmenu' class
-    applyMenuClass(obj, add) {
+    applyMenuClass(obj, add, className = 'openmenu') {
         if (!obj)
             return;
         if (add) {
             if (obj.add_style_class_name)
-                obj.add_style_class_name('openmenu');
+                obj.add_style_class_name(className);
         }
         else {
             if (obj.remove_style_class_name)
-                obj.remove_style_class_name('openmenu');
+                obj.remove_style_class_name(className);
         }
     }
 
@@ -923,6 +1025,15 @@ export default class BarEnhanced extends Extension {
             for (const btn of box) { // btn is a bin, parent of indicator button
                 if (btn.child instanceof PanelMenu.Button || btn.child instanceof PanelMenu.ButtonBox) { // btn.child is the indicator
 
+                    const menuBox = btn.child.menu?.box;
+                    if (menuBox) {
+                        const scope = btn.child === Main.panel.statusArea.quickSettings ? 'quick'
+                            : btn.child === Main.panel.statusArea.dateMenu ? 'calendar'
+                                : btn.child === this.vitalsMenu ? 'vitals'
+                                    : btn.child === this.btBatteryMenu ? 'bluetooth' : 'panel';
+                        this.applyMenuClass(menuBox, add, `be-menu-${scope}`);
+                    }
+
                     // box pointer case, to update -arrow-rise for bottom panel
                     if (btn.child.menu?._boxPointer) {
                         this.applyMenuClass(btn.child.menu._boxPointer, add);
@@ -960,6 +1071,7 @@ export default class BarEnhanced extends Extension {
 
                         const msgList = hbox.get_child_at_index(0); // Left Pane/Section with notifications etc
                         this.applyMenuClass(msgList, add);
+                        this.applyMenuClass(msgList, add, 'be-menu-notifications');
                         const placeholder = msgList.get_child_at_index(0); // placeholder for 'No Notifications'
                         this.applyMenuClass(placeholder, add);
                         const msgbox = msgList.get_child_at_index(1);
@@ -1001,10 +1113,13 @@ export default class BarEnhanced extends Extension {
 
                             if (item.constructor.name === 'Calendar') {
                                 this.applyCalendarGridStyle(item, add);
-                                this.calendarTimeoutId = setTimeout(() => {
-                                    this.applyCalendarGridStyle(item, add);
-                                    this.calendarTimeoutId = null;
-                                }, 250);
+                                const timeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 250, () => {
+                                    this._calendarTimeoutIds.delete(timeoutId);
+                                    if (!this.disabling && item.layout_manager)
+                                        this.applyCalendarGridStyle(item, add);
+                                    return GLib.SOURCE_REMOVE;
+                                });
+                                this._calendarTimeoutIds.add(timeoutId);
                             }
                         });
                     }
@@ -1125,6 +1240,17 @@ export default class BarEnhanced extends Extension {
             return;
         }
 
+        if (key == 'autotheme-refresh') {
+            if (this._settings.get_boolean(key))
+                this.updateBguri();
+            return;
+        }
+
+        if (key == 'auto-bgalpha') {
+            AutoThemes.applyAutomaticOpacity(this);
+            return;
+        }
+
         // Window-Max bar settings
         if (key == 'wmaxbar') {
             this.onWindowMaxBar();
@@ -1180,12 +1306,7 @@ export default class BarEnhanced extends Extension {
 
         // Set bgalpha on change of bartype
         if (key == 'bartype') {
-            if (bartype == 'Trilands' || bartype == 'Islands') {
-                this._settings.set_double('bgalpha', 0);
-            }
-            else {
-                this._settings.set_double('bgalpha', 0.9);
-            }
+            AutoThemes.applyAutomaticOpacity(this);
             // Some controls change bartype directly, without toggling
             // trigger-reload as Preferences does. Apply the new layout in the
             // Shell immediately instead of leaving the old CSS in place.
@@ -1217,6 +1338,15 @@ export default class BarEnhanced extends Extension {
             else if (!fullscreen && !this.isObarReset) {
                 this.onFullScreen(null, 'fullscreen');
             }
+            return;
+        }
+
+        // Both Preferences and the dashboard write this setting. Clear the
+        // existing music-derived palette immediately when either turns it off.
+        if (key === 'immersive-music-theme') {
+            if (!this._settings.get_boolean(key))
+                this.immersiveColorOverride = null;
+            StyleSheets.reloadStyle(this, this);
             return;
         }
 
@@ -1254,7 +1384,8 @@ export default class BarEnhanced extends Extension {
         }
 
         // Auto set closest Gnome Accent color
-        if (key == 'mscolor' && this.gnomeVersion >= 47) {
+        if ((key == 'mscolor' || key == 'menu-sync-system-accent') &&
+            this.gnomeVersion >= 47 && this._settings.get_boolean('menu-sync-system-accent')) {
             let closestAccent = AutoThemes.getClosestGnomeAccent(this);
             this._intSettings.set_string('accent-color', closestAccent);
         }
@@ -1310,15 +1441,24 @@ export default class BarEnhanced extends Extension {
                 this.disableFittsWidgets();
         }
 
-        let menuKeys = ['trigger-reload', 'reloadstyle', 'removestyle', 'menustyle', 'mfgcolor', 'mfgalpha', 'mbgcolor', 'mbgaplha', 'mbcolor', 'mbaplha',
-            'mhcolor', 'mhalpha', 'mscolor', 'msalpha', 'mshcolor', 'mshalpha', 'smbgoverride', 'smbgcolor', 'qtoggle-radius', 'slider-height', 'mbg-gradient', 'qtile-border'];
+        let menuKeys = ['trigger-reload', 'reloadstyle', 'removestyle', 'menustyle', 'mfgcolor', 'mfgalpha', 'mbgcolor', 'mbgalpha', 'mbcolor', 'mbalpha',
+            'mhcolor', 'mhalpha', 'mscolor', 'msalpha', 'mshcolor', 'mshalpha', 'smbgoverride', 'smbgcolor', 'qtoggle-radius', 'slider-height', 'slider-handle-color-override', 'slider-handle-color', 'mbg-gradient', 'qtile-border', 'menu-sync-system-accent', 'quick-settings-arrow-mode', 'quick-settings-arrow-colors'];
+        if (key === 'quick-settings-arrow-mode')
+            this._discoverQuickSettingsArrows();
         let barKeys = ['bgcolor', 'gradient', 'gradient-direction', 'bgcolor2', 'bgalpha', 'bgalpha2', 'fgcolor', 'fgalpha', 'bcolor', 'balpha', 'bradius',
             'bordertype', 'shcolor', 'shalpha', 'iscolor', 'isalpha', 'neon', 'shadow', 'font', 'default-font', 'hcolor', 'halpha', 'heffect', 'bgcolor-wmax',
             'bgalpha-wmax', 'neon-wmax', 'boxcolor', 'boxalpha', 'autofg-bar', 'autofg-menu', 'width-top', 'width-bottom', 'width-left', 'width-right',
             'radius-topleft', 'radius-topright', 'radius-bottomleft', 'radius-bottomright'];
         let keys = [...barKeys, ...menuKeys, 'autotheme-dark', 'autotheme-light', 'autotheme-refresh', 'accent-override', 'accent-color', 'apply-menu-shell',
-            'dashdock-style', 'dbgcolor', 'dbgalpha', 'dborder', 'dshadow'];
+            'dashdock-style', 'dbgcolor', 'dbgalpha', 'dbradius', 'disize', 'dborder', 'dshadow', 'dock-badge-color',
+            'hpad', 'vpad', 'bwidth', 'neon-intensity', 'candybar', 'candyalpha',
+            'menu-radius', 'notif-radius', 'apply-menu-notif', 'apply-accent-shell', 'apply-all-shell'];
         if (keys.includes(key)) {
+            // Preference widgets request a reload, but imported profiles and
+            // direct GSettings changes do not. Debouncing in reloadStyle keeps
+            // both paths consistent without generating a sheet per signal.
+            if (key !== 'reloadstyle' && key !== 'trigger-reload' && key !== 'removestyle')
+                StyleSheets.reloadStyle(this, this);
             return;
         }
 
@@ -1361,6 +1501,10 @@ export default class BarEnhanced extends Extension {
         }
 
         this.setPanelStyle(null, key);
+        if (['position', 'height', 'margin', 'bottom-margin', 'set-bottom-margin',
+            'set-overview', 'set-fullscreen', 'wmax-hbarhint', 'border-wmax',
+            'theme-app-grid'].includes(key))
+            StyleSheets.reloadStyle(this, this);
     }
 
     // QSAP: listen for addition of new panels
@@ -1375,6 +1519,48 @@ export default class BarEnhanced extends Extension {
         this._connections.connect(menu.box, this.addedSignal, (obj, signal, panelColumn, callbk_param) => {
             this._connections.connect(panelColumn, this.addedSignal, this.updatePanelStyle.bind(this));
         });
+    }
+
+    _discoverQuickSettingsArrows() {
+        const menu = Main.panel.statusArea.quickSettings?.menu;
+        const root = menu?.box;
+        if (!root) return;
+        const registry = this._settings.get_value('quick-settings-arrow-registry').deep_unpack();
+        let changed = false;
+        const labelFor = actor => {
+            if (typeof actor.title === 'string' && actor.title.trim()) return actor.title.trim();
+            for (const child of actor.get_children?.() ?? []) {
+                if (child instanceof St.Label && child.text?.trim()) return child.text.trim();
+                const found = labelFor(child);
+                if (found) return found;
+            }
+            return null;
+        };
+        const visit = actor => {
+            if (actor.has_style_class_name?.('quick-toggle-arrow') ||
+                actor.has_style_class_name?.('quick-toggle-menu-button') ||
+                actor.has_style_class_name?.('quick-settings-tile-side-button')) {
+                const tile = actor.get_parent?.();
+                const title = tile && labelFor(tile);
+                if (title) {
+                    // The class is stable for the visible title without embedding it in CSS.
+                    let hash = 2166136261;
+                    for (const char of title) hash = Math.imul(hash ^ char.codePointAt(0), 16777619);
+                    const id = `tile-${(hash >>> 0).toString(16)}`;
+                    this._quickArrowActors ??= new Map();
+                    const previousClass = this._quickArrowActors.get(actor);
+                    if (previousClass && previousClass !== `be-arrow-${id}`)
+                        actor.remove_style_class_name(previousClass);
+                    actor.add_style_class_name(`be-arrow-${id}`);
+                    this._quickArrowActors.set(actor, `be-arrow-${id}`);
+                    if (registry[id] !== title) { registry[id] = title; changed = true; }
+                }
+            }
+            for (const child of actor.get_children?.() ?? []) visit(child);
+        };
+        visit(root);
+        if (changed)
+            this._settings.set_value('quick-settings-arrow-registry', new GLib.Variant('a{ss}', registry));
     }
 
     // Find the monitor which has the panel/panelBox
@@ -1495,6 +1681,11 @@ export default class BarEnhanced extends Extension {
     }
 
     onWindowAdded(obj, signal, windowActor) {
+        // A compositor notification can arrive after Window-Max was disabled.
+        // In that case its registry has already been released.
+        if (!this._windowSignals)
+            return;
+
         if (windowActor) {
             this._windowSignals.set(windowActor, [
                 windowActor.connect('notify::visible', () => this.setWindowMaxBar('notify-visible')),
@@ -1512,7 +1703,13 @@ export default class BarEnhanced extends Extension {
     }
 
     onWindowRemoved(obj, signal, windowActor) {
-        let winSigActors = [windowActor, windowActor.meta_window];
+        if (!this._windowSignals)
+            return;
+
+        // A removed actor can already have lost its Meta.Window while Mutter is
+        // tearing down a window.  Keep cleanup best-effort instead of throwing
+        // from a late signal and leaving the Window-Max state half-updated.
+        let winSigActors = [windowActor, windowActor?.meta_window];
         for (const winSigActor of winSigActors) {
             if (winSigActor) {
                 let windowSignals = this._windowSignals.get(winSigActor);
@@ -1531,6 +1728,13 @@ export default class BarEnhanced extends Extension {
     onWindowMaxBar() {
         let wmaxbar = this._settings.get_boolean('wmaxbar');
         if (wmaxbar) {
+            // The setting callback can fire more than once while this mode is
+            // already enabled. Reusing the existing registry prevents duplicate
+            // window-group connections and orphaned per-window signal IDs.
+            if (this._windowSignals) {
+                this.setWindowMaxBar('wmaxbar-refresh');
+                return;
+            }
             this._windowSignals = new Map();
             const windowActors = this.gnomeVersion < 48 ? global.get_window_actors() : global.compositor.get_window_actors();
             for (const window of windowActors) {
@@ -1569,11 +1773,11 @@ export default class BarEnhanced extends Extension {
         // Coalesce rapid fullscreen notifications so an older callback cannot
         // reload styles after a newer fullscreen state (or after disable).
         if (this.onFullScrTimeoutId) {
-            clearTimeout(this.onFullScrTimeoutId);
+            GLib.Source.remove(this.onFullScrTimeoutId);
             this.onFullScrTimeoutId = null;
         }
         this.onFullScrTimeoutId =
-            setTimeout(() => {
+            GLib.timeout_add(GLib.PRIORITY_DEFAULT, timeout, () => {
                 // Check if panelBox is on the monitor which is in fullscreen
                 const LM = Main.layoutManager;
                 let panelBoxMonitor = this.getPanelMonitor()[0];
@@ -1591,7 +1795,8 @@ export default class BarEnhanced extends Extension {
                     this.isObarReset = false;
                 }
                 this.onFullScrTimeoutId = null;
-            }, timeout);
+                return GLib.SOURCE_REMOVE;
+            });
     }
 
     onModeChange() {
@@ -1614,7 +1819,7 @@ export default class BarEnhanced extends Extension {
             this.colorScheme = colorScheme;
         }
 
-        this.updateBguriId = setTimeout(() => {
+        this.updateBguriId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 200, () => {
             try {
                 let bguriDark = this._bgSettings.get_string('picture-uri-dark');
                 let bguriLight = this._bgSettings.get_string('picture-uri');
@@ -1640,7 +1845,8 @@ export default class BarEnhanced extends Extension {
                     this.updateBguri();
                 }
             }
-        }, 200);
+            return GLib.SOURCE_REMOVE;
+        });
     }
 
     // Connect multiple signals to ensure detecting background-change in all Gnome versions
@@ -1668,6 +1874,8 @@ export default class BarEnhanced extends Extension {
     }
 
     createFittsWidget(box, btn) {
+        if (!this._settings || !box || !btn)
+            return;
         let panel = Main.panel;
         let panelBox = Main.layoutManager.panelBox;
         let position = this._settings.get_string('position');
@@ -1898,7 +2106,7 @@ export default class BarEnhanced extends Extension {
 
     updateFittsWidgetAddRemove(box, key, btn) {
         if (this.fittsCornerTimeoutId) {
-            clearTimeout(this.fittsCornerTimeoutId);
+            GLib.Source.remove(this.fittsCornerTimeoutId);
             this.fittsCornerTimeoutId = null;
         }
         if (this.disabling) {
@@ -1912,10 +2120,11 @@ export default class BarEnhanced extends Extension {
                 (btn == panel.leftCornerButton || btn == panel.rightCornerButton))) {
             this.destroyFittsCornerWidgets();
             // Wait for Panel to update its x, width then create CornerWidgets
-            this.fittsCornerTimeoutId = setTimeout(() => {
+            this.fittsCornerTimeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 500, () => {
                 this.createFittsCornerWidgets();
                 this.fittsCornerTimeoutId = null;
-            }, 500);
+                return GLib.SOURCE_REMOVE;
+            });
         }
 
         if (!(btn.child instanceof PanelMenu.Button || btn.child instanceof PanelMenu.ButtonBox))
@@ -1956,13 +2165,15 @@ export default class BarEnhanced extends Extension {
     }
 
     postStartup() {
-        this.postStartupId = setTimeout(() => {
+        this.postStartupId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 2000, () => {
             this.setPanelStyle(null, 'post-startup');
             this.postStartupId = null;
-        }, 2000);
+            return GLib.SOURCE_REMOVE;
+        });
     }
 
     enable() {
+        const lifecycleGeneration = ++this._lifecycleGeneration;
         // Get Gnome version
         const [major, minor] = Config.PACKAGE_VERSION.split('.').map(s => Number(s));
         this.gnomeVersion = major;
@@ -1981,14 +2192,13 @@ export default class BarEnhanced extends Extension {
         this.isObarReset = false;
         this.addedSignal = this.gnomeVersion > 45 ? 'child-added' : 'actor-added';
         this.removedSignal = this.gnomeVersion > 45 ? 'child-removed' : 'actor-removed';
-        this.calendarTimeoutId = null;
+        this._calendarTimeoutIds = new Set();
         this.bgMgrTimeOutId = null;
         this.onFullScrTimeoutId = null;
         this.msgLists = [];
         this.msgListIds = [];
         this.styleUnloaded = false;
         this.updatingBguri = false;
-        this.updatingBguriId = null;
         this._pendingBguriUpdate = false;
         this.updateBguriId = null;
         this.postStartupId = null;
@@ -1996,7 +2206,8 @@ export default class BarEnhanced extends Extension {
         this._styleReloadInFlight = false;
         this._styleReloadQueued = false;
         this._styleReloadGeneration = 0;
-        this._pywalResumeTimer = null;
+        this._focusGlowStyles = new Map();
+        this._pywalGeneration = 0;
         this._primaryBgManager = null;
 
         // Settings for desktop background image (set bg-uri as per color scheme)
@@ -2025,8 +2236,14 @@ export default class BarEnhanced extends Extension {
 
         // Connect to the settings changes
         this._settingsChangedId = this._settings.connect('changed', (settings, key) => {
+            if (key === 'pywal-sync') {
+                if (settings.get_boolean(key))
+                    this._startPywalMonitor();
+                else
+                    this._stopPywalMonitor();
+            }
             this.updatePanelStyle(settings, key);
-            if (key === 'neon' || key === 'focus-glow') {
+            if (['focus-glow', 'neon-intensity', 'bartype', 'balpha', 'height', 'vpad', 'bradius', 'gradient'].includes(key)) {
                 this._onFocusWindowChanged();
             }
         });
@@ -2067,6 +2284,10 @@ export default class BarEnhanced extends Extension {
         if (this.gnomeVersion > 42) {
             let qSettings = Main.panel.statusArea.quickSettings;
             connections.push([qSettings, 'menu-set', this.setupLibpanel.bind(this), qSettings.menu]);
+            if (qSettings.menu)
+                connections.push([qSettings.menu, 'open-state-changed', (_menu, isOpen) => {
+                    if (isOpen) this._discoverQuickSettingsArrows();
+                }]);
         }
         // Connection specific to Workspace indicator dots
         if (this.gnomeVersion > 44) {
@@ -2080,11 +2301,15 @@ export default class BarEnhanced extends Extension {
         if (this.gnomeVersion > 42)
             this.setupLibpanel(null, 'enabled', null, Main.panel.statusArea.quickSettings.menu);
 
-        // Connect to background manager (give time for it to be available)
-        this.bgMgrTimeOutId = setTimeout(() => {
+        // Observe desktop settings immediately; the background manager itself
+        // may not exist until Shell finishes creating the stage.
+        this.connectPrimaryBGChanged();
+        // Retry once to attach to the background manager when it is available.
+        this.bgMgrTimeOutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 2000, () => {
             this.connectPrimaryBGChanged();
             this.bgMgrTimeOutId = null;
-        }, 2000);
+            return GLib.SOURCE_REMOVE;
+        });
         // Always refresh the current background on enable. A cached bguri used
         // to skip palette extraction entirely after a disable/enable cycle.
         this.updateBguri();
@@ -2113,50 +2338,20 @@ export default class BarEnhanced extends Extension {
         const userRunDir = GLib.get_user_runtime_dir();
         this.obarRunDir = Gio.File.new_for_path(`${userRunDir}/io.github.mrvanguardia.barEnhanced`);
         this.obarAssetsDir = Gio.File.new_for_path(`${this.obarRunDir.get_path()}/assets`);
-        // Create dirs if missing
-        if (!this.obarAssetsDir.query_exists(null)) {
-            try {
-                this.obarAssetsDir.make_directory_with_parents(null);
-            }
-            catch (e) {
-                log('Error creating BarEnhanced runtime/assets directory: ' + e);
-            }
-        }
-        // Copy static assets (SVGs) to runtime dir
         const assetsSrcDir = Gio.File.new_for_path(`${this.path}/media/assets`);
-        const iter = assetsSrcDir.enumerate_children('standard::name', Gio.FileQueryInfoFlags.NOFOLLOW_SYMLINKS, null);
-        for (const fileInfo of iter) {
-            let srcFile = Gio.File.new_for_path(`${assetsSrcDir.get_path()}/${fileInfo.get_name()}`);
-            let dstFile = Gio.File.new_for_path(`${this.obarAssetsDir.get_path()}/${fileInfo.get_name()}`);
-            srcFile.copy_async(dstFile, Gio.FileCopyFlags.OVERWRITE | Gio.FileCopyFlags.TARGET_DEFAULT_PERMS, GLib.PRIORITY_DEFAULT, null, null);
-        }
+        this._runtimeAssetsCancellable = new Gio.Cancellable();
+        this._runtimeAssetsReady = this._copyRuntimeAssets(
+            assetsSrcDir, this.obarAssetsDir, this._runtimeAssetsCancellable);
 
         // Add 'barEnhanced' class to top panel and panelBox
         panel.add_style_class_name('barEnhanced');
         Main.layoutManager.panelBox.add_style_class_name('barEnhanced');
 
-        // Setup Pywal / Material You color monitor
-        const homeDir = GLib.get_home_dir();
-        const walPath = GLib.build_filenamev([homeDir, '.cache', 'wal', 'colors']);
-        const walFile = Gio.File.new_for_path(walPath);
-
         this._walMonitor = null;
         this._walMonitorId = 0;
-
-        try {
-            this._walMonitor = walFile.monitor(Gio.FileMonitorFlags.NONE, null);
-            this._walMonitorId = this._walMonitor.connect('changed', (monitor, file, otherFile, eventType) => {
-                if (eventType === Gio.FileMonitorEvent.CHANGES_DONE_HINT || eventType === Gio.FileMonitorEvent.CREATED) {
-                    this._syncWithPywal();
-                }
-            });
-            // Initial sync on enable if Pywal setting is enabled
-            if (this._settings.get_boolean('pywal-sync')) {
-                this._syncWithPywal();
-            }
-        } catch (e) {
-            log('BarEnhanced: Failed to initialize Pywal file monitor: ', e);
-        }
+        this._walMonitorScope = null;
+        if (this._settings.get_boolean('pywal-sync'))
+            this._startPywalMonitor();
 
         // Connect palette changes to HydroWidgets
         this._paletteSettingsIds = [
@@ -2186,14 +2381,17 @@ export default class BarEnhanced extends Extension {
 
         // Apply the initial style
         this.updatePanelStyle(null, 'enabled');
+        this._onFocusWindowChanged();
         let menustyle = this._settings.get_boolean('menustyle');
         this.applyMenuStyles(panel, menustyle);
         // Refresh to fix any indicators added during initial styling
-        this.enableStyleTimeoutId = setTimeout(() => {
+        this.enableStyleTimeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 1000, () => {
             this.updatePanelStyle(null, 'enabled');
             this.applyMenuStyles(panel, menustyle);
+            this._onFocusWindowChanged();
             this.enableStyleTimeoutId = null;
-        }, 1000);
+            return GLib.SOURCE_REMOVE;
+        });
 
         // Set initial Window Max Bar
         this.onWindowMaxBar();
@@ -2213,25 +2411,22 @@ export default class BarEnhanced extends Extension {
         // Enable button proximity to interact with panel buttons without having to point precisely at them.
         const fittsWidgets = this._settings.get_boolean('fitts-widgets');
         if (fittsWidgets && !dtpOn)
-            this.fittsEnableTimeoutId = setTimeout(() => {
+            this.fittsEnableTimeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 5000, () => {
+                if (this._lifecycleGeneration !== lifecycleGeneration || !this._settings)
+                    return GLib.SOURCE_REMOVE;
                 this.enableFittsWidgets();
                 this.fittsEnableTimeoutId = null;
-            }, 5000);
+                return GLib.SOURCE_REMOVE;
+            });
 
         // Synchronize with Fedora/GNOME active system accent color in real-time
         this._interfaceSettings = new Gio.Settings({ schema_id: 'org.gnome.desktop.interface' });
-        if (this._interfaceSettings.settings_schema.has_key('accent-color')) {
-            this._interfaceSettingsId = this._interfaceSettings.connect('changed::accent-color', () => {
-                this._syncWithSystemAccent();
-            });
-        }
+        this._interfaceSettingsId = 0;
         this._systemAccentSyncSettingId = this._settings.connect('changed::system-accent-sync', () => {
-            this._syncWithSystemAccent();
+            this._updateSystemAccentMonitor();
         });
-        this._syncWithSystemAccent();
+        this._updateSystemAccentMonitor();
         // this.updateWindowsBlur();
-
-        this.loadDashToDockStylesheet();
 
         // Dash to Dock
         this._dashToDockEnabled = this._settings.get_boolean('dash-to-dock-enabled');
@@ -2240,6 +2435,10 @@ export default class BarEnhanced extends Extension {
             this._dashToDockEnabled = this._settings.get_boolean('dash-to-dock-enabled');
             if (this._dashToDockEnabled) this._enableDashToDock();
             else this._disableDashToDock();
+            // The root stylesheet contains optional visual rules for the
+            // embedded dock. Regenerate it now so disabling the module removes
+            // every #dash selector instead of leaving stale CSS behind.
+            StyleSheets.reloadStyle(this, this);
         });
 
         // Dynamic Music Pill
@@ -2312,35 +2511,51 @@ export default class BarEnhanced extends Extension {
             this.wallpaperManager = new WallpaperManager(this);
             this.wallpaperManager.enable();
         } catch (e) {
-            log('BarEnhanced: Error instantiating WallpaperManager: ' + e);
+            console.error(`BarEnhanced: failed to initialize WallpaperManager: ${e.message}`);
         }
     }
 
     _enableNotifIcons() {
-        this._topbarNotification = new TopbarNotification(this._niSettings);
-        this._niSignals = [
-            this._niSettings.connect('changed::right-side', () => this._onNiSettingsChanged()),
-            this._niSettings.connect('changed::colored-icons', () => this._onNiSettingsChanged()),
-            this._niSettings.connect('changed::dnd-mode', () => this._onNiSettingsChanged()),
-            this._niSettings.connect('changed::notification-count', () => this._onNiSettingsChanged()),
-            this._niSettings.connect('changed::hide-count-when-one', () => this._onNiSettingsChanged()),
-            this._niSettings.connect('changed::icon-size', () => this._onNiSettingsChanged()),
-        ];
-        this._insertNotifWidget();
+        this._niSignals = [];
+        try {
+            this._topbarNotification = new TopbarNotification(this._niSettings);
+            for (const key of ['right-side', 'colored-icons', 'dnd-mode',
+                'notification-count', 'hide-count-when-one', 'icon-size']) {
+                this._niSignals.push(this._niSettings.connect(`changed::${key}`,
+                    () => this._onNiSettingsChanged()));
+            }
+            this._insertNotifWidget();
+        } catch (e) {
+            console.error('BarEnhanced: failed to initialize notification icons', e);
+            this._disableNotifIcons();
+        }
     }
 
     _disableNotifIcons() {
         if (this._niSignals) {
-            this._niSignals.forEach(s => { if (s) this._niSettings.disconnect(s); });
+            for (const signal of this._niSignals) {
+                if (!signal) continue;
+                try {
+                    this._niSettings.disconnect(signal);
+                } catch (e) {
+                    console.error('BarEnhanced: failed to disconnect notification settings', e);
+                }
+            }
             this._niSignals = [];
         }
         if (this._topbarNotification) {
-            const dateMenu = Main.panel.statusArea.dateMenu;
-            if (dateMenu) {
-                try { dateMenu.get_first_child().remove_child(this._topbarNotification); } catch(e) {}
-            }
-            this._topbarNotification.destroy();
+            const widget = this._topbarNotification;
             this._topbarNotification = null;
+            try {
+                widget.get_parent()?.remove_child(widget);
+            } catch (e) {
+                console.error('BarEnhanced: failed to remove notification icons', e);
+            }
+            try {
+                widget.destroy();
+            } catch (e) {
+                console.error('BarEnhanced: failed to destroy notification icons', e);
+            }
         }
     }
 
@@ -2366,9 +2581,10 @@ export default class BarEnhanced extends Extension {
         const rightSide = this._niSettings.get_boolean('right-side');
         const container = dateMenu.get_first_child();
         try {
-            container.remove_child(this._topbarNotification);
+            this._topbarNotification.get_parent()?.remove_child(this._topbarNotification);
         } catch (e) {
-            // The date-menu container can be rebuilt while a preference changes.
+            console.error('BarEnhanced: failed to detach notification icons', e);
+            return;
         }
         if (rightSide) container.insert_child_above(this._topbarNotification, dateMenu._clockDisplay);
         else container.insert_child_below(this._topbarNotification, dateMenu._clockDisplay);
@@ -2387,7 +2603,7 @@ export default class BarEnhanced extends Extension {
 
     _disablePrivacyAccent() {
         if (this._privacyAccentTimeout) {
-            GLib.source_remove(this._privacyAccentTimeout);
+            GLib.Source.remove(this._privacyAccentTimeout);
             this._privacyAccentTimeout = null;
         }
         if (this._privacySignals) {
@@ -2402,12 +2618,17 @@ export default class BarEnhanced extends Extension {
     }
 
     _enableDashToDock() {
-        if (!this.dockManager) {
-            try {
-                this.dockManager = new DockManager(this);
-            } catch (e) {
-                log('BarEnhanced: Error instantiating DockManager: ', e);
-            }
+        if (this.dockManager)
+            return;
+
+        try {
+            this.dockManager = new DockManager(this);
+            this.loadDashToDockStylesheet();
+        } catch (e) {
+            console.error('BarEnhanced: failed to initialize DockManager', e);
+            this.dockManager?.destroy();
+            this.dockManager = null;
+            this.unloadDashToDockStylesheet();
         }
     }
 
@@ -2416,10 +2637,11 @@ export default class BarEnhanced extends Extension {
             try {
                 this.dockManager.destroy();
             } catch (e) {
-                log('BarEnhanced: Error destroying DockManager: ', e);
+                console.error('BarEnhanced: failed to destroy DockManager', e);
             }
             this.dockManager = null;
         }
+        this.unloadDashToDockStylesheet();
     }
 
     _enableMusicPill() {
@@ -2428,7 +2650,8 @@ export default class BarEnhanced extends Extension {
                 this.musicController = new MusicController(this);
                 this.musicController.enable();
             } catch (e) {
-                log('BarEnhanced: Error instantiating MusicController: ', e);
+                console.error('BarEnhanced: failed to initialize MusicController', e);
+                this._disableMusicPill(true);
             }
         } else {
             // Ensure the pill is created/shown if it was hidden
@@ -2443,7 +2666,7 @@ export default class BarEnhanced extends Extension {
                 try {
                     this.musicController.disable();
                 } catch (e) {
-                    log('BarEnhanced: Error destroying MusicController: ', e);
+                    console.error('BarEnhanced: failed to destroy MusicController', e);
                 }
                 this.musicController = null;
             } else {
@@ -2459,10 +2682,12 @@ export default class BarEnhanced extends Extension {
         if (!this.vitalsMenu) {
             try {
                 this.vitalsMenu = new VitalsMenuButton(this);
+                this.vitalsMenu.menu.box.add_style_class_name('be-menu-vitals');
                 let position = this.vitalsMenu._positionInPanel();
                 Main.panel.addToStatusArea('vitalsMenu', this.vitalsMenu, position[1], position[0]);
             } catch (e) {
-                log('BarEnhanced: Error instantiating Vitals: ', e);
+                console.error('BarEnhanced: failed to initialize Vitals', e);
+                this._disableVitals();
             }
         }
     }
@@ -2472,7 +2697,7 @@ export default class BarEnhanced extends Extension {
             try {
                 this.vitalsMenu.destroy();
             } catch (e) {
-                log('BarEnhanced: Error destroying Vitals: ', e);
+                console.error('BarEnhanced: failed to destroy Vitals', e);
             }
             this.vitalsMenu = null;
         }
@@ -2482,9 +2707,11 @@ export default class BarEnhanced extends Extension {
         if (!this.btBatteryMenu) {
             try {
                 this.btBatteryMenu = new BluetoothBatteryButton(this);
+                this.btBatteryMenu.menu.box.add_style_class_name('be-menu-bluetooth');
                 Main.panel.addToStatusArea('bluetoothBatteryMenu', this.btBatteryMenu, 0, 'right');
             } catch (e) {
-                log('BarEnhanced: Error instantiating Bluetooth Battery: ', e);
+                console.error('BarEnhanced: failed to initialize Bluetooth Battery', e);
+                this._disableBluetoothBattery();
             }
         }
     }
@@ -2494,7 +2721,7 @@ export default class BarEnhanced extends Extension {
             try {
                 this.btBatteryMenu.destroy();
             } catch (e) {
-                log('BarEnhanced: Error destroying Bluetooth Battery: ', e);
+                console.error('BarEnhanced: failed to destroy Bluetooth Battery', e);
             }
             this.btBatteryMenu = null;
         }
@@ -2506,7 +2733,8 @@ export default class BarEnhanced extends Extension {
                 this.hydroWidgetsManager = new HydroWidgetsManager(this);
                 this.hydroWidgetsManager.enable();
             } catch (e) {
-                log('BarEnhanced: Error instantiating HydroWidgetsManager: ', e);
+                console.error('BarEnhanced: failed to initialize HydroWidgetsManager', e);
+                this._disableHydroWidgets();
             }
         }
     }
@@ -2516,7 +2744,7 @@ export default class BarEnhanced extends Extension {
             try {
                 this.hydroWidgetsManager.disable();
             } catch (e) {
-                log('BarEnhanced: Error destroying HydroWidgetsManager: ', e);
+                console.error('BarEnhanced: failed to destroy HydroWidgetsManager', e);
             }
             this.hydroWidgetsManager = null;
         }
@@ -2530,7 +2758,7 @@ export default class BarEnhanced extends Extension {
                 Main.layoutManager.uiGroup.remove_style_class_name(className);
             }
         } catch(e) {
-            log('BarEnhanced: Error updating uiGroup class: ', e);
+            console.error('BarEnhanced: failed to update UI group class', e);
         }
     }
 
@@ -2551,7 +2779,15 @@ export default class BarEnhanced extends Extension {
     }
 
     disable() {
+        ++this._lifecycleGeneration;
         this.disabling = true;
+        if (this._quickArrowActors) {
+            for (const [actor, className] of this._quickArrowActors) {
+                try { actor.remove_style_class_name(className); } catch (e) {}
+            }
+            this._quickArrowActors.clear();
+            this._quickArrowActors = null;
+        }
 
         if (this._paletteSettingsIds) {
             this._paletteSettingsIds.forEach(id => this._settings.disconnect(id));
@@ -2614,7 +2850,6 @@ export default class BarEnhanced extends Extension {
             this._vitalsSettingId = null;
         }
         this._disableVitals();
-        this.unloadDashToDockStylesheet();
 
         this._resetFocusGlow();
 
@@ -2624,22 +2859,15 @@ export default class BarEnhanced extends Extension {
         }
         this._interfaceSettings = null;
 
-        if (this._walMonitor) {
-            if (this._walMonitorId > 0) {
-                try {
-                    this._walMonitor.disconnect(this._walMonitorId);
-                } catch (e) {
-                    log(`BarEnhanced: Failed to disconnect Pywal monitor: ${e.message}`);
-                }
-            }
-            this._walMonitor.cancel();
-            this._walMonitor = null;
-            this._walMonitorId = 0;
-        }
+        this._stopPywalMonitor();
 
         // Get the top panel
         let panel = Main.panel;
 
+        if (this.fittsEnableTimeoutId) {
+            GLib.Source.remove(this.fittsEnableTimeoutId);
+            this.fittsEnableTimeoutId = null;
+        }
         this.disableFittsWidgets();
 
         if (this._showDashboardId > 0) {
@@ -2667,46 +2895,37 @@ export default class BarEnhanced extends Extension {
 
         this.disconnectWindowSignals();
 
-        if (this.calendarTimeoutId > 0) {
-            clearTimeout(this.calendarTimeoutId);
-            this.calendarTimeoutId = null;
-        }
-        if (this.updatingBguriId > 0) {
-            clearTimeout(this.updatingBguriId);
-            this.updatingBguriId = null;
-        }
+        for (const timeoutId of this._calendarTimeoutIds)
+            GLib.Source.remove(timeoutId);
+        this._calendarTimeoutIds.clear();
         if (this.updateBguriId > 0) {
-            clearTimeout(this.updateBguriId);
+            GLib.Source.remove(this.updateBguriId);
             this.updateBguriId = null;
         }
         this.updatingBguri = false;
         this._pendingBguriUpdate = false;
         if (this.bgMgrTimeOutId > 0) {
-            clearTimeout(this.bgMgrTimeOutId);
+            GLib.Source.remove(this.bgMgrTimeOutId);
             this.bgMgrTimeOutId = null;
         }
         if (this.onFullScrTimeoutId > 0) {
-            clearTimeout(this.onFullScrTimeoutId);
+            GLib.Source.remove(this.onFullScrTimeoutId);
             this.onFullScrTimeoutId = null;
         }
         if (this.postStartupId > 0) {
-            clearTimeout(this.postStartupId);
+            GLib.Source.remove(this.postStartupId);
             this.postStartupId = null;
         }
-        if (this._pywalResumeTimer) {
-            GLib.Source.remove(this._pywalResumeTimer);
-            this._pywalResumeTimer = null;
-        }
         if (this.enableStyleTimeoutId > 0) {
-            clearTimeout(this.enableStyleTimeoutId);
+            GLib.Source.remove(this.enableStyleTimeoutId);
             this.enableStyleTimeoutId = null;
         }
-        if (this.fittsEnableTimeoutId > 0) {
-            clearTimeout(this.fittsEnableTimeoutId);
+        if (this.fittsEnableTimeoutId) {
+            GLib.Source.remove(this.fittsEnableTimeoutId);
             this.fittsEnableTimeoutId = null;
         }
         if (this.fittsCornerTimeoutId > 0) {
-            clearTimeout(this.fittsCornerTimeoutId);
+            GLib.Source.remove(this.fittsCornerTimeoutId);
             this.fittsCornerTimeoutId = null;
         }
 
@@ -2749,6 +2968,12 @@ export default class BarEnhanced extends Extension {
         StyleSheets.saveGtkCss(this, 'disable');
         StyleSheets.saveFlatpakOverrides(this, 'disable');
 
+        if (this._runtimeAssetsCancellable) {
+            this._runtimeAssetsCancellable.cancel();
+            this._runtimeAssetsCancellable = null;
+        }
+        this._runtimeAssetsReady = null;
+
         this.main = null;
         this._settings = null;
         this._bgSettings = null;
@@ -2758,7 +2983,7 @@ export default class BarEnhanced extends Extension {
     }
 
     _onFocusWindowChanged() {
-        if (!this._settings || !this._settings.get_boolean('focus-glow') || !this._settings.get_boolean('neon')) {
+        if (!this._settings || !this._settings.get_boolean('focus-glow')) {
             this._resetFocusGlow();
             return;
         }
@@ -2806,8 +3031,14 @@ export default class BarEnhanced extends Extension {
         }
 
         if (!rgb) {
-            this._resetFocusGlow();
-            return;
+            // Unknown apps still get a stable, visible accent without pretending
+            // that this synthetic color is their official brand color.
+            const accents = [[31, 140, 220], [151, 89, 210], [20, 165, 140],
+                [215, 113, 44], [200, 75, 120], [104, 144, 42]];
+            let hash = 0;
+            for (const char of wmClass)
+                hash = (Math.imul(hash, 31) + char.codePointAt(0)) >>> 0;
+            rgb = accents[hash % accents.length];
         }
 
         let [r, g, b] = rgb;
@@ -2816,12 +3047,14 @@ export default class BarEnhanced extends Extension {
 
     _applyFocusGlow(r, g, b) {
         if (!this._settings) return;
+        this._resetFocusGlow();
         let bartype = this._settings.get_string('bartype');
         let height = this._settings.get_int('height') || 30;
         let vPad = this._settings.get_int('vpad') || 2;
         let borderRadius = this._settings.get_double('bradius') || 30.0;
         let gradient = this._settings.get_boolean('gradient');
-        let balpha = this._settings.get_double('balpha') || 0.85;
+        let balpha = this._settings.get_double('balpha');
+        let intensity = this._settings.get_double('neon-intensity');
 
         // Spread formula matched to stylesheets.js for flawless, clip-free rendering
         let padmod = (bartype === 'Mainland' || bartype === 'Floating') ? -2 : vPad;
@@ -2835,29 +3068,93 @@ export default class BarEnhanced extends Extension {
         }
 
         // Render breathtaking adaptive neon glow respecting customized border transparency and snappy 100ms transition
-        let styleStr = `box-shadow: 0px 0px 6px ${spread}px rgba(${r}, ${g}, ${b}, 0.65) !important; border-color: rgba(${r}, ${g}, ${b}, ${balpha}) !important; transition-duration: 100ms;`;
+        let styleStr = `box-shadow: 0px 0px 6px ${spread}px rgba(${r}, ${g}, ${b}, ${intensity}) !important; border-color: rgba(${r}, ${g}, ${b}, ${balpha}) !important; transition-duration: 100ms;`;
+
+        const styleActor = actor => {
+            const original = actor.get_style() ?? '';
+            const applied = `${original}${original && !original.trimEnd().endsWith(';') ? ';' : ''}${styleStr}`;
+            this._focusGlowStyles.set(actor, { original, applied });
+            actor.set_style(applied);
+        };
 
         if (bartype === 'Mainland' || bartype === 'Floating') {
-            Main.panel.set_style(styleStr);
+            styleActor(Main.panel);
         } else {
             // Islands or Trilands: Apply style to individual panel buttons
             for (let box of [Main.panel._leftBox, Main.panel._centerBox, Main.panel._rightBox]) {
                 for (let child of box.get_children()) {
-                    child.set_style(styleStr);
+                    styleActor(child);
                 }
             }
         }
     }
 
     _resetFocusGlow() {
-        if (Main && Main.panel) {
-            Main.panel.set_style('');
-            for (let box of [Main.panel._leftBox, Main.panel._centerBox, Main.panel._rightBox]) {
-                for (let child of box.get_children()) {
-                    child.set_style('');
-                }
+        if (!this._focusGlowStyles)
+            return;
+        for (const [actor, { original, applied }] of this._focusGlowStyles) {
+            // Leave any style subsequently installed by another extension alone.
+            try {
+                if (actor.get_style() === applied)
+                    actor.set_style(original);
+            } catch (e) {
+                // An indicator may have been destroyed after losing focus.
             }
         }
+        this._focusGlowStyles.clear();
+    }
+
+    _stopPywalMonitor() {
+        this._pywalGeneration++;
+        if (this._walMonitor) {
+            if (this._walMonitorId)
+                this._walMonitor.disconnect(this._walMonitorId);
+            this._walMonitor.cancel();
+        }
+        this._walMonitor = null;
+        this._walMonitorId = 0;
+        this._walMonitorScope = null;
+    }
+
+    _startPywalMonitor() {
+        this._stopPywalMonitor();
+        if (!this._settings?.get_boolean('pywal-sync'))
+            return;
+
+        const home = GLib.get_home_dir();
+        const candidates = [
+            ['wal', GLib.build_filenamev([home, '.cache', 'wal'])],
+            ['cache', GLib.build_filenamev([home, '.cache'])],
+            ['home', home],
+        ];
+        for (const [scope, path] of candidates) {
+            try {
+                this._walMonitor = Gio.File.new_for_path(path).monitor_directory(Gio.FileMonitorFlags.NONE, null);
+                this._walMonitorScope = scope;
+                break;
+            } catch (e) {
+                if (scope === 'home')
+                    console.error('BarEnhanced: failed to monitor Pywal palette directory', e);
+            }
+        }
+        if (this._walMonitor) {
+            this._walMonitorId = this._walMonitor.connect('changed', (_monitor, file, otherFile, eventType) => {
+                if (!this._settings?.get_boolean('pywal-sync'))
+                    return;
+                const name = eventType === Gio.FileMonitorEvent.RENAMED ? otherFile?.get_basename() : file.get_basename();
+                if (this._walMonitorScope === 'wal' && name === 'colors' &&
+                    [Gio.FileMonitorEvent.CREATED, Gio.FileMonitorEvent.CHANGES_DONE_HINT,
+                        Gio.FileMonitorEvent.MOVED_IN, Gio.FileMonitorEvent.RENAMED].includes(eventType)) {
+                    this._syncWithPywal();
+                } else if ([Gio.FileMonitorEvent.CREATED, Gio.FileMonitorEvent.MOVED_IN,
+                    Gio.FileMonitorEvent.RENAMED].includes(eventType) &&
+                    ((this._walMonitorScope === 'cache' && name === 'wal') ||
+                        (this._walMonitorScope === 'home' && name === '.cache'))) {
+                    this._startPywalMonitor();
+                }
+            });
+        }
+        this._syncWithPywal();
     }
 
     _syncWithPywal() {
@@ -2865,25 +3162,31 @@ export default class BarEnhanced extends Extension {
             return;
         }
 
+        const generation = ++this._pywalGeneration;
+
         const homeDir = GLib.get_home_dir();
         const walPath = GLib.build_filenamev([homeDir, '.cache', 'wal', 'colors']);
         const walFile = Gio.File.new_for_path(walPath);
 
-        if (!walFile.query_exists(null)) {
-            return;
-        }
-
         walFile.load_contents_async(null, (file, res) => {
             try {
+                // File I/O can finish after disable() has released GSettings.
+                // Never apply a stale palette to a later extension instance.
+                if (!this._settings || !this._settings.get_boolean('pywal-sync') ||
+                    generation !== this._pywalGeneration)
+                    return;
+
                 let [success, contents] = file.load_contents_finish(res);
                 if (!success) return;
 
                 let decodedContents = new TextDecoder('utf-8').decode(contents);
-                let hexColors = decodedContents.trim().split('\n')
-                    .map(c => c.trim())
-                    .filter(c => c.startsWith('#') && c.length === 7);
+                let hexColors = decodedContents.trim().split(/\r?\n/).map(c => c.trim()).filter(Boolean);
 
-                if (hexColors.length < 8) return;
+                if (hexColors.length < 8 || hexColors.length > 16 ||
+                    hexColors.some(color => !color.startsWith('#') || !Utils.hexToRgb(color))) {
+                    console.warn('BarEnhanced: Pywal colors must contain 8–16 valid #RRGGBB lines');
+                    return;
+                }
 
                 // Helper to compute contrast color (white or dark) based on background RGB
                 const getContrastColor = (rVal, gVal, bVal) => {
@@ -2892,11 +3195,14 @@ export default class BarEnhanced extends Extension {
                 };
 
                 // Pause stylesheet reload during multi-setting changes
+                const wasPaused = this._settings.get_boolean('pause-reload');
                 this._settings.set_boolean('pause-reload', true);
+                let applied = false;
+                try {
 
                 // Map Pywal colors to candy colors
-                for (let i = 0; i < Math.min(hexColors.length, 16); i++) {
-                    let hex = hexColors[i];
+                for (let i = 0; i < 16; i++) {
+                    let hex = hexColors[i % hexColors.length];
                     let r = (parseInt(hex.substring(1, 3), 16) / 255.0).toFixed(3);
                     let g = (parseInt(hex.substring(3, 5), 16) / 255.0).toFixed(3);
                     let b = (parseInt(hex.substring(5, 7), 16) / 255.0).toFixed(3);
@@ -2976,24 +3282,35 @@ export default class BarEnhanced extends Extension {
                 this._settings.set_strv('dark-vw-color', [bgR, bgG, bgB]);
                 this._settings.set_strv('light-vw-color', [bgR, bgG, bgB]);
 
-                // Automatically enable system-wide GTK3 / GTK4 theme injection!
-                this._settings.set_boolean('apply-gtk', true);
-
-                // Wait 150ms and trigger a full CSS compilation and reload!
-                if (this._pywalResumeTimer)
-                    GLib.Source.remove(this._pywalResumeTimer);
-                this._pywalResumeTimer = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 150, () => {
-                    this._pywalResumeTimer = null;
-                    if (!this._settings)
-                        return GLib.SOURCE_REMOVE;
-                    this._settings.set_boolean('pause-reload', false);
-                    this._settings.set_boolean('trigger-reload', !this._settings.get_boolean('trigger-reload'));
-                    return GLib.SOURCE_REMOVE;
-                });
+                applied = true;
+                } finally {
+                    this._settings.set_boolean('pause-reload', wasPaused);
+                    if (applied && !wasPaused)
+                        this._settings.set_boolean('trigger-reload', !this._settings.get_boolean('trigger-reload'));
+                }
             } catch (e) {
-                log('BarEnhanced: Error syncing with Pywal: ', e);
+                if (e.matches?.(Gio.IOErrorEnum, Gio.IOErrorEnum.NOT_FOUND))
+                    return;
+                console.error('BarEnhanced: failed to synchronize Pywal palette', e);
             }
         });
+    }
+
+    _updateSystemAccentMonitor() {
+        if (!this._settings || !this._interfaceSettings)
+            return;
+        const enabled = this._settings.get_boolean('system-accent-sync');
+        if (enabled && !this._interfaceSettingsId &&
+            this._interfaceSettings.settings_schema.has_key('accent-color')) {
+            this._interfaceSettingsId = this._interfaceSettings.connect('changed::accent-color', () => {
+                this._syncWithSystemAccent();
+            });
+        } else if (!enabled && this._interfaceSettingsId) {
+            this._interfaceSettings.disconnect(this._interfaceSettingsId);
+            this._interfaceSettingsId = 0;
+        }
+        // Toggling off must immediately restore the user's manual border color.
+        this._syncWithSystemAccent();
     }
 
     _syncWithSystemAccent() {
@@ -3004,7 +3321,7 @@ export default class BarEnhanced extends Extension {
             // the user's manual colors if false. Extremely clean and non-destructive!
             this._settings.set_boolean('trigger-reload', !this._settings.get_boolean('trigger-reload'));
         } catch (e) {
-            log('BarEnhanced: Error syncing with System Accent: ', e);
+            console.error('BarEnhanced: failed to synchronize system accent', e);
         }
     }
 

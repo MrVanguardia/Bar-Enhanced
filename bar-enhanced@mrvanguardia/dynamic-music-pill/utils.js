@@ -116,7 +116,7 @@ export function initDTDModule() {
             _applyDisable();
         }
     }).catch((e) => {
-        log('[Dynamic Music Pill] DTD/Ubuntu Dock import error: ' + e.message);
+        console.error('Dynamic Music Pill: failed to access external dock:', e.message);
         _dtdImportPromise = null;
     });
     
@@ -138,7 +138,7 @@ function _applyDisable() {
             dock._show();
         }
     } catch (e) {
-        log('[Dynamic Music Pill] DTD _applyDisable error: ' + e.message);
+        console.error('Dynamic Music Pill: failed to disable external dock autohide:', e.message);
     }
 }
 
@@ -153,7 +153,7 @@ export function disableDashToDockAutohide() {
             }
         }
     } catch (e) {
-        log('[Dynamic Music Pill] DTD/Ubuntu Dock disable error: ' + e.message);
+        console.error('Dynamic Music Pill: failed to update external dock autohide:', e.message);
     }
 }
 
@@ -166,7 +166,7 @@ function _applyRestore() {
             dock._updateDashVisibility();
         }
     } catch (e) {
-        log('[Dynamic Music Pill] DTD _applyRestore error: ' + e.message);
+        console.error('Dynamic Music Pill: failed to restore external dock autohide:', e.message);
     }
 }
 
@@ -181,7 +181,7 @@ export function restoreDashToDockAutohide() {
             }
         }
     } catch (e) {
-        log('[Dynamic Music Pill] DTD/Ubuntu Dock restore error: ' + e.message);
+        console.error('Dynamic Music Pill: failed to restore external dock:', e.message);
     }
 }
 

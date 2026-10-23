@@ -35,7 +35,6 @@ let GTop, hasGTop = true;
 try {
     ({default: GTop} = await import('gi://GTop'));
 } catch (err) {
-    log(err);
     hasGTop = false;
 };
 
@@ -54,7 +53,7 @@ export const Sensors = GObject.registerClass({
         this._settingChangedSignals = [];
         this._addSettingChangedSignal('show-gpu', this._reconfigureNvidiaSmiProcess.bind(this));
         this._addSettingChangedSignal('update-time', this._reconfigureNvidiaSmiProcess.bind(this));
-        this._addSettingChangedSignal('network-public-ip-interval', () => {this._lastPublicIPCheck = 0;});
+        this._addSettingChangedSignal('network-public-ip-interval', () => {this._next_public_ip_check = 0;});
         //this._addSettingChangedSignal('include-static-gpu-info', this._reconfigureNvidiaSmiProcess.bind(this));
 
         this._gpu_drm_vendors = null;
@@ -86,6 +85,9 @@ export const Sensors = GObject.registerClass({
     _refreshIPAddress(callback) {
         // check IP address
         new FileModule.File('https://ipv4.corecoding.com').read().then(contents => {
+            if (this._destroyed || !this._settings ||
+                !this._settings.get_boolean('include-public-ip'))
+                return;
             let obj = JSON.parse(contents);
             let cc = (obj && typeof obj['countryCode'] === 'string') ? obj['countryCode'].trim().toLowerCase() : '';
             let ip = (obj && typeof obj['IPv4'] === 'string') ? obj['IPv4'].trim() : '';
@@ -97,6 +99,8 @@ export const Sensors = GObject.registerClass({
 
     _findStorageDevice() {
         new FileModule.File('/proc/mounts').read("\n").then(lines => {
+            if (this._destroyed || !this._settings)
+                return;
             for (let line of lines) {
                 let loadArray = line.trim().split(/\s+/);
                 if (loadArray[1] == this._settings.get_string('storage-path')) {
@@ -108,7 +112,7 @@ export const Sensors = GObject.registerClass({
     }
 
     query(callback, dwell) {
-        if (this._destroyed)
+        if (this._destroyed || !this._settings)
             return;
         if (!this._hardware_detected) {
             // we could set _hardware_detected in discoverHardwareMonitors, but by
@@ -155,10 +159,12 @@ export const Sensors = GObject.registerClass({
             if (values = lines.match(/Cached:(\s+)(\d+) kB/)) cached = values[2];
             if (values = lines.match(/MemFree:(\s+)(\d+) kB/)) memFree = values[2];
 
-            let used = total - avail
-            let utilized = used / total;
-            let swapUsed = swapTotal - swapFree
-            let swapUtilized = swapUsed / swapTotal;
+            let used = total - avail;
+            let utilized = total > 0 ? used / total : 0;
+            let swapUsed = swapTotal - swapFree;
+            // A machine without swap reports SwapTotal: 0. Treat that as zero
+            // use rather than emitting NaN to the panel.
+            let swapUtilized = swapTotal > 0 ? swapUsed / swapTotal : 0;
 
             this._returnValue(callback, 'Usage', utilized, 'memory', 'percent');
             this._returnValue(callback, 'memory', utilized, 'memory-group', 'percent');
@@ -192,7 +198,7 @@ export const Sensors = GObject.registerClass({
                     if (!(cpu in this._last_processor['core']))
                         this._last_processor['core'][cpu] = 0;
 
-                    let stats = reverse_data[2].trim().split(' ').reverse();
+                    let stats = reverse_data[2].trim().split(/\s+/).reverse();
                     for (let column of columns)
                         statistics[cpu][column] = parseInt(stats.pop());
                 }
@@ -201,23 +207,30 @@ export const Sensors = GObject.registerClass({
             let cores = Object.keys(statistics).length - 1;
 
             for (let cpu in statistics) {
-                let total = statistics[cpu]['user'] + statistics[cpu]['nice'] + statistics[cpu]['system'];
+                const stats = statistics[cpu];
+                const ticks = name => Number.isFinite(stats[name]) ? stats[name] : 0;
+                // guest and guest_nice are already represented in user/nice.
+                // Compare busy ticks with the total tick delta instead of
+                // assuming a fixed kernel tick rate or query interval.
+                const busy = ticks('user') + ticks('nice') + ticks('system') + ticks('irq') + ticks('softirq') + ticks('steal');
+                const total = busy + ticks('idle') + ticks('iowait');
+                const previous = this._last_processor['core'][cpu];
 
-                // make sure we have data to report
-                if (this._last_processor['core'][cpu] > 0) {
-                    let delta = (total - this._last_processor['core'][cpu]) / dwell;
-
-                    // /proc/stat provides overall usage for us under the 'cpu' heading
-                    if (cpu == 'cpu') {
-                        delta = delta / cores;
-                        this._returnValue(callback, 'processor', delta / 100, 'processor-group', 'percent');
-                        this._returnValue(callback, 'Usage', delta / 100, 'processor', 'percent');
-                    } else {
-                        this._returnValue(callback, _('Core %d').format(cpu.substr(3)), delta / 100, 'processor', 'percent');
+                if (previous && typeof previous === 'object') {
+                    const totalDelta = total - previous.total;
+                    const busyDelta = busy - previous.busy;
+                    if (totalDelta > 0 && busyDelta >= 0) {
+                        const utilization = Math.min(1, busyDelta / totalDelta);
+                        if (cpu == 'cpu') {
+                            this._returnValue(callback, 'processor', utilization, 'processor-group', 'percent');
+                            this._returnValue(callback, 'Usage', utilization, 'processor', 'percent');
+                        } else {
+                            this._returnValue(callback, _('Core %d').format(cpu.substr(3)), utilization, 'processor', 'percent');
+                        }
                     }
                 }
 
-                this._last_processor['core'][cpu] = total;
+                this._last_processor['core'][cpu] = { busy, total };
             }
 
             // if frequency scaling is enabled, gather cpu-freq values
@@ -240,6 +253,9 @@ export const Sensors = GObject.registerClass({
                     let value = line.match(/^cpu MHz(\s+): ([+-]?\d+(\.\d+)?)/);
                     if (value) freqs.push(parseFloat(value[2]));
                 }
+
+                if (freqs.length === 0)
+                    return;
 
                 let sum = freqs.reduce((a, b) => a + b);
                 let hertz = (sum / freqs.length) * 1000 * 1000;
@@ -315,7 +331,7 @@ export const Sensors = GObject.registerClass({
 
         // some may not want public ip checking
         if (this._settings.get_boolean('include-public-ip')) {
-            // check the public ip every hour or when waking from sleep
+            // Refresh at the user-configured interval or after history resets.
             if (this._next_public_ip_check <= 0) {
                 let intervalMinutes = this._settings.get_int('network-public-ip-interval');
                 this._next_public_ip_check = intervalMinutes * 60;
@@ -367,8 +383,21 @@ export const Sensors = GObject.registerClass({
                     var write = (loadArray[9] * 512);
                     this._returnValue(callback, 'Read total', read, 'storage', 'storage');
                     this._returnValue(callback, 'Write total', write, 'storage', 'storage');
-                    this._returnValue(callback, 'Read rate', (read - this._lastRead) / dwell, 'storage', 'storage');
-                    this._returnValue(callback, 'Write rate', (write - this._lastWrite) / dwell, 'storage', 'storage');
+                    // Disk counters start at an arbitrary boot total and can
+                    // reset after a device reconnect. A rate is meaningful
+                    // only after a prior sample with a positive interval.
+                    let readRate = 0;
+                    let writeRate = 0;
+                    if (dwell > 0 && this._lastRead > 0) {
+                        readRate = (read - this._lastRead) / dwell;
+                        if (!Number.isFinite(readRate) || readRate < 0) readRate = 0;
+                    }
+                    if (dwell > 0 && this._lastWrite > 0) {
+                        writeRate = (write - this._lastWrite) / dwell;
+                        if (!Number.isFinite(writeRate) || writeRate < 0) writeRate = 0;
+                    }
+                    this._returnValue(callback, 'Read rate', readRate, 'storage', 'speed');
+                    this._returnValue(callback, 'Write rate', writeRate, 'storage', 'speed');
                     this._lastRead = read;
                     this._lastWrite = write;
                     break;
@@ -585,7 +614,10 @@ export const Sensors = GObject.registerClass({
             }
         }
 
-        this._nvidia_smi_process.read('\n').then(lines => {
+        const process = this._nvidia_smi_process;
+        process.read('\n').then(lines => {
+            if (this._destroyed || process !== this._nvidia_smi_process)
+                return;
             /// for debugging multi-gpu on systems with only one gpu
             /// duplicates the first gpu's data 3 times, for 4 total gpus
             ///if(lines.length == 0) return;
@@ -605,6 +637,8 @@ export const Sensors = GObject.registerClass({
                 this._reconfigureNvidiaSmiProcess();
             }
         }).catch(err => {
+            if (this._destroyed || process !== this._nvidia_smi_process)
+                return;
             this._disableGpuLabels(callback);
             this._terminateNvidiaSmiProcess();
         });
@@ -760,7 +794,7 @@ export const Sensors = GObject.registerClass({
 
     _returnStaticGpuValue(callback, label, value, type, format) {
         //if we've already tried to return existing static info before or if the option isn't enabled, then do nothing.
-        if (this._nvidia_static_returned || !this._settings.get_boolean('include-static-gpu-info'))
+        if (this._destroyed || !this._settings || this._nvidia_static_returned || !this._settings.get_boolean('include-static-gpu-info'))
             return;
 
         //we don't need to disable static info labels, so just use ordinary returnValue function
@@ -781,14 +815,17 @@ export const Sensors = GObject.registerClass({
     }
 
     _returnValue(callback, label, value, type, format) {
-        // don't return if value is not a number - will revisit later
-        //if (isNaN(value)) return;
+        // Sensor files can temporarily disappear or return malformed values
+        // during suspend/resume. Preserve the explicit disabled marker, but do
+        // not feed NaN/Infinity into the formatter or panel history.
+        if (value !== 'disabled' && format !== 'string' && format !== '' &&
+            !Number.isFinite(Number(value)))
+            return;
         if (!this._destroyed)
             callback(label, value, type, format);
     }
 
     _discoverHardwareMonitors(callback) {
-        log("Bar Enhanced Vitals: Iniciando descubrimiento de sensores...");
         this._tempVoltFanSensors = { 'temperature': {}, 'voltage': {}, 'fan': {} };
 
         let hwbase = '/sys/class/hwmon/';
@@ -805,15 +842,13 @@ export const Sensors = GObject.registerClass({
         if (this._settings.get_boolean('show-fan'))
             sensor_types['fan'] = 'fan';
 
-        log("Bar Enhanced Vitals: Tipos de sensores a monitorizar: " + JSON.stringify(sensor_types));
-
         // a little informal, but this code has zero I/O block
         new FileModule.File(hwbase).list().then(files => {
-            log("Bar Enhanced Vitals: Directorios en hwmon encontrados: " + JSON.stringify(files));
+            if (this._destroyed)
+                return;
             for (let file of files) {
                 // grab name of sensor
                 new FileModule.File(hwbase + file + '/name').read().then(name => {
-                    log("Bar Enhanced Vitals: Sensor detectado '" + name + "' en " + file);
                     // are we dealing with a CPU?
                     if (name == 'coretemp') {
                         // determine which processor (socket) we are dealing with
@@ -828,21 +863,18 @@ export const Sensors = GObject.registerClass({
                         // not a CPU, process all other sensors
                         this._processTempVoltFan(callback, sensor_types, name, hwbase + file, file);
                     }
-                }).catch(err => {
-                    log("Bar Enhanced Vitals: Falló lectura directa de nombre en " + file + ", probando ruta alternativa...");
+                }).catch(() => {
                     new FileModule.File(hwbase + file + '/device/name').read().then(name => {
                         this._processTempVoltFan(callback, sensor_types, name, hwbase + file + '/device', file);
-                    }).catch(err => {
-                        log("Bar Enhanced Vitals: No se pudo obtener nombre para " + file + ": " + err);
-                    });
+                    }).catch(() => {});
                 });
             }
-        }).catch(err => {
-            log("Bar Enhanced Vitals: Falló listar " + hwbase + ": " + err);
-        });
+        }).catch(() => {});
 
         // does this system support cpu scaling? if so we will use it to grab Frequency and Boost below
         new FileModule.File('/sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq').read().then(value => {
+            if (this._destroyed)
+                return;
             this._processor_uses_cpu_info = false;
         }).catch(err => { });
 
@@ -895,6 +927,8 @@ export const Sensors = GObject.registerClass({
             // try to discover up to 10 cards starting from index 0
             for(let i = 0; i < 10 ; i++){
                 new FileModule.File('/sys/class/drm/card'+i+'/device/vendor').read().then(value => {
+                    if (this._destroyed)
+                        return;
                     if(!this._gpu_drm_indices){
                         this._gpu_drm_indices = [];
                         this._gpu_drm_vendors = [];
@@ -975,11 +1009,14 @@ export const Sensors = GObject.registerClass({
     }
 
     _processTempVoltFan(callback, sensor_types, name, path, file) {
+        if (this._destroyed)
+            return;
         let sensor_files = [ 'input', 'label' ];
-        log("Bar Enhanced Vitals: Procesando temp/volt/fan para " + name + " en " + path);
 
         // grab files from directory
         new FileModule.File(path).list().then(files2 => {
+            if (this._destroyed)
+                return;
             let trisensors = {};
 
             // loop over files from directory
@@ -1005,18 +1042,15 @@ export const Sensors = GObject.registerClass({
                 }
             }
 
-            log("Bar Enhanced Vitals: Trisensors descubiertos para " + name + ": " + JSON.stringify(trisensors));
-
             for (let obj of Object.values(trisensors)) {
                 if (!('input' in obj)) {
-                    log("Bar Enhanced Vitals: Omitiendo sensor sin archivo de entrada: " + JSON.stringify(obj));
                     continue;
                 }
 
                 new FileModule.File(obj['input']).read().then(value => {
+                    if (this._destroyed || !this._settings)
+                        return;
                     let extra = (obj['label'].indexOf('_label')==-1) ? ' ' + obj['input'].substr(obj['input'].lastIndexOf('/')+1).split('_')[0] : '';
-
-                    log("Bar Enhanced Vitals: Valor leído para " + obj['input'] + " = " + value);
 
                     if (value > 0 || !this._settings.get_boolean('hide-zeros') || obj['type'] == 'fan') {
                         new FileModule.File(obj['label']).read().then(label => {
@@ -1025,23 +1059,17 @@ export const Sensors = GObject.registerClass({
                             let tmpFile = obj['label'].substr(0, obj['label'].lastIndexOf('/')) + '/name';
                             new FileModule.File(tmpFile).read().then(label => {
                                 this._addTempVoltFan(callback, obj, name, label, extra, value);
-                            }).catch(err => {
-                                log("Bar Enhanced Vitals: Error leyendo etiqueta/nombre alternativo para " + obj['label'] + ": " + err);
-                            });
+                            }).catch(() => {});
                         });
-                    } else {
-                        log("Bar Enhanced Vitals: Sensor " + obj['input'] + " filtrado por valor <= 0 (hide-zeros está activo)");
                     }
-                }).catch(err => {
-                    log("Bar Enhanced Vitals: Error leyendo archivo de sensor " + obj['input'] + ": " + err);
-                });
+                }).catch(() => {});
             }
-        }).catch(err => {
-            log("Bar Enhanced Vitals: Error listando archivos en " + path + ": " + err);
-        });
+        }).catch(() => {});
     }
 
     _addTempVoltFan(callback, obj, name, label, extra, value) {
+        if (this._destroyed)
+            return;
         // prepend module that provided sensor data
         if (name != label) label = name + ' ' + label;
 
@@ -1075,8 +1103,6 @@ export const Sensors = GObject.registerClass({
             }
         }
 
-        log("Bar Enhanced Vitals: Registrando sensor exitosamente: " + label + " (" + obj['type'] + ") con valor " + value);
-
         // update screen on initial build to prevent delay on update
         this._returnValue(callback, label, value, obj['type'], obj['format']);
 
@@ -1107,5 +1133,11 @@ export const Sensors = GObject.registerClass({
 
         for (let signal of Object.values(this._settingChangedSignals))
             this._settings.disconnect(signal);
+        this._settingChangedSignals = [];
+        this._sensorIcons = null;
+        this._settings = null;
+        this._gpu_drm_vendors = null;
+        this._gpu_drm_indices = null;
+        this._nvidia_labels = [];
     }
 });

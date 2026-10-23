@@ -17,12 +17,11 @@ import {
 } from './imports.js';
 
 import {Extension} from './dependencies/shell/extensions/extension.js';
+import System from 'system';
 
 // Use __ () and N__() for the extension gettext domain, and reuse
 // the shell domain with the default _() and N_()
 const {gettext: __} = Extension;
-
-const {signals: Signals} = imports;
 
 const FALLBACK_REMOVABLE_MEDIA_ICON = 'drive-removable-media';
 const FALLBACK_TRASH_ICON = 'user-trash';
@@ -49,7 +48,7 @@ const Labels = Object.freeze({
     WINDOWS_CHANGED: Symbol('windows-changed'),
 });
 
-const GJS_SUPPORTS_FILE_IFACE_PROMISES = imports.system.version >= 17101;
+const GJS_SUPPORTS_FILE_IFACE_PROMISES = System.version >= 17101;
 
 if (GJS_SUPPORTS_FILE_IFACE_PROMISES) {
     Gio._promisify(Gio.File.prototype, 'query_info_async');
@@ -485,7 +484,7 @@ class MountableVolumeAppInfo extends LocationAppInfo {
 
     destroy() {
         if (this._lazyUpdater) {
-            GLib.source_remove(this._lazyUpdater);
+            GLib.Source.remove(this._lazyUpdater);
             delete this._lazyUpdater;
         }
         this.disconnect(this._mountChanged);
@@ -779,18 +778,24 @@ class TrashAppInfo extends LocationAppInfo {
         }
         this._updateTrash();
 
-        this.connect('notify::empty', () => this._updateLocationIcon());
+        this._emptyChangedId = this.connect('notify::empty', () => this._updateLocationIcon());
         this.notify('empty');
     }
 
     destroy() {
         if (this._schedUpdateId) {
-            GLib.source_remove(this._schedUpdateId);
+            GLib.Source.remove(this._schedUpdateId);
             this._schedUpdateId = 0;
         }
         this._updateTrashCancellable?.cancel();
-        this._monitor?.disconnect(this._monitorChangedId);
+        if (this._monitor && this._monitorChangedId)
+            this._monitor.disconnect(this._monitorChangedId);
         this._monitor = null;
+        this._monitorChangedId = 0;
+        if (this._emptyChangedId) {
+            this.disconnect(this._emptyChangedId);
+            this._emptyChangedId = 0;
+        }
 
         super.destroy();
     }
@@ -810,11 +815,11 @@ class TrashAppInfo extends LocationAppInfo {
 
     _onTrashChange() {
         if (this._schedUpdateId) {
-            GLib.source_remove(this._schedUpdateId);
+            GLib.Source.remove(this._schedUpdateId);
             this._schedUpdateId = 0;
         }
 
-        if (this._monitor.is_cancelled())
+        if (!this._monitor || this._monitor.is_cancelled())
             return;
 
         this._schedUpdateId = GLib.timeout_add(GLib.PRIORITY_LOW,
@@ -830,40 +835,55 @@ class TrashAppInfo extends LocationAppInfo {
         this._updateTrashCancellable?.cancel();
         const cancellable = new Utils.CancellableChild(this.cancellable);
         this._updateTrashCancellable = cancellable;
-
-        try {
-            const trashInfo = await this.location.query_info_async(
-                Gio.FILE_ATTRIBUTE_TRASH_ITEM_COUNT,
-                Gio.FileQueryInfoFlags.NONE,
-                priority, cancellable);
-            this.empty = !trashInfo.get_attribute_uint32(
-                Gio.FILE_ATTRIBUTE_TRASH_ITEM_COUNT);
-            return;
-        } catch (e) {
-            if (!e.matches(Gio.IOErrorEnum, Gio.IOErrorEnum.CANCELLED))
-                logError(e, 'Impossible to get trash children from infos');
-        } finally {
+        const finish = () => {
             cancellable.cancel();
-            if (this._updateIconCancellable === cancellable)
-                delete this._updateTrashCancellable;
+            if (this._updateTrashCancellable === cancellable)
+                this._updateTrashCancellable = null;
+        };
+        const location = this.location;
+
+        if (!location) {
+            finish();
+            return;
         }
 
         try {
-            const childrenEnumerator = await this.location.enumerate_children_async(
+            const trashInfo = await location.query_info_async(
+                Gio.FILE_ATTRIBUTE_TRASH_ITEM_COUNT,
+                Gio.FileQueryInfoFlags.NONE,
+                priority, cancellable);
+            if (!cancellable.is_cancelled() && this.location === location) {
+                this.empty = !trashInfo.get_attribute_uint32(
+                    Gio.FILE_ATTRIBUTE_TRASH_ITEM_COUNT);
+            }
+            finish();
+            return;
+        } catch (e) {
+            if (cancellable.is_cancelled() || e.matches(Gio.IOErrorEnum, Gio.IOErrorEnum.CANCELLED)) {
+                finish();
+                return;
+            }
+            if (!e.matches(Gio.IOErrorEnum, Gio.IOErrorEnum.CANCELLED))
+                logError(e, 'Impossible to get trash children from infos');
+        }
+
+        try {
+            if (cancellable.is_cancelled() || this.location !== location)
+                return;
+            const childrenEnumerator = await location.enumerate_children_async(
                 Gio.FILE_ATTRIBUTE_STANDARD_TYPE, Gio.FileQueryInfoFlags.NONE,
                 priority, cancellable);
             const children = await childrenEnumerator.next_files_async(1,
                 priority, cancellable);
-            this.empty = !children.length;
+            if (!cancellable.is_cancelled() && this.location === location)
+                this.empty = !children.length;
 
             await childrenEnumerator.close_async(priority, null);
         } catch (e) {
             if (!e.matches(Gio.IOErrorEnum, Gio.IOErrorEnum.CANCELLED))
                 logError(e, 'Impossible to enumerate trash children');
         } finally {
-            cancellable.cancel();
-            if (this._updateIconCancellable === cancellable)
-                delete this._updateTrashCancellable;
+            finish();
         }
     }
 
@@ -917,7 +937,7 @@ function wrapWindowsBackedApp(shellApp) {
         destroy() {
             this.windows = [];
             this.proxyProperties = [];
-            this.sources.forEach(s => GLib.source_remove(s));
+            this.sources.forEach(s => GLib.Source.remove(s));
             this.sources.clear();
             this.signalConnections.destroy();
             this.methodInjections.destroy();
@@ -1383,6 +1403,8 @@ export class Removables {
     }
 
     constructor() {
+        this._signalHandlers = new Map();
+        this._nextSignalId = 1;
         this._signalsHandler = new Utils.GlobalSignalsHandler();
 
         this._monitor = Gio.VolumeMonitor.get();
@@ -1421,6 +1443,8 @@ export class Removables {
         this._cancellable = null;
         this._signalsHandler.destroy();
         this._monitor = null;
+        this._signalHandlers.clear();
+        this._signalHandlers = null;
     }
 
     _updateVolumes() {
@@ -1502,8 +1526,24 @@ export class Removables {
     getApps() {
         return this._volumeApps;
     }
+
+    connect(signal, callback) {
+        const id = this._nextSignalId++;
+        this._signalHandlers.set(id, {signal, callback});
+        return id;
+    }
+
+    disconnect(id) {
+        this._signalHandlers.delete(id);
+    }
+
+    emit(signal, ...args) {
+        for (const {signal: registeredSignal, callback} of this._signalHandlers.values()) {
+            if (registeredSignal === signal)
+                callback(this, ...args);
+        }
+    }
 }
-Signals.addSignalMethods(Removables.prototype);
 
 /**
  *

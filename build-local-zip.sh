@@ -1,32 +1,9 @@
-#!/bin/bash
-# Script to package the GNOME Extension for LOCAL TESTING
-# It includes gschemas.compiled so it works immediately in a VM.
+#!/usr/bin/env bash
+# Compatibility entry point for local test packages.
+set -euo pipefail
 
-EXT_NAME="bar-enhanced@mrvanguardia"
-ZIP_NAME="${EXT_NAME}-local.zip"
-
-echo "Compiling schemas first just in case..."
-glib-compile-schemas "$EXT_NAME/schemas/"
-
-echo "Packing local extension into $ZIP_NAME..."
-
-cd "$EXT_NAME" || exit
-
-# Create the zip file including gschemas.compiled
-zip -rq "../$ZIP_NAME" . \
-    -x "*.po" \
-    -x "*.pot" \
-    -x "*/po/*" \
-    -x "*/po" \
-    -x "*/*/po/*" \
-    -x "*/*/po" \
-    -x "*POTFILES.in" \
-    -x "*/*POTFILES.in" \
-    -x "*.md" \
-    -x "LICENSE" \
-    -x "*.sh" \
-    -x "*.git*"
-
-cd ..
-
-echo "Done! Use $ZIP_NAME for testing on your virtual machine."
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+bash "$ROOT_DIR/tools/package-extension.sh" "$ROOT_DIR"
+cp "$ROOT_DIR/bar-enhanced@mrvanguardia.shell-extension.zip" \
+    "$ROOT_DIR/bar-enhanced@mrvanguardia-local.zip"
+printf 'Created %s\n' "$ROOT_DIR/bar-enhanced@mrvanguardia-local.zip"

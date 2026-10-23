@@ -94,6 +94,7 @@ function createComboRowInt(settings, key, title, options) {
     
     row.connect('notify::selected', () => {
         const selectedOpt = options[row.get_selected()];
+        if (!selectedOpt) return;
         settings.set_int(key, selectedOpt[0]);
     });
     
@@ -258,7 +259,7 @@ export function fillVitalsPreferences(parentWindow, realExtension) {
         try {
             GLib.chmod(scriptPath, 0o755);
         } catch (e) {
-            log('BarEnhanced Vitals: Error setting executable permissions on setup script: ' + e);
+            console.error('BarEnhanced Vitals: failed to set setup-script permissions:', e);
         }
 
         try {

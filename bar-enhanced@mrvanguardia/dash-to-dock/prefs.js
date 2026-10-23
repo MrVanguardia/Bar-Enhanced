@@ -182,7 +182,7 @@ export const DockSettings = GObject.registerClass({
 
         this._extensionPreferences = extensionPreferences;
         this._settings = extensionPreferences.getSettings(
-            'org.gnome.shell.extensions.dash-to-dock');
+            'org.gnome.shell.extensions.bar-enhanced.dash-to-dock');
         this._appSwitcherSettings = new Gio.Settings({schema_id: 'org.gnome.shell.app-switcher'});
         this._rtl = Gtk.Widget.get_default_direction() === Gtk.TextDirection.RTL;
 
@@ -212,17 +212,17 @@ export const DockSettings = GObject.registerClass({
 
     _onWindowsClosed() {
         if (this._dock_size_timeout) {
-            GLib.source_remove(this._dock_size_timeout);
+            GLib.Source.remove(this._dock_size_timeout);
             delete this._dock_size_timeout;
         }
 
         if (this._icon_size_timeout) {
-            GLib.source_remove(this._icon_size_timeout);
+            GLib.Source.remove(this._icon_size_timeout);
             delete this._icon_size_timeout;
         }
 
         if (this._opacity_timeout) {
-            GLib.source_remove(this._opacity_timeout);
+            GLib.Source.remove(this._opacity_timeout);
             delete this._opacity_timeout;
         }
     }
@@ -276,7 +276,7 @@ export const DockSettings = GObject.registerClass({
     dock_size_scale_value_changed_cb(scale) {
         // Avoid settings the size continuously
         if (this._dock_size_timeout > 0)
-            GLib.source_remove(this._dock_size_timeout);
+            GLib.Source.remove(this._dock_size_timeout);
         this._dock_size_timeout = GLib.timeout_add(
             GLib.PRIORITY_DEFAULT, SCALE_UPDATE_TIMEOUT, () => {
                 this._settings.set_double('height-fraction', scale.get_value());
@@ -288,7 +288,7 @@ export const DockSettings = GObject.registerClass({
     icon_size_scale_value_changed_cb(scale) {
         // Avoid settings the size consinuosly
         if (this._icon_size_timeout > 0)
-            GLib.source_remove(this._icon_size_timeout);
+            GLib.Source.remove(this._icon_size_timeout);
         this._icon_size_timeout = GLib.timeout_add(
             GLib.PRIORITY_DEFAULT, SCALE_UPDATE_TIMEOUT, () => {
                 this._settings.set_int('dash-max-icon-size', scale.get_value());
@@ -308,7 +308,7 @@ export const DockSettings = GObject.registerClass({
     custom_opacity_scale_value_changed_cb(scale) {
         // Avoid settings the opacity consinuosly as it's change is animated
         if (this._opacity_timeout > 0)
-            GLib.source_remove(this._opacity_timeout);
+            GLib.Source.remove(this._opacity_timeout);
         this._opacity_timeout = GLib.timeout_add(
             GLib.PRIORITY_DEFAULT, SCALE_UPDATE_TIMEOUT, () => {
                 this._settings.set_double('background-opacity', scale.get_value());
@@ -320,7 +320,7 @@ export const DockSettings = GObject.registerClass({
     min_opacity_scale_value_changed_cb(scale) {
         // Avoid settings the opacity consinuosly as it's change is animated
         if (this._opacity_timeout > 0)
-            GLib.source_remove(this._opacity_timeout);
+            GLib.Source.remove(this._opacity_timeout);
         this._opacity_timeout = GLib.timeout_add(
             GLib.PRIORITY_DEFAULT, SCALE_UPDATE_TIMEOUT, () => {
                 this._settings.set_double('min-alpha', scale.get_value());
@@ -332,7 +332,7 @@ export const DockSettings = GObject.registerClass({
     max_opacity_scale_value_changed_cb(scale) {
         // Avoid settings the opacity consinuosly as it's change is animated
         if (this._opacity_timeout > 0)
-            GLib.source_remove(this._opacity_timeout);
+            GLib.Source.remove(this._opacity_timeout);
         this._opacity_timeout = GLib.timeout_add(
             GLib.PRIORITY_DEFAULT, SCALE_UPDATE_TIMEOUT, () => {
                 this._settings.set_double('max-alpha', scale.get_value());

@@ -406,6 +406,41 @@
       <summary>Menu selection Color (RGBA)</summary>
       <description>Selection color of Top Bar menus.</description>
     </key>
+    <key type="a{ss}" name="quick-settings-control-colors">
+      <default>{}</default>
+      <summary>Legacy per-control Quick Settings colors</summary>
+      <description>Retained only so older profiles remain importable; this setting no longer affects styles.</description>
+    </key>
+    <key type="a{ss}" name="quick-settings-control-registry">
+      <default>{}</default>
+      <summary>Legacy Quick Settings control registry</summary>
+      <description>Retained only for profile compatibility; controls are no longer scanned or stored.</description>
+    </key>
+    <key type="s" name="quick-settings-arrow-mode">
+      <default>'shared'</default>
+      <summary>Quick Settings arrow color mode</summary>
+      <description>Use the shared secondary surface or per-tile arrow colors.</description>
+    </key>
+    <key type="a{ss}" name="quick-settings-arrow-colors">
+      <default>{}</default>
+      <summary>Individual Quick Settings arrow colors</summary>
+      <description>Hex RGB colors keyed by discovered Quick Settings tile identifier.</description>
+    </key>
+    <key type="a{ss}" name="quick-settings-arrow-registry">
+      <default>{}</default>
+      <summary>Discovered Quick Settings tiles with arrows</summary>
+      <description>Identifier to visible tile name mapping used by preferences.</description>
+    </key>
+    <key type="a{ss}" name="menu-surface-colors">
+      <default>{}</default>
+      <summary>Colors for individual menu surfaces</summary>
+      <description>Optional colors keyed by menu surface and visual role.</description>
+    </key>
+    <key type="b" name="menu-sync-system-accent">
+      <default>false</default>
+      <summary>Use the menu selection color as the GNOME system accent</summary>
+      <description>Explicitly allow a menu color to change the desktop-wide GNOME accent.</description>
+    </key>
     <key type="as" name="dark-mscolor">
       <default>['0', '0.7', '0.75']</default>
       <summary>Menu selection Color (RGBA)</summary>
@@ -1081,6 +1116,11 @@
       <summary>Whether to override accent color in auto theme</summary>
       <description>Whether to override accent color in auto theme.</description>
     </key>
+    <key type="b" name="autotheme-active-tile-color">
+      <default>true</default>
+      <summary>Synchronize active tile color with automatic palettes</summary>
+      <description>When disabled, applying an automatic palette preserves the manually selected Quick Settings active tile color.</description>
+    </key>
     <key type="as" name="accent-color">
       <default>['0', '0.75', '0.75']</default>
       <summary>Accent color (manual override) in auto theme (RGB)</summary>
@@ -1115,6 +1155,22 @@
       <default>4</default>
       <summary>Height of sliders (px)</summary>
       <description>Height of sliders (px).</description>
+    </key>
+    <key type="b" name="slider-handle-color-override">
+      <default>false</default>
+      <summary>Use a custom Quick Settings slider handle color</summary>
+    </key>
+    <key type="as" name="slider-handle-color">
+      <default>['1', '1', '1']</default>
+      <summary>Quick Settings slider handle color</summary>
+    </key>
+    <key type="as" name="dark-slider-handle-color">
+      <default>['1', '1', '1']</default>
+      <summary>Dark mode Quick Settings slider handle color</summary>
+    </key>
+    <key type="as" name="light-slider-handle-color">
+      <default>['1', '1', '1']</default>
+      <summary>Light mode Quick Settings slider handle color</summary>
     </key>
     <key type="d" name="handle-border">
       <default>3</default>
@@ -1241,6 +1297,11 @@
       <summary>Apply menu styles to the Gnome shell</summary>
       <description>Apply menu styles to the Gnome shell.</description>
     </key>
+    <key type="b" name="theme-app-grid">
+      <default>false</default>
+      <summary>Theme the application grid</summary>
+      <description>Apply Bar Enhanced colours to the overview application grid. Keep disabled when another extension manages the overview, such as V-Shell.</description>
+    </key>
     <key type="b" name="apply-menu-notif">
       <default>false</default>
       <summary>Apply message styles to Notifications</summary>
@@ -1265,6 +1326,18 @@
       <default>['0.125', '0.125', '0.125']</default>
       <summary>BG Color (RGB) of Dash</summary>
       <description>Background Color of Dash or Dock.</description>
+    </key>
+    <key type="as" name="dock-badge-color">
+      <default>['1', '0', '0']</default>
+      <summary>Notification badge color of the bundled dock</summary>
+    </key>
+    <key type="as" name="dark-dock-badge-color">
+      <default>['1', '0', '0']</default>
+      <summary>Dark mode notification badge color of the bundled dock</summary>
+    </key>
+    <key type="as" name="light-dock-badge-color">
+      <default>['1', '0', '0']</default>
+      <summary>Light mode notification badge color of the bundled dock</summary>
     </key>
     <key type="d" name="dbgalpha">
       <default>0.85</default>
@@ -1489,12 +1562,12 @@
     <key type="b" name="focus-glow">
       <default>true</default>
       <summary>Dynamic Focus Glow</summary>
-      <description>Dynamically match neon glow of the panel to the active window brand/accent color.</description>
+      <description>Color the panel glow from the focused application's class, independently of the static neon effect. Known apps use a brand accent; other apps receive a stable generated accent.</description>
     </key>
     <key type="b" name="pywal-sync">
       <default>false</default>
-      <summary>Pywal / Material You Sync</summary>
-      <description>Automatically sync custom palettes with Pywal colors (~/.cache/wal/colors).</description>
+      <summary>Pywal Palette Sync</summary>
+      <description>Synchronize Bar Enhanced colors from ~/.cache/wal/colors. This does not enable GTK theming or read a generic Material You provider.</description>
     </key>
     <key type="b" name="show-dashboard">
       <default>true</default>
@@ -1503,8 +1576,8 @@
     </key>
     <key type="b" name="system-accent-sync">
       <default>false</default>
-      <summary>Sync with System Accent Color</summary>
-      <description>Automatically sync the panel border and neon glow with Fedora's active system accent color.</description>
+      <summary>Sync Bar Border and Neon with GNOME Accent</summary>
+      <description>Use GNOME's accent color for the panel border and neon glow without overwriting individual menu colors.</description>
     </key>
     <key type="b" name="enable-gtk-window-custom">
       <default>false</default>

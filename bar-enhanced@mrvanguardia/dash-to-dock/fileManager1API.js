@@ -1,7 +1,6 @@
 // -*- mode: js; js-indent-level: 4; indent-tabs-mode: nil -*-
 
 import {GLib, Gio} from './dependencies/gi.js';
-const {signals: Signals} = imports;
 
 import {Utils} from './imports.js';
 
@@ -75,7 +74,7 @@ export class FileManager1Client {
     destroy() {
         this._destroyed = true;
         if (this._windowsUpdateIdle) {
-            GLib.source_remove(this._windowsUpdateIdle);
+            GLib.Source.remove(this._windowsUpdateIdle);
             delete this._windowsUpdateIdle;
         }
         this._cancellable.cancel();
@@ -206,4 +205,4 @@ export class FileManager1Client {
         }
     }
 }
-Signals.addSignalMethods(FileManager1Client.prototype);
+Utils.addSignalMethods(FileManager1Client.prototype);

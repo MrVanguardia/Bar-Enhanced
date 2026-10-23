@@ -14,7 +14,6 @@ import {
 import {
     AppDisplay,
     AppFavorites,
-    BoxPointer,
     Dash,
     Main,
     PopupMenu,
@@ -242,7 +241,7 @@ export const DockAbstractAppIcon = GObject.registerClass({
         // This is necessary due to an upstream bug
         // https://bugzilla.gnome.org/show_bug.cgi?id=757556
         // It can be safely removed once it get solved upstream.
-        this._menu?.close(false);
+        this._menu?.close({animate: false});
         delete this._menu;
     }
 
@@ -802,6 +801,19 @@ export const DockAbstractAppIcon = GObject.registerClass({
     }
 
     updateNumberOverlay() {
+        if (!this._iconContainer.get_stage()) {
+            if (!this._numberOverlayMappedId) {
+                this._numberOverlayMappedId = this._iconContainer.connect('notify::mapped', () => {
+                    if (!this._iconContainer.mapped)
+                        return;
+                    this._iconContainer.disconnect(this._numberOverlayMappedId);
+                    this._numberOverlayMappedId = 0;
+                    this.updateNumberOverlay();
+                });
+            }
+            return;
+        }
+
         // We apply an overall scale factor that might come from a HiDPI monitor.
         // Clutter dimensions are in physical pixels, but CSS measures are in logical
         // pixels, so make sure to consider the scale.
@@ -891,7 +903,7 @@ export const DockAbstractAppIcon = GObject.registerClass({
             return;
 
         if (recentlyClickedAppLoopId > 0)
-            GLib.source_remove(recentlyClickedAppLoopId);
+            GLib.Source.remove(recentlyClickedAppLoopId);
         recentlyClickedAppLoopId = GLib.timeout_add(
             GLib.PRIORITY_DEFAULT, MEMORY_TIME, this._resetRecentlyClickedApp);
 
@@ -923,7 +935,7 @@ export const DockAbstractAppIcon = GObject.registerClass({
 
     _resetRecentlyClickedApp() {
         if (recentlyClickedAppLoopId > 0)
-            GLib.source_remove(recentlyClickedAppLoopId);
+            GLib.Source.remove(recentlyClickedAppLoopId);
         recentlyClickedAppLoopId = 0;
         recentlyClickedApp = null;
         recentlyClickedAppWindows = null;
@@ -1080,7 +1092,7 @@ const DockAppIconMenu = class DockAppIconMenu extends PopupMenu.PopupMenu {
 
     popup(_activatingButton) {
         this._rebuildMenu();
-        this.open(BoxPointer.PopupAnimation.FULL);
+        this.open();
     }
 
     removeAll() {
