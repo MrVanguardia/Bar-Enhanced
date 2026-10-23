@@ -31,6 +31,7 @@ class PointerWatcher {
         return watch;
     }
 
+    // Kept for callers that used the old private API.
     _removeWatch(watch) {
         if (!watch)
             return;
