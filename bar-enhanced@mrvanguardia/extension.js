@@ -2476,6 +2476,14 @@ export default class BarEnhanced extends Extension {
                 if (hadDock !== !!this.dockManager)
                     StyleSheets.reloadStyle(this, this);
             }));
+        this._dockConflictStateId = Main.extensionManager.connect('extension-state-changed', (_manager, changedExtension) => {
+            if (!['ubuntu-dock@ubuntu.com', 'dash-to-dock@micxgx.gmail.com'].includes(changedExtension?.uuid))
+                return;
+            const hadDock = !!this.dockManager;
+            this._syncDashToDock();
+            if (hadDock !== !!this.dockManager)
+                StyleSheets.reloadStyle(this, this);
+        });
 
         // Dynamic Music Pill
         this._musicPillEnabled = this._settings.get_boolean('music-pill-enabled');
@@ -2665,8 +2673,7 @@ export default class BarEnhanced extends Extension {
                 ...(Main.sessionMode.enabledExtensions ?? []),
             ]);
             const disabled = new Set(shellSettings.get_strv('disabled-extensions'));
-            return docks.find(uuid => enabled.has(uuid) && !disabled.has(uuid) &&
-                Main.extensionManager.lookup(uuid)) ?? null;
+            return docks.find(uuid => enabled.has(uuid) && !disabled.has(uuid)) ?? null;
         } catch (e) {
             console.error('BarEnhanced: failed to check for other dock extensions', e);
             return null;
@@ -2908,6 +2915,10 @@ export default class BarEnhanced extends Extension {
         if (this._dockConflictSettingIds) {
             this._dockConflictSettingIds.forEach(id => this._shellSettings?.disconnect(id));
             this._dockConflictSettingIds = null;
+        }
+        if (this._dockConflictStateId) {
+            Main.extensionManager.disconnect(this._dockConflictStateId);
+            this._dockConflictStateId = null;
         }
         this._dockConflictLogged = null;
         this._disableDashToDock();
