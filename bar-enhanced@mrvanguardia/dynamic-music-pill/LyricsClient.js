@@ -14,6 +14,8 @@ export class LyricsClient {
       "send_and_read_finish",
     );
     this._session = new Soup.Session();
+    // lrclib asks API clients to identify themselves.
+    this._session.user_agent = 'Bar-Enhanced (https://github.com/MrVanguardia/Bar-Enhanced)';
   }
 
 

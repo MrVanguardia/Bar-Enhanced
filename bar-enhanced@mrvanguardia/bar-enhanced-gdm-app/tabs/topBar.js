@@ -42,13 +42,16 @@ export function buildTopBarTab(extension, extensionPath, T) {
     textColorBtn.connect('notify::rgba', (btn) => {
         settings.set_string('text-color', btn.rgba.to_string());
     });
-    settings.connect('changed::text-color', () => {
+    const textColorChangedId = settings.connect('changed::text-color', () => {
         let currentVal = settings.get_string('text-color');
         let parsed = new Gdk.RGBA();
         if (parsed.parse(currentVal)) {
             textColorBtn.rgba = parsed;
         }
     });
+    // Disconnect when the window closes so reopening it does not leave
+    // handlers updating destroyed widgets.
+    textColorBtn.connect('destroy', () => settings.disconnect(textColorChangedId));
 
     const textColorRow = new Adw.ActionRow({
         title: T ? T('Text Color') : 'Text Color',
@@ -77,13 +80,16 @@ export function buildTopBarTab(extension, extensionPath, T) {
     bgColorBtn.connect('notify::rgba', (btn) => {
         settings.set_string('background-color', btn.rgba.to_string());
     });
-    settings.connect('changed::background-color', () => {
+    const bgColorChangedId = settings.connect('changed::background-color', () => {
         let currentVal = settings.get_string('background-color');
         let parsed = new Gdk.RGBA();
         if (parsed.parse(currentVal)) {
             bgColorBtn.rgba = parsed;
         }
     });
+    // Disconnect when the window closes so reopening it does not leave
+    // handlers updating destroyed widgets.
+    bgColorBtn.connect('destroy', () => settings.disconnect(bgColorChangedId));
 
     const bgColorRow = new Adw.ActionRow({
         title: T ? T('Background Color') : 'Background Color',

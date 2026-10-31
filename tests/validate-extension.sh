@@ -213,7 +213,7 @@ if rg -q ' /tmp/(95-gdm-settings|gdm-profile)' "$EXTENSION_DIR/bar-enhanced-gdm-
     exit 1
 fi
 
-if ! rg -q "curl', '--fail', '--location', '--output'" "$EXTENSION_DIR/wallpaper-store-prefs.js"; then
+if ! rg -q "curl', '--fail', '--location', '--proto', '=https', '--proto-redir', '=https'," "$EXTENSION_DIR/wallpaper-store-prefs.js"; then
     echo 'Wallpaper downloads must fail safely before applying a file.' >&2
     exit 1
 fi

@@ -1366,7 +1366,10 @@ export const MusicPill = GObject.registerClass(
                     this._colorAnimId = null;
                     return GLib.SOURCE_REMOVE;
                 }
-                if (!this.get_parent()) return GLib.SOURCE_REMOVE;
+                if (!this.get_parent()) {
+                    this._colorAnimId = null;
+                    return GLib.SOURCE_REMOVE;
+                }
                 count++;
                 let progress = count / steps;
                 let t = progress * progress * (3 - 2 * progress);

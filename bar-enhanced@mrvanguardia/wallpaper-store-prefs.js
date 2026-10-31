@@ -279,7 +279,8 @@ function renderWallpaperList(container, loadingLabel, data, soupSession, T, sett
                 let proc;
                 try {
                     proc = Gio.Subprocess.new(
-                        ['curl', '--fail', '--location', '--output', partialFile,
+                        ['curl', '--fail', '--location', '--proto', '=https', '--proto-redir', '=https',
+                            '--output', partialFile,
                             '--connect-timeout', '10', '--max-time', '120',
                             '--max-filesize', '524288000', '--silent', '--show-error', downloadUrl],
                         Gio.SubprocessFlags.NONE

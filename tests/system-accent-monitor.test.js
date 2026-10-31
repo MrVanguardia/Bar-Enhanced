@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const source = fs.readFileSync(path.join(__dirname, '../bar-enhanced@mrvanguardia/extension.js'), 'utf8');
-const start = source.indexOf('    _updateSystemAccentMonitor() {');
+const start = source.indexOf('    _updateSystemAccentMonitor(reload = true) {');
 const end = source.indexOf('    _syncWithSystemAccent() {', start);
 assert(start >= 0 && end > start, 'system-accent monitor method is present');
 const Core = new Function(`return class Core { ${source.slice(start, end)} }`)();
@@ -35,6 +35,9 @@ core._interfaceSettings = {
 };
 core._syncWithSystemAccent = () => { reloads++; };
 
+// enable() attaches the listener without an extra stylesheet regeneration.
+core._updateSystemAccentMonitor(false);
+assert.equal(reloads, 0, 'initial enable must not trigger a second stylesheet reload');
 core._updateSystemAccentMonitor();
 assert.equal(connects, 0, 'disabled feature must not watch GNOME accent changes');
 enabled = true;

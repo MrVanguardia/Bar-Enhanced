@@ -15,7 +15,9 @@ function scanThemes(dirs, checkSubdir = null) {
             while ((info = enumerator.next_file(null)) !== null) {
                 if (info.get_file_type() === Gio.FileType.DIRECTORY) {
                     let name = info.get_name();
-                    if (name.startsWith('.') || name === 'Default') continue;
+                    // BarEnhancedGdm is the theme this app generates; offering
+                    // it as a base would make it import itself.
+                    if (name.startsWith('.') || name === 'Default' || name === 'BarEnhancedGdm') continue;
                     
                     if (checkSubdir) {
                         let sub = Gio.File.new_for_path(`${path}/${name}/${checkSubdir}`);
@@ -65,20 +67,17 @@ export function buildAppearanceTab(extension, extensionPath, T) {
     themeGroup.add(lightModeRow);
 
     // Dynamic Theme Scanners
-    const homeDir = GLib.get_home_dir();
-    const dataDir = GLib.get_user_data_dir();
-
+    // GDM runs as its own user and cannot read themes in your home folder, so
+    // only offer themes installed system-wide.
     const shellThemeDirs = [
         '/usr/share/themes',
-        `${homeDir}/.themes`,
-        `${dataDir}/themes`
+        '/usr/local/share/themes',
     ];
     const shellThemes = scanThemes(shellThemeDirs, 'gnome-shell');
 
     const iconThemeDirs = [
         '/usr/share/icons',
-        `${homeDir}/.icons`,
-        `${dataDir}/icons`
+        '/usr/local/share/icons',
     ];
     const iconThemes = scanThemes(iconThemeDirs);
     const cursorThemes = scanThemes(iconThemeDirs, 'cursors');
@@ -224,13 +223,16 @@ export function buildAppearanceTab(extension, extensionPath, T) {
     bgColorBtn.connect('notify::rgba', (btn) => {
         settings.set_string('background-color', btn.rgba.to_string());
     });
-    settings.connect('changed::background-color', () => {
+    const bgColorChangedId = settings.connect('changed::background-color', () => {
         let currentVal = settings.get_string('background-color');
         let parsed = new Gdk.RGBA();
         if (parsed.parse(currentVal)) {
             bgColorBtn.rgba = parsed;
         }
     });
+    // Disconnect when the window closes so reopening it does not leave
+    // handlers updating destroyed widgets.
+    bgColorBtn.connect('destroy', () => settings.disconnect(bgColorChangedId));
 
     const bgColorRow = new Adw.ActionRow({
         title: T ? T('Background Color') : 'Background Color',
@@ -308,13 +310,16 @@ export function buildAppearanceTab(extension, extensionPath, T) {
     authBoxColorBtn.connect('notify::rgba', (btn) => {
         miscSettings.set_string('auth-box-color', btn.rgba.to_string());
     });
-    miscSettings.connect('changed::auth-box-color', () => {
+    const authBoxColorChangedId = miscSettings.connect('changed::auth-box-color', () => {
         let currentVal = miscSettings.get_string('auth-box-color');
         let parsed = new Gdk.RGBA();
         if (parsed.parse(currentVal)) {
             authBoxColorBtn.rgba = parsed;
         }
     });
+    // Disconnect when the window closes so reopening it does not leave
+    // handlers updating destroyed widgets.
+    authBoxColorBtn.connect('destroy', () => miscSettings.disconnect(authBoxColorChangedId));
 
     const authBoxColorRow = new Adw.ActionRow({
         title: T ? T('Password Box Color') : 'Password Box Color',

@@ -11,6 +11,21 @@ import { WeatherClient } from 'resource:///org/gnome/shell/misc/weather.js';
 import { WaveformVisualizer } from './dynamic-music-pill/uiVisualizers.js';
 import { ScrollLabel, CrossfadeArt } from './dynamic-music-pill/uiWidgets.js';
 
+// WeatherClient has no destroy(): each instance keeps GeoClue, GWeather and
+// settings connections alive for the rest of the session. The widgets are
+// rebuilt on every lock/unlock, so share a single client instead of leaking a
+// new one each time, and ask it to refresh when a widget is created.
+let sharedWeatherClient = null;
+function getWeatherClient() {
+    sharedWeatherClient ??= new WeatherClient();
+    try {
+        sharedWeatherClient.update?.();
+    } catch (e) {
+        console.error('BarEnhanced: weather refresh failed:', e.message);
+    }
+    return sharedWeatherClient;
+}
+
 // Helper function to convert RGB/RGBA color strings to Hex format, since Pango markup
 // does not support rgb() or rgba() color specifications in the 'color' attribute.
 function toHexColor(colorStr) {
@@ -65,6 +80,9 @@ const HydroSquircle = GObject.registerClass(
                         if (source instanceof St.Button)
                             return Clutter.EVENT_PROPAGATE;
                     }
+                    // A lost grab can skip the release event; finish any
+                    // previous drag first so its stage handler is not leaked.
+                    this._finishDrag();
                     this._isDragging = true;
                     let [stageX, stageY] = event.get_coords();
                     let [actorX, actorY] = this.get_transformed_position();
@@ -699,7 +717,7 @@ const HydroWeatherWidget = GObject.registerClass(
             this.add_child(this._minimalBox);
             this.add_child(this._pixel16Box);
 
-            this._weatherClient = new WeatherClient();
+            this._weatherClient = getWeatherClient();
             this._weatherUpdateId = this._weatherClient.connect('changed', this._updateWeather.bind(this));
             this._updateWeather();
 
@@ -924,7 +942,7 @@ const HydroCalendarWidget = GObject.registerClass(
             // Fetch weather from main client if available
             try {
                 if (!this._weatherClient) {
-                    this._weatherClient = new WeatherClient();
+                    this._weatherClient = getWeatherClient();
                 }
                 let info = this._weatherClient.info;
                 if (info && info.is_valid && info.is_valid()) {
