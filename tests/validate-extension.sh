@@ -47,6 +47,7 @@ node --check "$ROOT_DIR/tests/fake-mpris-player.js"
 XDG_DATA_HOME="$RUNTIME_DIR" gjs -m "$ROOT_DIR/tests/flatpak-overrides.test.js"
 GSETTINGS_BACKEND=memory GSETTINGS_SCHEMA_DIR="$SCHEMA_DIR" gjs -m "$ROOT_DIR/tests/schema-contract.test.js"
 GSETTINGS_BACKEND=memory GSETTINGS_SCHEMA_DIR="$SCHEMA_DIR" gjs -m "$ROOT_DIR/tests/auto-themes.test.js"
+GSETTINGS_BACKEND=memory GSETTINGS_SCHEMA_DIR="$SCHEMA_DIR" gjs -m "$ROOT_DIR/tests/gdm-image-security.test.js"
 node "$ROOT_DIR/tests/focus-glow.test.js"
 node "$ROOT_DIR/tests/quick-settings-arrows.test.js"
 node "$ROOT_DIR/tests/dashboard-toggle.test.js"
@@ -213,7 +214,7 @@ if rg -q ' /tmp/(95-gdm-settings|gdm-profile)' "$EXTENSION_DIR/bar-enhanced-gdm-
     exit 1
 fi
 
-if ! rg -q "curl', '--fail', '--location', '--output'" "$EXTENSION_DIR/wallpaper-store-prefs.js"; then
+if ! rg -q "curl', '--fail', '--location', '--proto', '=https', '--proto-redir', '=https'," "$EXTENSION_DIR/wallpaper-store-prefs.js"; then
     echo 'Wallpaper downloads must fail safely before applying a file.' >&2
     exit 1
 fi

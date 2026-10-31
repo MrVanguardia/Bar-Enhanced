@@ -1126,7 +1126,10 @@ async function updateFlatpakOverride(obar, enabled) {
     try {
         const [contents] = await globalFile.load_contents_async(null);
         const data = new TextDecoder('utf-8').decode(contents);
-        keyfile.load_from_data(data, data.length, GLib.KeyFileFlags.KEEP_COMMENTS);
+        // The length is in bytes: data.length counts UTF-16 units and would
+        // truncate non-ASCII override files (GJS rejects -1 here).
+        keyfile.load_from_data(data, new TextEncoder().encode(data).length,
+            GLib.KeyFileFlags.KEEP_COMMENTS);
     } catch (e) {
         if (!enabled || !e.matches(Gio.IOErrorEnum, Gio.IOErrorEnum.NOT_FOUND))
             throw e;
@@ -1165,7 +1168,10 @@ async function updateFlatpakOverride(obar, enabled) {
 
 // Change only permissions added by this instance, preserving other Flatpak overrides.
 export function saveFlatpakOverrides(obar, caller) {
-    const enabled = caller !== 'disable' && obar._settings.get_boolean('apply-flatpak');
+    // GTK CSS injection was removed, so granting every Flatpak read access to
+    // ~/.config/gtk-3.0 and gtk-4.0 no longer serves any purpose. Never add
+    // the permission; still remove any this session added earlier.
+    const enabled = false;
     obar._flatpakOverrideOp = (obar._flatpakOverrideOp ?? Promise.resolve())
         .catch(() => {})
         .then(() => updateFlatpakOverride(obar, enabled))
@@ -3204,7 +3210,10 @@ function getStylesheet(obar, Me) {
     applyAccentShell = obar._settings.get_boolean('apply-accent-shell');
     applyMenuNotif = obar._settings.get_boolean('apply-menu-notif');
     dashDockStyle = obar._settings.get_string('dashdock-style');
-    dashToDockEnabled = obar._settings.get_boolean('dash-to-dock-enabled');
+    // Style the dock only while Bar Enhanced's own dock is running. When it is
+    // skipped because Ubuntu Dock or Dash to Dock is active, these #dash rules
+    // would otherwise restyle that other extension's dock.
+    dashToDockEnabled = !!obar.dockManager;
     if (dashToDockEnabled) {
         const badgeColor = obar._settings.get_strv('dock-badge-color')
             .map(value => Math.round(Math.max(0, Math.min(1, Number(value) || 0)) * 255)).join(',');

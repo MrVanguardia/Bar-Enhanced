@@ -7,64 +7,36 @@ function assert(condition, message) {
         throw new Error(message);
 }
 
+function readEntries(file) {
+    const [, bytes] = file.load_contents(null);
+    const keyfile = new GLib.KeyFile();
+    const data = new TextDecoder().decode(bytes);
+    keyfile.load_from_data(data, new TextEncoder().encode(data).length, GLib.KeyFileFlags.NONE);
+    return [keyfile, keyfile.get_string('Context', 'filesystems').split(';').filter(Boolean)];
+}
+
 const overrideDir = Gio.File.new_for_path(`${GLib.get_user_data_dir()}/flatpak/overrides`);
 assert(!overrideDir.query_exists(null), 'test must start with an empty data directory');
 
-const state = {enabled: false};
-const obar = {_settings: {get_boolean: () => state.enabled}};
-await saveFlatpakOverrides(obar, 'disable');
-assert(!overrideDir.query_exists(null), 'disabled module must not create a global override');
+// GTK CSS injection was removed, so the extension must never grant Flatpak
+// apps access to the GTK config directories any more, even with the legacy
+// 'apply-flatpak' setting still true from an older version.
+const obar = {_settings: {get_boolean: () => true}};
+await saveFlatpakOverrides(obar, 'enable');
+assert(!overrideDir.query_exists(null), 'enable must not create a global override');
 
 overrideDir.make_directory_with_parents(null);
 const globalFile = overrideDir.get_child('global');
-globalFile.replace_contents('[Context]\nfilesystems=home;\n[Other]\nvalue=keep\n',
+// Non-ASCII content must be parsed completely (load_from_data length is bytes).
+globalFile.replace_contents('[Context]\nfilesystems=home;xdg-config/gtk-3.0:ro;\n[Other]\nvalue=café\n',
     null, false, Gio.FileCreateFlags.NONE, null);
 
-state.enabled = true;
 await saveFlatpakOverrides(obar, 'enable');
-await saveFlatpakOverrides(obar, 'enable');
-
-let [, bytes] = globalFile.load_contents(null);
-let data = new TextDecoder().decode(bytes);
-let keyfile = new GLib.KeyFile();
-keyfile.load_from_data(data, data.length, GLib.KeyFileFlags.NONE);
-let entries = keyfile.get_string('Context', 'filesystems').split(';').filter(Boolean);
-assert(entries.join(';') === 'home;xdg-config/gtk-3.0:ro;xdg-config/gtk-4.0:ro',
-    'enable must add each GTK permission once while preserving existing permissions');
-assert(keyfile.get_string('Other', 'value') === 'keep',
-    'enable must preserve unrelated override groups');
-
-// Simulate another program changing the same key while this extension is enabled.
-keyfile.set_string('Context', 'filesystems', `${entries.join(';')};xdg-documents;`);
-globalFile.replace_contents(keyfile.to_data()[0], null, false,
-    Gio.FileCreateFlags.NONE, null);
-
-state.enabled = false;
 await saveFlatpakOverrides(obar, 'disable');
-[, bytes] = globalFile.load_contents(null);
-data = new TextDecoder().decode(bytes);
-keyfile = new GLib.KeyFile();
-keyfile.load_from_data(data, data.length, GLib.KeyFileFlags.NONE);
-entries = keyfile.get_string('Context', 'filesystems').split(';').filter(Boolean);
-assert(entries.join(';') === 'home;xdg-documents',
-    'disable must remove only permissions added by this extension');
-assert(keyfile.get_string('Other', 'value') === 'keep',
-    'disable must preserve unrelated override groups');
-
-// Permissions already present before a later enable belong to the user.
-keyfile.set_string('Context', 'filesystems',
-    'home;xdg-config/gtk-3.0:ro;xdg-documents;');
-globalFile.replace_contents(keyfile.to_data()[0], null, false,
-    Gio.FileCreateFlags.NONE, null);
-const laterInstance = {_settings: {get_boolean: () => true}};
-await saveFlatpakOverrides(laterInstance, 'enable');
-await saveFlatpakOverrides(laterInstance, 'disable');
-[, bytes] = globalFile.load_contents(null);
-data = new TextDecoder().decode(bytes);
-keyfile = new GLib.KeyFile();
-keyfile.load_from_data(data, data.length, GLib.KeyFileFlags.NONE);
-entries = keyfile.get_string('Context', 'filesystems').split(';').filter(Boolean);
-assert(entries.join(';') === 'home;xdg-config/gtk-3.0:ro;xdg-documents',
-    'disable must keep a GTK permission that predated this instance');
+const [keyfile, entries] = readEntries(globalFile);
+assert(entries.join(';') === 'home;xdg-config/gtk-3.0:ro',
+    'enable/disable must leave existing user permissions untouched');
+assert(keyfile.get_string('Other', 'value') === 'café',
+    'unrelated override groups must be preserved');
 
 print('Flatpak override tests passed.');

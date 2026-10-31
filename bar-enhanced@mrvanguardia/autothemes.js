@@ -46,6 +46,19 @@ export function applyAutomaticOpacity(obar) {
 // Auto-Theming: Select colors from color palette as per theme & dark/light mode (Gets called separately for dark/light)
 // Manipulate colors, as needed, for better contrast and readability (except for 'True Color')
 export function autoApplyBGPalette(obar, requestMode) {
+    // The theme generator pauses stylesheet reloads while it writes hundreds
+    // of keys. If it throws midway, never leave 'pause-reload' stuck on: that
+    // would freeze all styling until the next login.
+    try {
+        applyBGPaletteForMode(obar, requestMode);
+    } catch (e) {
+        console.error(`BarEnhanced: automatic theme generation failed for ${requestMode}:`, e);
+        if (obar._settings?.get_boolean('pause-reload'))
+            obar._settings.set_boolean('pause-reload', false);
+    }
+}
+
+function applyBGPaletteForMode(obar, requestMode) {
     const importExport = obar._settings.get_boolean('import-export');
     if(importExport)
         return;

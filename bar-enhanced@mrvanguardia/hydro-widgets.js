@@ -7,9 +7,23 @@ import cairo from 'gi://cairo';
 import UPowerGlib from 'gi://UPowerGlib';
 import * as Mpris from 'resource:///org/gnome/shell/ui/mpris.js';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
-import { WeatherClient } from 'resource:///org/gnome/shell/misc/weather.js';
 import { WaveformVisualizer } from './dynamic-music-pill/uiVisualizers.js';
 import { ScrollLabel, CrossfadeArt } from './dynamic-music-pill/uiWidgets.js';
+
+// The date menu owns the Shell weather client. Reuse it so disabling this
+// extension leaves no extra GeoClue/GWeather client alive.
+function getWeatherClient() {
+    const client = Main.panel.statusArea.dateMenu?._weatherItem?._weatherClient ?? null;
+    // The date menu refreshes this client only when the calendar is opened.
+    // Refresh it when a widget is created too (as the old per-widget client
+    // did), so the widget does not show stale weather.
+    try {
+        client?.update?.();
+    } catch (e) {
+        console.error('BarEnhanced: weather refresh failed:', e.message);
+    }
+    return client;
+}
 
 // Helper function to convert RGB/RGBA color strings to Hex format, since Pango markup
 // does not support rgb() or rgba() color specifications in the 'color' attribute.
@@ -65,6 +79,9 @@ const HydroSquircle = GObject.registerClass(
                         if (source instanceof St.Button)
                             return Clutter.EVENT_PROPAGATE;
                     }
+                    // A lost grab can skip the release event; finish any
+                    // previous drag first so its stage handler is not leaked.
+                    this._finishDrag();
                     this._isDragging = true;
                     let [stageX, stageY] = event.get_coords();
                     let [actorX, actorY] = this.get_transformed_position();
@@ -699,8 +716,8 @@ const HydroWeatherWidget = GObject.registerClass(
             this.add_child(this._minimalBox);
             this.add_child(this._pixel16Box);
 
-            this._weatherClient = new WeatherClient();
-            this._weatherUpdateId = this._weatherClient.connect('changed', this._updateWeather.bind(this));
+            this._weatherClient = getWeatherClient();
+            this._weatherUpdateId = this._weatherClient?.connect('changed', this._updateWeather.bind(this)) ?? null;
             this._updateWeather();
 
         }
@@ -924,9 +941,9 @@ const HydroCalendarWidget = GObject.registerClass(
             // Fetch weather from main client if available
             try {
                 if (!this._weatherClient) {
-                    this._weatherClient = new WeatherClient();
+                    this._weatherClient = getWeatherClient();
                 }
-                let info = this._weatherClient.info;
+                let info = this._weatherClient?.info;
                 if (info && info.is_valid && info.is_valid()) {
                     let temp = info.get_temp_summary();
                     this._tempLabel.set_text(temp);

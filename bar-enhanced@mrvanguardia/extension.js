@@ -451,6 +451,12 @@ class TopbarNotification extends St.BoxLayout {
         if (!source) return;
         this._unwatchSourceCount(source);
         const sourceId = this._getSourceId(source);
+        // Sources of the same app share one icon. If another one is still
+        // there, rebuild so the icon stays and points at the remaining source.
+        if (Main.messageTray.getSources().some(other => other !== source && this._getSourceId(other) === sourceId)) {
+            this._updateAllSources();
+            return;
+        }
         const icon = this._icons.get(sourceId);
         if (icon) {
             this._destroyIcon(icon);
@@ -720,6 +726,9 @@ export default class BarEnhanced extends Extension {
         // update.
         let pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(path, 1000, 1000, true);
         let nChannels = pixbuf.n_channels;
+        // Rows can be padded for alignment; index pixels through the rowstride
+        // or channels drift (R/G/B swap) on images with certain widths.
+        const rowstride = pixbuf.get_rowstride();
 
         // Get the width, height and pixel count of the image
         let width = pixbuf.get_width();
@@ -736,7 +745,7 @@ export default class BarEnhanced extends Extension {
         let colorfulPixelArray = [];
         // Loop through the pixels and get the rgba values
         for (let i = 0, index, r, g, b, a; i < pixelCount; i = i + offset) {
-            index = i * nChannels;
+            index = Math.floor(i / width) * rowstride + (i % width) * nChannels;
 
             // Get the red, green, blue, and alpha values
             r = pixels[index];
@@ -944,6 +953,13 @@ export default class BarEnhanced extends Extension {
         // This is a normal hot reload, not a disable. Do not invalidate a
         // style write that is still finishing or a queued user change.
         this.unloadStylesheet(false);
+
+        // While a fullscreen window has the panel monitor, the stylesheet stays
+        // unloaded on purpose. The regenerated file is loaded when fullscreen
+        // ends (onFullScreen), so a background reload (e.g. the immersive music
+        // theme on every track change) must not re-apply it now.
+        if (this.isObarReset)
+            return;
 
         // Load stylesheet
         this.loadStylesheet();
@@ -1392,16 +1408,24 @@ export default class BarEnhanced extends Extension {
         // Auto set closest Yaru theme
         if (key == 'mscolor' || key == 'set-yarutheme') {
             let setYaruTheme = this._settings.get_boolean('set-yarutheme');
+            // The previous themes are stored in GSettings (not in memory) so
+            // turning this off after a re-login still restores them.
             if (key == 'set-yarutheme') {
                 if (setYaruTheme) {
-                    this.yaruBackup = this._intSettings.get_string('gtk-theme');
-                    this.iconBackup = this._intSettings.get_string('icon-theme');
+                    if (!this._settings.get_string('yaru-gtk-backup')) {
+                        this._settings.set_string('yaru-gtk-backup', this._intSettings.get_string('gtk-theme'));
+                        this._settings.set_string('yaru-icon-backup', this._intSettings.get_string('icon-theme'));
+                    }
                 }
                 else {
-                    if (this.yaruBackup)
-                        this._intSettings.set_string('gtk-theme', this.yaruBackup);
-                    if (this.iconBackup)
-                        this._intSettings.set_string('icon-theme', this.iconBackup);
+                    const gtkBackup = this._settings.get_string('yaru-gtk-backup');
+                    const iconBackup = this._settings.get_string('yaru-icon-backup');
+                    if (gtkBackup)
+                        this._intSettings.set_string('gtk-theme', gtkBackup);
+                    if (iconBackup)
+                        this._intSettings.set_string('icon-theme', iconBackup);
+                    this._settings.set_string('yaru-gtk-backup', '');
+                    this._settings.set_string('yaru-icon-backup', '');
                 }
             }
             if (setYaruTheme) {
@@ -1410,8 +1434,12 @@ export default class BarEnhanced extends Extension {
                 let yaruColor = AutoThemes.getClosestYaruTheme(this);
                 yaruColor = (yaruColor == 'default') ? '' : '-' + yaruColor;
                 let yaruTheme = 'Yaru' + yaruColor + modeSuffix;
-                this._intSettings.set_string('gtk-theme', yaruTheme);
-                this._intSettings.set_string('icon-theme', yaruTheme);
+                // Yaru only ships on Ubuntu. Never point GTK at a theme that is
+                // not installed (that leaves apps with a broken fallback look).
+                if (this._isThemeInstalled('themes', yaruTheme))
+                    this._intSettings.set_string('gtk-theme', yaruTheme);
+                if (this._isThemeInstalled('icons', yaruTheme))
+                    this._intSettings.set_string('icon-theme', yaruTheme);
             }
         }
 
@@ -2237,10 +2265,12 @@ export default class BarEnhanced extends Extension {
         // Connect to the settings changes
         this._settingsChangedId = this._settings.connect('changed', (settings, key) => {
             if (key === 'pywal-sync') {
-                if (settings.get_boolean(key))
+                if (settings.get_boolean(key)) {
                     this._startPywalMonitor();
-                else
+                } else {
                     this._stopPywalMonitor();
+                    this._restorePywalBackup();
+                }
             }
             this.updatePanelStyle(settings, key);
             if (['focus-glow', 'neon-intensity', 'bartype', 'balpha', 'height', 'vpad', 'bradius', 'gradient'].includes(key)) {
@@ -2425,20 +2455,34 @@ export default class BarEnhanced extends Extension {
         this._systemAccentSyncSettingId = this._settings.connect('changed::system-accent-sync', () => {
             this._updateSystemAccentMonitor();
         });
-        this._updateSystemAccentMonitor();
+        // enable() already regenerates the stylesheet; only attach the listener.
+        this._updateSystemAccentMonitor(false);
         // this.updateWindowsBlur();
 
         // Dash to Dock
-        this._dashToDockEnabled = this._settings.get_boolean('dash-to-dock-enabled');
-        if (this._dashToDockEnabled) this._enableDashToDock();
+        this._syncDashToDock();
         this._dashToDockSettingId = this._settings.connect('changed::dash-to-dock-enabled', () => {
-            this._dashToDockEnabled = this._settings.get_boolean('dash-to-dock-enabled');
-            if (this._dashToDockEnabled) this._enableDashToDock();
-            else this._disableDashToDock();
+            this._syncDashToDock();
             // The root stylesheet contains optional visual rules for the
             // embedded dock. Regenerate it now so disabling the module removes
             // every #dash selector instead of leaving stale CSS behind.
             StyleSheets.reloadStyle(this, this);
+        });
+        // Re-evaluate when the user turns Ubuntu Dock / Dash to Dock on or off.
+        this._dockConflictSettingIds = ['changed::enabled-extensions', 'changed::disabled-extensions']
+            .map(signal => this._shellSettings.connect(signal, () => {
+                const hadDock = !!this.dockManager;
+                this._syncDashToDock();
+                if (hadDock !== !!this.dockManager)
+                    StyleSheets.reloadStyle(this, this);
+            }));
+        this._dockConflictStateId = Main.extensionManager.connect('extension-state-changed', (_manager, changedExtension) => {
+            if (!['ubuntu-dock@ubuntu.com', 'dash-to-dock@micxgx.gmail.com'].includes(changedExtension?.uuid))
+                return;
+            const hadDock = !!this.dockManager;
+            this._syncDashToDock();
+            if (hadDock !== !!this.dockManager)
+                StyleSheets.reloadStyle(this, this);
         });
 
         // Dynamic Music Pill
@@ -2617,6 +2661,48 @@ export default class BarEnhanced extends Extension {
         this._updateUiGroupClass(false, 'neutral-color');
     }
 
+    // Ubuntu Dock and Dash to Dock patch the same Overview objects as the
+    // embedded dock. Running two of them at once breaks the Overview, so the
+    // embedded dock stays off while either of them is enabled.
+    _getConflictingDock() {
+        const docks = ['ubuntu-dock@ubuntu.com', 'dash-to-dock@micxgx.gmail.com'];
+        try {
+            const shellSettings = this._shellSettings;
+            const enabled = new Set([
+                ...shellSettings.get_strv('enabled-extensions'),
+                ...(Main.sessionMode.enabledExtensions ?? []),
+            ]);
+            const disabled = new Set(shellSettings.get_strv('disabled-extensions'));
+            // lookup() can't be used here: GNOME enables extensions while it is
+            // still loading them, so a dock loaded after Bar Enhanced is not
+            // known yet. Check the install directories instead, which also
+            // ignores stale entries left in enabled-extensions by an
+            // extension that was deleted.
+            const installed = uuid => [GLib.get_user_data_dir(), ...GLib.get_system_data_dirs()]
+                .some(dir => GLib.file_test(
+                    GLib.build_filenamev([dir, 'gnome-shell', 'extensions', uuid, 'metadata.json']),
+                    GLib.FileTest.EXISTS));
+            return docks.find(uuid => enabled.has(uuid) && !disabled.has(uuid) && installed(uuid)) ?? null;
+        } catch (e) {
+            console.error('BarEnhanced: failed to check for other dock extensions', e);
+            return null;
+        }
+    }
+
+    _syncDashToDock() {
+        this._dashToDockEnabled = this._settings.get_boolean('dash-to-dock-enabled');
+        const conflict = this._dashToDockEnabled ? this._getConflictingDock() : null;
+        if (this._dashToDockEnabled && !conflict) {
+            this._enableDashToDock();
+            return;
+        }
+        if (conflict && this._dockConflictLogged !== conflict) {
+            console.log(`BarEnhanced: embedded dock disabled because ${conflict} is enabled`);
+            this._dockConflictLogged = conflict;
+        }
+        this._disableDashToDock();
+    }
+
     _enableDashToDock() {
         if (this.dockManager)
             return;
@@ -2684,7 +2770,9 @@ export default class BarEnhanced extends Extension {
                 this.vitalsMenu = new VitalsMenuButton(this);
                 this.vitalsMenu.menu.box.add_style_class_name('be-menu-vitals');
                 let position = this.vitalsMenu._positionInPanel();
-                Main.panel.addToStatusArea('vitalsMenu', this.vitalsMenu, position[1], position[0]);
+                // 'vitalsMenu' is the standalone Vitals extension's role; using it here
+                // made addToStatusArea throw whenever both were enabled.
+                Main.panel.addToStatusArea('barEnhancedVitalsMenu', this.vitalsMenu, position[1], position[0]);
             } catch (e) {
                 console.error('BarEnhanced: failed to initialize Vitals', e);
                 this._disableVitals();
@@ -2833,6 +2921,15 @@ export default class BarEnhanced extends Extension {
             this._settings.disconnect(this._dashToDockSettingId);
             this._dashToDockSettingId = null;
         }
+        if (this._dockConflictSettingIds) {
+            this._dockConflictSettingIds.forEach(id => this._shellSettings?.disconnect(id));
+            this._dockConflictSettingIds = null;
+        }
+        if (this._dockConflictStateId) {
+            Main.extensionManager.disconnect(this._dockConflictStateId);
+            this._dockConflictStateId = null;
+        }
+        this._dockConflictLogged = null;
         this._disableDashToDock();
 
         if (this._musicPillSettingId) {
@@ -3049,8 +3146,8 @@ export default class BarEnhanced extends Extension {
         if (!this._settings) return;
         this._resetFocusGlow();
         let bartype = this._settings.get_string('bartype');
-        let height = this._settings.get_int('height') || 30;
-        let vPad = this._settings.get_int('vpad') || 2;
+        let height = this._settings.get_double('height') || 30;
+        let vPad = this._settings.get_double('vpad') || 2;
         let borderRadius = this._settings.get_double('bradius') || 30.0;
         let gradient = this._settings.get_boolean('gradient');
         let balpha = this._settings.get_double('balpha');
@@ -3194,6 +3291,9 @@ export default class BarEnhanced extends Extension {
                     return Y > 130 ? ['0.100', '0.100', '0.100'] : ['1.000', '1.000', '1.000'];
                 };
 
+                // Keep the user's own colors so turning Pywal off restores them.
+                this._backupBeforePywal();
+
                 // Pause stylesheet reload during multi-setting changes
                 const wasPaused = this._settings.get_boolean('pause-reload');
                 this._settings.set_boolean('pause-reload', true);
@@ -3296,7 +3396,67 @@ export default class BarEnhanced extends Extension {
         });
     }
 
-    _updateSystemAccentMonitor() {
+    _isThemeInstalled(kind, name) {
+        const dirs = [
+            GLib.build_filenamev([GLib.get_user_data_dir(), kind]),
+            GLib.build_filenamev([GLib.get_home_dir(), kind === 'themes' ? '.themes' : '.icons']),
+            ...GLib.get_system_data_dirs().map(dir => GLib.build_filenamev([dir, kind])),
+        ];
+        return dirs.some(dir => GLib.file_test(GLib.build_filenamev([dir, name]), GLib.FileTest.IS_DIR));
+    }
+
+    // Settings that _syncWithPywal() overwrites.
+    _getPywalKeys() {
+        const keys = ['accent-override'];
+        for (let i = 1; i <= 16; i++)
+            keys.push(`candy${i}`, `dark-candy${i}`, `light-candy${i}`);
+        for (const key of ['bgcolor', 'iscolor', 'fgcolor', 'mbgcolor', 'mfgcolor', 'smbgcolor',
+            'bcolor', 'mbcolor', 'accent-color', 'mscolor', 'mhcolor', 'hscd-color', 'vw-color'])
+            keys.push(key, `dark-${key}`, `light-${key}`);
+        return keys;
+    }
+
+    _backupBeforePywal() {
+        // Only the first sync saves: later syncs would back up Pywal's colors.
+        if (!this._settings || this._settings.get_string('pywal-backup'))
+            return;
+        const backup = {};
+        for (const key of this._getPywalKeys())
+            backup[key] = this._settings.get_value(key).print(true);
+        this._settings.set_string('pywal-backup', JSON.stringify(backup));
+    }
+
+    _restorePywalBackup() {
+        const raw = this._settings?.get_string('pywal-backup');
+        if (!raw)
+            return;
+        // An imported profile turning Pywal off carries its own colors; keep them.
+        if (this._settings.get_boolean('import-export')) {
+            this._settings.set_string('pywal-backup', '');
+            return;
+        }
+        const wasPaused = this._settings.get_boolean('pause-reload');
+        this._settings.set_boolean('pause-reload', true);
+        let restored = false;
+        try {
+            const backup = JSON.parse(raw);
+            const keys = new Set(this._getPywalKeys());
+            for (const [key, value] of Object.entries(backup)) {
+                if (keys.has(key))
+                    this._settings.set_value(key, GLib.Variant.parse(null, value, null, null));
+            }
+            restored = true;
+        } catch (e) {
+            console.error('BarEnhanced: failed to restore colors saved before Pywal sync', e);
+        } finally {
+            this._settings.set_string('pywal-backup', '');
+            this._settings.set_boolean('pause-reload', wasPaused);
+            if (restored && !wasPaused)
+                this._settings.set_boolean('trigger-reload', !this._settings.get_boolean('trigger-reload'));
+        }
+    }
+
+    _updateSystemAccentMonitor(reload = true) {
         if (!this._settings || !this._interfaceSettings)
             return;
         const enabled = this._settings.get_boolean('system-accent-sync');
@@ -3310,7 +3470,8 @@ export default class BarEnhanced extends Extension {
             this._interfaceSettingsId = 0;
         }
         // Toggling off must immediately restore the user's manual border color.
-        this._syncWithSystemAccent();
+        if (reload)
+            this._syncWithSystemAccent();
     }
 
     _syncWithSystemAccent() {

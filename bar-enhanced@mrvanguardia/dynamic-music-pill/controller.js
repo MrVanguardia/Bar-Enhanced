@@ -448,6 +448,9 @@ export class MusicController {
             this._expandedPlayer.destroy();
             this._expandedPlayer = null;
         }
+        // The player selector is added to the layout chrome too; leaving it
+        // behind would keep it on screen bound to a disabled controller.
+        this.closePlayerMenu();
         if (this._pill) {
             this._pill.destroy();
             this._pill = null;
@@ -648,8 +651,8 @@ export class MusicController {
 
     toggleMenu() {
         if (this._expandedPlayer) {
+            // The destroy handler was already connected when it was created.
             this._expandedPlayer.hide();
-            this._expandedPlayer.connect('destroy', () => { this._expandedPlayer = null; });
             return;
         }
 

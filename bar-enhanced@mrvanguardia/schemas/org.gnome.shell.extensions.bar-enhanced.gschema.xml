@@ -1569,6 +1569,21 @@
       <summary>Pywal Palette Sync</summary>
       <description>Synchronize Bar Enhanced colors from ~/.cache/wal/colors. This does not enable GTK theming or read a generic Material You provider.</description>
     </key>
+    <key type="s" name="pywal-backup">
+      <default>""</default>
+      <summary>Colors saved before Pywal sync</summary>
+      <description>Internal: the color settings Pywal sync overwrote, restored when it is turned off.</description>
+    </key>
+    <key type="s" name="yaru-gtk-backup">
+      <default>""</default>
+      <summary>GTK theme saved before Yaru accent sync</summary>
+      <description>Internal: restored when "set-yarutheme" is turned off.</description>
+    </key>
+    <key type="s" name="yaru-icon-backup">
+      <default>""</default>
+      <summary>Icon theme saved before Yaru accent sync</summary>
+      <description>Internal: restored when "set-yarutheme" is turned off.</description>
+    </key>
     <key type="b" name="show-dashboard">
       <default>true</default>
       <summary>Show Dashboard Widget Center</summary>

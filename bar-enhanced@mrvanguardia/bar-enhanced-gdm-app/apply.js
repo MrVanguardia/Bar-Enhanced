@@ -1,5 +1,6 @@
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
+import GdkPixbuf from 'gi://GdkPixbuf';
 
 function getRgbaColor(colorStr, opacityPercent) {
     let opacity = (opacityPercent / 100.0).toFixed(2);
@@ -22,6 +23,17 @@ function getRgbaColor(colorStr, opacityPercent) {
     }
     
     return `rgba(0, 0, 0, ${opacity})`;
+}
+
+// Colours stored as GSettings strings are written into the GDM stylesheet.
+// Accept only plain CSS colour syntax so a malformed or imported value cannot
+// close the rule and inject arbitrary CSS (or break the here-document).
+function cssColor(value, fallback) {
+    const color = String(value ?? '').trim();
+    if (/^#[0-9a-fA-F]{3,8}$/.test(color) ||
+        /^rgba?\(\s*[\d.]+%?\s*,\s*[\d.]+%?\s*,\s*[\d.]+%?\s*(,\s*[\d.]+%?\s*)?\)$/.test(color))
+        return color;
+    return fallback;
 }
 
 // Values emitted into the privileged shell script must never be interpolated
@@ -50,6 +62,32 @@ function localPath(value) {
         console.error(`BarEnhanced: invalid local file URI: ${e.message}`);
         return '';
     }
+}
+
+// The privileged script copies the background and logo with root rights into
+// a world-readable location. A path can come from an imported profile, so only
+// accept regular image files that the current user can already read; otherwise
+// root could be tricked into publishing a private file such as /etc/shadow.
+function readableImagePath(value) {
+    const path = localPath(value);
+    if (!path)
+        return '';
+
+    try {
+        const info = Gio.File.new_for_path(path).query_info(
+            'standard::type,standard::content-type,access::can-read',
+            Gio.FileQueryInfoFlags.NOFOLLOW_SYMLINKS, null);
+        const contentType = info.get_content_type() || '';
+        const [format] = GdkPixbuf.Pixbuf.get_file_info(path);
+        if (format && info.get_file_type() === Gio.FileType.REGULAR &&
+            info.get_attribute_boolean('access::can-read') &&
+            contentType.startsWith('image/'))
+            return path;
+    } catch (e) {
+        // Missing or unreadable files are ignored below.
+    }
+    console.warn(`BarEnhanced: ignoring GDM image that is not a readable image file: ${path}`);
+    return '';
 }
 
 // GDM does not receive Bar Enhanced's runtime style classes. Keep a small,
@@ -99,7 +137,7 @@ function getCss(appearance, topBar, misc, extensionPath, extension) {
 
     // Lock Screen Background CSS
     let bgType = appearance.get_string('background-type');
-    let bgImg = appearance.get_string('background-image');
+    let bgImg = readableImagePath(appearance.get_string('background-image'));
 
     if (bgType === 'image' && bgImg) {
         css += `#lockDialogGroup {\n  background-image: url('file:///usr/share/backgrounds/bar-enhanced-gdm-bg') !important;\n  background-size: cover;\n  background-repeat: no-repeat;\n}\n`;
@@ -119,7 +157,7 @@ function getCss(appearance, topBar, misc, extensionPath, extension) {
 `;
         }
     } else if (bgType === 'color') {
-        let bgColor = appearance.get_string('background-color');
+        let bgColor = cssColor(appearance.get_string('background-color'), '#000000');
         css += `#lockDialogGroup {\n  background-image: none !important;\n  background-color: ${bgColor} !important;\n}\n`;
     }
 
@@ -127,9 +165,9 @@ function getCss(appearance, topBar, misc, extensionPath, extension) {
     let disableArrows = topBar.get_boolean('disable-arrows');
     let disableCorners = topBar.get_boolean('disable-rounded-corners');
     let changeTextColor = topBar.get_boolean('change-text-color');
-    let textColor = topBar.get_string('text-color');
+    let textColor = cssColor(topBar.get_string('text-color'), '#ffffff');
     let changeBgColor = topBar.get_boolean('change-background-color');
-    let bgColorTop = topBar.get_string('background-color');
+    let bgColorTop = cssColor(topBar.get_string('background-color'), '#000000');
 
     const selectElem = (elem = '') => {
         if (elem) {
@@ -293,6 +331,10 @@ export function generateDconfScript(extension) {
     const topBar = extension.getSettings('org.gnome.shell.extensions.bar-enhanced.gdm.top-bar');
     const touchpad = extension.getSettings('org.gnome.shell.extensions.bar-enhanced.gdm.touchpad');
     const a11y = extension.getSettings('org.gnome.shell.extensions.bar-enhanced.gdm.accessibility');
+    // Use the same validation as the privileged copy below, so dconf and CSS
+    // never point GDM at an image the script refused to install.
+    const hasBgImage = !!readableImagePath(appearance.get_string('background-image'));
+    const hasLogo = !!readableImagePath(misc.get_string('logo'));
 
     function formatDouble(val) {
         let s = val.toString();
@@ -338,8 +380,8 @@ text-scaling-factor=${formatDouble(fonts.get_double('scaling-factor'))}
 shell-theme='BarEnhancedGdm'
 
 [org/gnome/desktop/background]
-picture-uri='${appearance.get_string('background-type') === 'image' && appearance.get_string('background-image') ? 'file:///usr/share/backgrounds/bar-enhanced-gdm-bg' : ''}'
-picture-uri-dark='${appearance.get_string('background-type') === 'image' && appearance.get_string('background-image') ? 'file:///usr/share/backgrounds/bar-enhanced-gdm-bg' : ''}'
+picture-uri='${appearance.get_string('background-type') === 'image' && hasBgImage ? 'file:///usr/share/backgrounds/bar-enhanced-gdm-bg' : ''}'
+picture-uri-dark='${appearance.get_string('background-type') === 'image' && hasBgImage ? 'file:///usr/share/backgrounds/bar-enhanced-gdm-bg' : ''}'
 picture-options='zoom'
 
 [org/gnome/desktop/a11y]
@@ -384,7 +426,7 @@ night-light-schedule-from=${formatDouble(nightLight.get_int('start-hour') + nigh
 night-light-schedule-to=${formatDouble(nightLight.get_int('end-hour') + nightLight.get_int('end-minute')/60)}
 
 [org/gnome/login-screen]
-logo='${misc.get_boolean('enable-logo') && misc.get_string('logo') ? 'file:///usr/share/backgrounds/bar-enhanced-gdm-logo' : ''}'
+logo='${misc.get_boolean('enable-logo') && hasLogo ? 'file:///usr/share/backgrounds/bar-enhanced-gdm-logo' : ''}'
 banner-message-enable=${misc.get_boolean('enable-welcome-message')}
 banner-message-text='${dconfString(misc.get_string('welcome-message'))}'
 disable-restart-buttons=${misc.get_boolean('disable-restart-buttons')}
@@ -393,19 +435,80 @@ ${userThemeDconf}`;
 
     let customCss = getCss(appearance, topBar, misc, extension.path, extension);
     let rawBgImage = appearance.get_string('background-image');
-    let bgImage = shellQuote(localPath(rawBgImage));
+    let bgImage = shellQuote(readableImagePath(rawBgImage));
     let bgType = appearance.get_string('background-type');
     let blurBg = appearance.get_boolean('blur-background');
     let blurBgValue = appearance.get_int('blur-background-value');
 
     let rawLogoImage = misc.get_string('logo');
-    let logoImage = shellQuote(localPath(rawLogoImage));
+    let logoImage = shellQuote(readableImagePath(rawLogoImage));
     let enableLogo = misc.get_boolean('enable-logo');
+    const assetsDir = GLib.build_filenamev([GLib.get_user_runtime_dir(),
+        'io.github.mrvanguardia.barEnhanced', 'assets']);
+    // A fixed EOF marker would let any embedded line reading "EOF" end the
+    // here-document early and run the rest as root shell commands.
+    // Base the generated GDM theme on the selected system shell theme, if any.
+    let baseThemeUrl = 'resource:///org/gnome/shell/theme/gnome-shell.css';
+    const shellTheme = appearance.get_string('shell-theme');
+    if (shellTheme && !['default', 'Default', 'BarEnhancedGdm'].includes(shellTheme) &&
+        /^[\w .+-]+$/.test(shellTheme)) {
+        for (const base of ['/usr/share/themes', '/usr/local/share/themes']) {
+            const themeCss = `${base}/${shellTheme}/gnome-shell/gnome-shell.css`;
+            if (GLib.file_test(themeCss, GLib.FileTest.IS_REGULAR)) {
+                baseThemeUrl = `file://${themeCss}`;
+                break;
+            }
+        }
+    }
+    const heredocEnd = `BAR_ENHANCED_EOF_${GLib.uuid_string_random().replace(/-/g, '')}`;
 
     return `#!/bin/bash
-set -eu
+set -euo pipefail
 TEMP_DIR=$(mktemp -d)
 trap 'rm -rf "$TEMP_DIR"' EXIT
+# A file may change after preferences validate it. Open every user-controlled
+# source as the invoking user, without following symlinks, before root writes
+# any world-readable image or changes system configuration.
+copy_user_image() {
+    local source="$1" target="$2" mime
+    [[ "\${PKEXEC_UID:-}" =~ ^[0-9]+$ ]] && [ "$PKEXEC_UID" -ne 0 ] || return 1
+    python3 - "$PKEXEC_UID" "$source" > "$target" <<'PY'
+import os, pwd, shutil, stat, sys
+uid = int(sys.argv[1])
+account = pwd.getpwuid(uid)
+# Keep the user's supplementary groups so group-readable pictures still work.
+os.initgroups(account.pw_name, account.pw_gid)
+os.setgid(account.pw_gid)
+os.setuid(uid)
+fd = os.open(sys.argv[2], os.O_RDONLY | os.O_NOFOLLOW)
+with os.fdopen(fd, 'rb') as source:
+    if not stat.S_ISREG(os.fstat(source.fileno()).st_mode):
+        raise ValueError('GDM image is not a regular file')
+    shutil.copyfileobj(source, sys.stdout.buffer)
+PY
+    if ! command -v file >/dev/null 2>&1; then
+        echo "Bar Enhanced GDM needs the 'file' command to verify images." >&2
+        return 1
+    fi
+    mime=$(file --brief --mime-type "$target")
+    case "$mime" in
+        image/*) ;;
+        # Bar Enhanced's generated SVGs have no XML declaration, so file(1)
+        # reports them as text. Accept that only for .svg files with an <svg> tag.
+        text/*) [[ "$source" == *.svg ]] && grep -q '<svg' "$target" || return 1 ;;
+        *) return 1 ;;
+    esac
+}
+BG_IMG=${bgImage}
+BG_TYPE=${shellQuote(bgType)}
+ENABLE_LOGO=${shellQuote(enableLogo)}
+LOGO_IMG=${logoImage}
+if [ "$BG_TYPE" = "image" ] && [ -n "$BG_IMG" ]; then
+    copy_user_image "$BG_IMG" "$TEMP_DIR/background-image"
+fi
+if [ "$ENABLE_LOGO" = "true" ] && [ -n "$LOGO_IMG" ]; then
+    copy_user_image "$LOGO_IMG" "$TEMP_DIR/logo-image"
+fi
 # GDM needs the system copy of User Themes to load the generated shell theme.
 # Do this check before changing dconf so a missing dependency cannot leave a
 # partially-applied login-screen configuration behind.  Installing packages
@@ -418,16 +521,16 @@ if [ ! -f "$UT_META" ]; then
     exit 1
 fi
 # Write settings
-cat << 'EOF' > "$TEMP_DIR/95-gdm-settings"
+cat << '${heredocEnd}' > "$TEMP_DIR/95-gdm-settings"
 ${dconf}
-EOF
+${heredocEnd}
 
 # Profile configuration
-cat << 'EOF' > "$TEMP_DIR/gdm-profile"
+cat << '${heredocEnd}' > "$TEMP_DIR/gdm-profile"
 user-db:user
 system-db:gdm
 file-db:/usr/share/gdm/greeter-dconf-defaults
-EOF
+${heredocEnd}
 
 # Install settings to GDM database (99- prefix ensures it overrides all other system profiles)
 install -Dm644 "$TEMP_DIR/95-gdm-settings" -T /etc/dconf/db/gdm.d/99-bar-enhanced-gdm
@@ -460,11 +563,9 @@ mkdir -p "$THEME_DIR"
 mkdir -p /usr/share/backgrounds
 
 # Apply background image if present and type is image (using install -Dm644 to set correct SELinux context)
-BG_IMG=${bgImage}
-BG_TYPE="${bgType}"
-BLUR_BG="${blurBg}"
-BLUR_RADIUS="${blurBgValue}"
-if [ "$BG_TYPE" = "image" ] && [ -n "$BG_IMG" ] && [ -f "$BG_IMG" ]; then
+BLUR_BG=${shellQuote(blurBg)}
+BLUR_RADIUS=${shellQuote(Math.max(0, Math.round(Number(blurBgValue) || 0)))}
+if [ "$BG_TYPE" = "image" ] && [ -n "$BG_IMG" ]; then
     if [ "$BLUR_BG" = "true" ]; then
         python3 -c '
 import sys
@@ -476,29 +577,43 @@ try:
     sys.exit(0)
 except Exception as e:
     sys.exit(1)
-' "\$BG_IMG" "\$BLUR_RADIUS" || convert "\$BG_IMG" -blur 0x"\$BLUR_RADIUS" /usr/share/backgrounds/bar-enhanced-gdm-bg || install -Dm644 "\$BG_IMG" /usr/share/backgrounds/bar-enhanced-gdm-bg
+' "$TEMP_DIR/background-image" "\$BLUR_RADIUS" || convert "$TEMP_DIR/background-image" -blur 0x"\$BLUR_RADIUS" /usr/share/backgrounds/bar-enhanced-gdm-bg || install -Dm644 "$TEMP_DIR/background-image" /usr/share/backgrounds/bar-enhanced-gdm-bg
         chmod 644 /usr/share/backgrounds/bar-enhanced-gdm-bg
     else
-        install -Dm644 "\$BG_IMG" /usr/share/backgrounds/bar-enhanced-gdm-bg
+        install -Dm644 "$TEMP_DIR/background-image" /usr/share/backgrounds/bar-enhanced-gdm-bg
     fi
 else
     rm -f /usr/share/backgrounds/bar-enhanced-gdm-bg
 fi
 
 # Apply logo if enabled (using install -Dm644 to set correct SELinux context)
-ENABLE_LOGO="${enableLogo}"
-LOGO_IMG=${logoImage}
-if [ "$ENABLE_LOGO" = "true" ] && [ -n "$LOGO_IMG" ] && [ -f "$LOGO_IMG" ]; then
-    install -Dm644 "$LOGO_IMG" /usr/share/backgrounds/bar-enhanced-gdm-logo
+if [ "$ENABLE_LOGO" = "true" ] && [ -n "$LOGO_IMG" ]; then
+    install -Dm644 "$TEMP_DIR/logo-image" /usr/share/backgrounds/bar-enhanced-gdm-logo
 else
     rm -f /usr/share/backgrounds/bar-enhanced-gdm-logo
 fi
 
 # Append custom CSS
-cat << 'EOF' > "$THEME_DIR/gnome-shell.css"
-@import url("resource:///org/gnome/shell/theme/gnome-shell.css");
+cat << '${heredocEnd}' > "$THEME_DIR/gnome-shell.css"
+@import url("${baseThemeUrl}");
 ${customCss}
-EOF
+${heredocEnd}
+
+# The copied session stylesheet references url(assets/...) relative to the
+# theme file. Copy only regular SVG files (never follow symlinks) so GDM can
+# draw toggles, check boxes and calendar markers.
+ASSETS_SRC=${shellQuote(assetsDir)}
+rm -rf "$THEME_DIR/assets"
+if [ -d "$ASSETS_SRC" ]; then
+    mkdir -p "$THEME_DIR/assets"
+    while IFS= read -r -d '' asset; do
+        asset_name=\${asset##*/}
+        if copy_user_image "$asset" "$TEMP_DIR/asset-image"; then
+            install -m644 "$TEMP_DIR/asset-image" "$THEME_DIR/assets/$asset_name"
+        fi
+    done < <(find "$ASSETS_SRC" -maxdepth 1 -type f -name '*.svg' -print0)
+    chmod 755 "$THEME_DIR/assets"
+fi
 
 chmod 755 /usr/share/themes/BarEnhancedGdm
 chmod 755 "$THEME_DIR"

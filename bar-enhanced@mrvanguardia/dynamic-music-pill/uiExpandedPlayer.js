@@ -1193,9 +1193,16 @@ export const ExpandedPlayer = GObject.registerClass(
                     let lengthMicro = smartUnpack(m['mpris:length']) || 0;
                     let durationSec = Math.round(lengthMicro / 1_000_000);
 
-                    this._lyricsClient.getLyrics(
-                        fetchTitle, fetchArtist, fetchAlbum, durationSec, this._settings
-                    ).then(lyrics => {
+                    // Reuse the lyrics the controller already downloaded for this
+                    // track instead of querying lrclib a second time.
+                    const ctrl = this._controller;
+                    const cachedLyrics = ctrl && ctrl._fetchedTrackKey === `${fetchTitle}||${fetchArtist}`
+                        ? ctrl._fetchedLyricsData : null;
+                    const lyricsRequest = cachedLyrics?.length
+                        ? Promise.resolve(cachedLyrics)
+                        : this._lyricsClient.getLyrics(
+                            fetchTitle, fetchArtist, fetchAlbum, durationSec, this._settings);
+                    lyricsRequest.then(lyrics => {
                         if (page !== this._currentSubPage || !page.get_parent()) return;
                         if (!lyricsWidget || (lyricsWidget.is_finalized && lyricsWidget.is_finalized())) return;
                         if (lyrics && lyrics.length > 0) {
@@ -1380,13 +1387,16 @@ export const ExpandedPlayer = GObject.registerClass(
                     sliderRow.add_child(volLabel);
                     wrapper.add_child(sliderRow);
 
-                    GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
-                        if (!sliderBg.get_parent() || !subpage.get_parent()) return GLib.SOURCE_REMOVE;
+                    // Wait for the first allocation, but give up after ~2 s so
+                    // a page that is never shown cannot keep a busy idle loop.
+                    let allocAttempts = 0;
+                    GLib.timeout_add(GLib.PRIORITY_DEFAULT, 16, () => {
+                        if (this._isCleanedUp || !sliderBg.get_parent() || !subpage.get_parent()) return GLib.SOURCE_REMOVE;
                         if (sliderBg.has_allocation && sliderBg.has_allocation() && sliderBg.get_width() > 0) {
                             upd(frac0);
                             return GLib.SOURCE_REMOVE;
                         }
-                        return GLib.SOURCE_CONTINUE;
+                        return ++allocAttempts < 120 ? GLib.SOURCE_CONTINUE : GLib.SOURCE_REMOVE;
                     });
 
                     allSliders.push({ sliderBg, drag, applyVol });
@@ -1506,9 +1516,11 @@ export const ExpandedPlayer = GObject.registerClass(
                         const doTimer = (m, b, lbl) => {
                             lbl.text = '\u2713';
                             b.set_style('border-radius:12px;padding:8px 12px;min-width:42px;background-color:rgba(255,255,255,0.38);');
+                            // Start the timer right away so it is not lost if the
+                            // popup closes during the confirmation animation.
+                            ctrl.startSleepTimer(m);
                             GLib.timeout_add(GLib.PRIORITY_DEFAULT, 300, () => {
-                                if (this.is_finalized && this.is_finalized()) return GLib.SOURCE_REMOVE;
-                                ctrl.startSleepTimer(m);
+                                if (this._isCleanedUp || !this._controller) return GLib.SOURCE_REMOVE;
                                 this._updateCustomButtons();
                                 this._popPage();
                                 return GLib.SOURCE_REMOVE;
@@ -1559,9 +1571,9 @@ export const ExpandedPlayer = GObject.registerClass(
                         const doRate = (r, b, lbl) => {
                             lbl.text = '\u2713';
                             b.set_style('border-radius:12px;padding:8px 14px;min-width:42px;background-color:rgba(255,255,255,0.38);');
+                            this._controller.setPlaybackRate(r);
                             GLib.timeout_add(GLib.PRIORITY_DEFAULT, 300, () => {
-                                if (this.is_finalized && this.is_finalized()) return GLib.SOURCE_REMOVE;
-                                this._controller.setPlaybackRate(r);
+                                if (this._isCleanedUp || !this._controller) return GLib.SOURCE_REMOVE;
                                 this._popPage();
                                 return GLib.SOURCE_REMOVE;
                             });
@@ -1773,6 +1785,8 @@ export const ExpandedPlayer = GObject.registerClass(
         }
 
         _cleanup() {
+            // St actors have no is_finalized(); timers check this flag instead.
+            this._isCleanedUp = true;
             if (this._updateTimer) { GLib.Source.remove(this._updateTimer); this._updateTimer = null; }
             if (this._resizeDebounceId) { GLib.Source.remove(this._resizeDebounceId); this._resizeDebounceId = null; }
             if (this._leaveHideTimeoutId) { GLib.Source.remove(this._leaveHideTimeoutId); this._leaveHideTimeoutId = null; }

@@ -33,6 +33,11 @@ import { fillBluetoothBatteryPreferences } from './bluetooth-battery-prefs.js';
 import { fillHydroWidgetsPreferences } from './hydro-widgets-prefs.js';
 import { openWallpaperStoreModal } from './wallpaper-store-prefs.js';
 
+// Keys never taken from an imported profile: runtime flags, and backups of
+// the user's own themes/colors that only make sense on the machine they came from.
+const PROFILE_IMPORT_SKIP_KEYS = ['import-export', 'default-font', 'pywal-backup',
+    'yaru-gtk-backup', 'yaru-icon-backup'];
+
 Gio._promisify(Gio.File.prototype, 'query_info_async', 'query_info_finish');
 Gio._promisify(Gio.File.prototype, 'make_directory_async', 'make_directory_finish');
 Gio._promisify(Gio.File.prototype, 'load_contents_async', 'load_contents_finish');
@@ -1454,7 +1459,8 @@ class BarEnhancedPrefs {
         const appGroup = new Adw.PreferencesGroup({ title: T('Desktop App Integration') });
         appsPage.add(appGroup);
         appGroup.add(this.createSwitchRow('apply-gtk', T('Inject Theme into Gtk Ecosystem')));
-        appGroup.add(this.createSwitchRow('apply-flatpak', T('Extend Support to Flatpak Sandbox')));
+        // 'apply-flatpak' is no longer offered: GTK CSS injection was removed,
+        // so the Flatpak permission it added had no effect.
 
         const gdmRow = new Adw.ActionRow({
             title: T('GDM Login Screen Customizer'),
@@ -1816,7 +1822,7 @@ class BarEnhancedPrefs {
                                 mainData = data;
                             }
                             Object.keys(mainData).forEach(k => {
-                                if (allKeys.includes(k) && !['import-export', 'default-font'].includes(k)) {
+                                if (allKeys.includes(k) && !PROFILE_IMPORT_SKIP_KEYS.includes(k)) {
                                     this._setTypedValue(this._settings, k, mainData[k]);
                                 }
                             });
@@ -1951,7 +1957,8 @@ class BarEnhancedPrefs {
 
                                     try {
                                         const variant = GLib.Variant.parse(null, value, null, null);
-                                        if (currentSettings.list_keys().includes(key)) {
+                                        if (currentSettings.list_keys().includes(key) &&
+                                            !(currentSettings === this._settings && PROFILE_IMPORT_SKIP_KEYS.includes(key))) {
                                             currentSettings.set_value(key, variant);
                                         }
                                     } catch (e) {
@@ -2355,13 +2362,13 @@ class BarEnhancedPrefs {
         if (!mainData) mainData = data;
 
         Object.keys(mainData).forEach(k => {
-            if (allKeys.includes(k) && !['import-export', 'default-font'].includes(k)) {
+            if (allKeys.includes(k) && !PROFILE_IMPORT_SKIP_KEYS.includes(k)) {
                 this._setTypedValue(this._settings, k, mainData[k]);
             }
         });
 
         Object.keys(enhData).forEach(k => {
-            if (allKeys.includes(k) && !['import-export', 'default-font'].includes(k)) {
+            if (allKeys.includes(k) && !PROFILE_IMPORT_SKIP_KEYS.includes(k)) {
                 this._setTypedValue(this._settings, k, enhData[k]);
             }
         });
@@ -2433,7 +2440,8 @@ class BarEnhancedPrefs {
         const safeName = (name || 'theme').replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 80);
         const tempPath = GLib.build_filenamev([GLib.get_tmp_dir(), `${safeName}-${GLib.uuid_string_random()}${ext}`]);
         const proc = Gio.Subprocess.new(
-            ['curl', '--fail', '--location', '--output', tempPath, url],
+            ['curl', '--fail', '--location', '--proto', '=https', '--proto-redir', '=https',
+                '--output', tempPath, url],
             Gio.SubprocessFlags.NONE
         );
 
@@ -2893,9 +2901,11 @@ class BarEnhancedPrefs {
                 subtitleText += `  •  ${T('Installed')}`;
             }
 
+            // Adw rows parse titles as Pango markup; names from the store API
+            // (e.g. "Black & White") must be escaped or they render blank.
             const row = new Adw.ActionRow({
-                title: name,
-                subtitle: subtitleText
+                title: GLib.markup_escape_text(String(name ?? ''), -1),
+                subtitle: GLib.markup_escape_text(subtitleText, -1)
             });
 
             const picture = new Gtk.Image({
