@@ -33,6 +33,15 @@ if [ ! -f "$VIDEO_PATH" ]; then
 fi
 
 if [ "$XDG_SESSION_TYPE" == "wayland" ]; then
+    # mpvpaper needs the wlr-layer-shell protocol, which GNOME's Mutter does
+    # not implement. Fail clearly instead of silently doing nothing.
+    case ":${XDG_CURRENT_DESKTOP:-}:" in
+        *:GNOME:*)
+            echo "Video wallpapers are not supported on GNOME Wayland (no wlr-layer-shell)."
+            notify-send "Bar Enhanced" "Video wallpapers are not supported on GNOME Wayland. Use an Xorg session or a static wallpaper." 2>/dev/null || true
+            exit 1
+            ;;
+    esac
     if command -v mpvpaper >/dev/null 2>&1; then
         # mpvpaper runs mpv under the hood and places it behind icons on Wayland
         mpvpaper -o "loop --hwdec=auto --no-audio" "*" "$VIDEO_PATH" &

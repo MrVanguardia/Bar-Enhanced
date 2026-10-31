@@ -78,7 +78,10 @@ export class WallpaperManager {
                 throw new Error('The selected video is not a local file');
             if (this._videoPath === path)
                 return;
-            this._stopVideo();
+            // Do not spawn a separate "stop" process here: it would run
+            // concurrently with the new player and could read the PID file
+            // after the new player wrote it, killing the video just started.
+            // play-wallpaper.sh always stops the previous player itself.
             this._videoProcess = Gio.Subprocess.new(
                 [this._scriptPath, path],
                 Gio.SubprocessFlags.NONE
