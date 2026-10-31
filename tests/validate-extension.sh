@@ -11,6 +11,20 @@ trap 'rm -rf "$SCHEMA_DIR" "$RUNTIME_DIR"' EXIT
 cp "$EXTENSION_DIR"/schemas/*.xml "$SCHEMA_DIR"/
 glib-compile-schemas --strict "$SCHEMA_DIR"
 
+# The repository ships a precompiled schema for manual git installs. If it falls
+# behind the XML, GSettings aborts GNOME Shell when a missing key is read.
+COMMITTED_SCHEMA="$EXTENSION_DIR/schemas/gschemas.compiled"
+if [[ -f "$COMMITTED_SCHEMA" ]]; then
+    for schema_id in $(xmllint --xpath '//schema/@id' "$EXTENSION_DIR"/schemas/*.gschema.xml | sed -E 's/ ?id="([^"]+)"/\1\n/g'); do
+        fresh="$(GSETTINGS_SCHEMA_DIR="$SCHEMA_DIR" gsettings list-keys "$schema_id" | sort)"
+        shipped="$(GSETTINGS_SCHEMA_DIR="$EXTENSION_DIR/schemas" gsettings list-keys "$schema_id" 2>/dev/null | sort || true)"
+        if [[ "$fresh" != "$shipped" ]]; then
+            echo "schemas/gschemas.compiled is stale for $schema_id; run: glib-compile-schemas bar-enhanced@mrvanguardia/schemas" >&2
+            exit 1
+        fi
+    done
+fi
+
 for schema_file in "$EXTENSION_DIR"/schemas/*.gschema.xml; do
     schema_count="$(xmllint --xpath 'count(/schemalist/schema)' "$schema_file")"
     schema_id="$(xmllint --xpath 'string(/schemalist/schema/@id)' "$schema_file")"

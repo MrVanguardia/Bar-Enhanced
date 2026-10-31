@@ -2545,9 +2545,10 @@ class BarEnhancedPrefs {
 
                 // Pass paths as positional arguments so a theme name can never
                 // change the shell command that copies its GTK4 assets.
+                // $1 must be ~/.config/gtk-4.0, never ~/.config itself.
                 const script = 'rm -f "$1/gtk.css" "$1/gtk-dark.css"; rm -rf "$1/assets"; cp -rf "$2/." "$1/"';
                 const proc = Gio.Subprocess.new(
-                    ['bash', '-c', script, 'bar-enhanced-gtk4', configDir, sourceDir],
+                    ['bash', '-c', script, 'bar-enhanced-gtk4', gtk4ConfigDir.get_path(), sourceDir],
                     Gio.SubprocessFlags.NONE
                 );
                 proc.wait_async(null, async (p, res) => {
@@ -2578,7 +2579,7 @@ class BarEnhancedPrefs {
                 // Clean the slate asynchronously
                 const script = 'rm -f "$1/gtk.css" "$1/gtk-dark.css"; rm -rf "$1/assets"';
                 const proc = Gio.Subprocess.new(
-                    ['bash', '-c', script, 'bar-enhanced-gtk4', configDir],
+                    ['bash', '-c', script, 'bar-enhanced-gtk4', gtk4ConfigDir.get_path()],
                     Gio.SubprocessFlags.NONE
                 );
                 proc.wait_async(null, async (p, res) => {

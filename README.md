@@ -185,6 +185,7 @@ To install **Bar Enhanced** correctly, you must clone the repository and then mo
    ```bash
    mkdir -p ~/.local/share/gnome-shell/extensions/
    cp -r Bar-Enhanced/bar-enhanced@mrvanguardia ~/.local/share/gnome-shell/extensions/
+   glib-compile-schemas ~/.local/share/gnome-shell/extensions/bar-enhanced@mrvanguardia/schemas
    ```
 3. **Restart GNOME Shell:**
    - **Wayland:** Log out and log back in.
