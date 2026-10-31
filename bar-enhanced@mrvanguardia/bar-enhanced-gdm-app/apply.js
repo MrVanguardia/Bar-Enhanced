@@ -1,5 +1,6 @@
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
+import GdkPixbuf from 'gi://GdkPixbuf';
 
 function getRgbaColor(colorStr, opacityPercent) {
     let opacity = (opacityPercent / 100.0).toFixed(2);
@@ -75,9 +76,10 @@ function readableImagePath(value) {
     try {
         const info = Gio.File.new_for_path(path).query_info(
             'standard::type,standard::content-type,access::can-read',
-            Gio.FileQueryInfoFlags.NONE, null);
+            Gio.FileQueryInfoFlags.NOFOLLOW_SYMLINKS, null);
         const contentType = info.get_content_type() || '';
-        if (info.get_file_type() === Gio.FileType.REGULAR &&
+        const [format] = GdkPixbuf.Pixbuf.get_file_info(path);
+        if (format && info.get_file_type() === Gio.FileType.REGULAR &&
             info.get_attribute_boolean('access::can-read') &&
             contentType.startsWith('image/'))
             return path;
@@ -461,9 +463,41 @@ ${userThemeDconf}`;
     const heredocEnd = `BAR_ENHANCED_EOF_${GLib.uuid_string_random().replace(/-/g, '')}`;
 
     return `#!/bin/bash
-set -eu
+set -euo pipefail
 TEMP_DIR=$(mktemp -d)
 trap 'rm -rf "$TEMP_DIR"' EXIT
+# A file may change after preferences validate it. Open every user-controlled
+# source as the invoking user, without following symlinks, before root writes
+# any world-readable image or changes system configuration.
+copy_user_image() {
+    local source="$1" target="$2" mime
+    [[ "\${PKEXEC_UID:-}" =~ ^[0-9]+$ ]] && [ "$PKEXEC_UID" -ne 0 ] || return 1
+    python3 - "$PKEXEC_UID" "$source" > "$target" <<'PY'
+import os, pwd, shutil, stat, sys
+uid = int(sys.argv[1])
+account = pwd.getpwuid(uid)
+os.setgroups([])
+os.setgid(account.pw_gid)
+os.setuid(uid)
+fd = os.open(sys.argv[2], os.O_RDONLY | os.O_NOFOLLOW)
+with os.fdopen(fd, 'rb') as source:
+    if not stat.S_ISREG(os.fstat(source.fileno()).st_mode):
+        raise ValueError('GDM image is not a regular file')
+    shutil.copyfileobj(source, sys.stdout.buffer)
+PY
+    mime=$(file --brief --mime-type "$target")
+    [[ "$mime" == image/* ]] || return 1
+}
+BG_IMG=${bgImage}
+BG_TYPE=${shellQuote(bgType)}
+ENABLE_LOGO=${shellQuote(enableLogo)}
+LOGO_IMG=${logoImage}
+if [ "$BG_TYPE" = "image" ] && [ -n "$BG_IMG" ]; then
+    copy_user_image "$BG_IMG" "$TEMP_DIR/background-image"
+fi
+if [ "$ENABLE_LOGO" = "true" ] && [ -n "$LOGO_IMG" ]; then
+    copy_user_image "$LOGO_IMG" "$TEMP_DIR/logo-image"
+fi
 # GDM needs the system copy of User Themes to load the generated shell theme.
 # Do this check before changing dconf so a missing dependency cannot leave a
 # partially-applied login-screen configuration behind.  Installing packages
@@ -518,11 +552,9 @@ mkdir -p "$THEME_DIR"
 mkdir -p /usr/share/backgrounds
 
 # Apply background image if present and type is image (using install -Dm644 to set correct SELinux context)
-BG_IMG=${bgImage}
-BG_TYPE=${shellQuote(bgType)}
 BLUR_BG=${shellQuote(blurBg)}
 BLUR_RADIUS=${shellQuote(Math.max(0, Math.round(Number(blurBgValue) || 0)))}
-if [ "$BG_TYPE" = "image" ] && [ -n "$BG_IMG" ] && [ -f "$BG_IMG" ]; then
+if [ "$BG_TYPE" = "image" ] && [ -n "$BG_IMG" ]; then
     if [ "$BLUR_BG" = "true" ]; then
         python3 -c '
 import sys
@@ -534,20 +566,18 @@ try:
     sys.exit(0)
 except Exception as e:
     sys.exit(1)
-' "\$BG_IMG" "\$BLUR_RADIUS" || convert "\$BG_IMG" -blur 0x"\$BLUR_RADIUS" /usr/share/backgrounds/bar-enhanced-gdm-bg || install -Dm644 "\$BG_IMG" /usr/share/backgrounds/bar-enhanced-gdm-bg
+' "$TEMP_DIR/background-image" "\$BLUR_RADIUS" || convert "$TEMP_DIR/background-image" -blur 0x"\$BLUR_RADIUS" /usr/share/backgrounds/bar-enhanced-gdm-bg || install -Dm644 "$TEMP_DIR/background-image" /usr/share/backgrounds/bar-enhanced-gdm-bg
         chmod 644 /usr/share/backgrounds/bar-enhanced-gdm-bg
     else
-        install -Dm644 "\$BG_IMG" /usr/share/backgrounds/bar-enhanced-gdm-bg
+        install -Dm644 "$TEMP_DIR/background-image" /usr/share/backgrounds/bar-enhanced-gdm-bg
     fi
 else
     rm -f /usr/share/backgrounds/bar-enhanced-gdm-bg
 fi
 
 # Apply logo if enabled (using install -Dm644 to set correct SELinux context)
-ENABLE_LOGO=${shellQuote(enableLogo)}
-LOGO_IMG=${logoImage}
-if [ "$ENABLE_LOGO" = "true" ] && [ -n "$LOGO_IMG" ] && [ -f "$LOGO_IMG" ]; then
-    install -Dm644 "$LOGO_IMG" /usr/share/backgrounds/bar-enhanced-gdm-logo
+if [ "$ENABLE_LOGO" = "true" ] && [ -n "$LOGO_IMG" ]; then
+    install -Dm644 "$TEMP_DIR/logo-image" /usr/share/backgrounds/bar-enhanced-gdm-logo
 else
     rm -f /usr/share/backgrounds/bar-enhanced-gdm-logo
 fi
@@ -565,7 +595,12 @@ ASSETS_SRC=${shellQuote(assetsDir)}
 rm -rf "$THEME_DIR/assets"
 if [ -d "$ASSETS_SRC" ]; then
     mkdir -p "$THEME_DIR/assets"
-    find "$ASSETS_SRC" -maxdepth 1 -type f -name '*.svg' -exec install -m644 {} "$THEME_DIR/assets/" \\;
+    while IFS= read -r -d '' asset; do
+        asset_name=\${asset##*/}
+        if copy_user_image "$asset" "$TEMP_DIR/asset-image"; then
+            install -m644 "$TEMP_DIR/asset-image" "$THEME_DIR/assets/$asset_name"
+        fi
+    done < <(find "$ASSETS_SRC" -maxdepth 1 -type f -name '*.svg' -print0)
     chmod 755 "$THEME_DIR/assets"
 fi
 
