@@ -2673,7 +2673,16 @@ export default class BarEnhanced extends Extension {
                 ...(Main.sessionMode.enabledExtensions ?? []),
             ]);
             const disabled = new Set(shellSettings.get_strv('disabled-extensions'));
-            return docks.find(uuid => enabled.has(uuid) && !disabled.has(uuid)) ?? null;
+            // lookup() can't be used here: GNOME enables extensions while it is
+            // still loading them, so a dock loaded after Bar Enhanced is not
+            // known yet. Check the install directories instead, which also
+            // ignores stale entries left in enabled-extensions by an
+            // extension that was deleted.
+            const installed = uuid => [GLib.get_user_data_dir(), ...GLib.get_system_data_dirs()]
+                .some(dir => GLib.file_test(
+                    GLib.build_filenamev([dir, 'gnome-shell', 'extensions', uuid, 'metadata.json']),
+                    GLib.FileTest.EXISTS));
+            return docks.find(uuid => enabled.has(uuid) && !disabled.has(uuid) && installed(uuid)) ?? null;
         } catch (e) {
             console.error('BarEnhanced: failed to check for other dock extensions', e);
             return null;

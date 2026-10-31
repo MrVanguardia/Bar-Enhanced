@@ -476,7 +476,8 @@ copy_user_image() {
 import os, pwd, shutil, stat, sys
 uid = int(sys.argv[1])
 account = pwd.getpwuid(uid)
-os.setgroups([])
+# Keep the user's supplementary groups so group-readable pictures still work.
+os.initgroups(account.pw_name, account.pw_gid)
 os.setgid(account.pw_gid)
 os.setuid(uid)
 fd = os.open(sys.argv[2], os.O_RDONLY | os.O_NOFOLLOW)
@@ -485,8 +486,18 @@ with os.fdopen(fd, 'rb') as source:
         raise ValueError('GDM image is not a regular file')
     shutil.copyfileobj(source, sys.stdout.buffer)
 PY
+    if ! command -v file >/dev/null 2>&1; then
+        echo "Bar Enhanced GDM needs the 'file' command to verify images." >&2
+        return 1
+    fi
     mime=$(file --brief --mime-type "$target")
-    [[ "$mime" == image/* ]] || return 1
+    case "$mime" in
+        image/*) ;;
+        # Bar Enhanced's generated SVGs have no XML declaration, so file(1)
+        # reports them as text. Accept that only for .svg files with an <svg> tag.
+        text/*) [[ "$source" == *.svg ]] && grep -q '<svg' "$target" || return 1 ;;
+        *) return 1 ;;
+    esac
 }
 BG_IMG=${bgImage}
 BG_TYPE=${shellQuote(bgType)}

@@ -13,7 +13,16 @@ import { ScrollLabel, CrossfadeArt } from './dynamic-music-pill/uiWidgets.js';
 // The date menu owns the Shell weather client. Reuse it so disabling this
 // extension leaves no extra GeoClue/GWeather client alive.
 function getWeatherClient() {
-    return Main.panel.statusArea.dateMenu?._weatherItem?._weatherClient ?? null;
+    const client = Main.panel.statusArea.dateMenu?._weatherItem?._weatherClient ?? null;
+    // The date menu refreshes this client only when the calendar is opened.
+    // Refresh it when a widget is created too (as the old per-widget client
+    // did), so the widget does not show stale weather.
+    try {
+        client?.update?.();
+    } catch (e) {
+        console.error('BarEnhanced: weather refresh failed:', e.message);
+    }
+    return client;
 }
 
 // Helper function to convert RGB/RGBA color strings to Hex format, since Pango markup
