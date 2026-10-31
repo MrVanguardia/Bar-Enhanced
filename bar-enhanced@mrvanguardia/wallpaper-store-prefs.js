@@ -27,6 +27,31 @@ export function wallpaperMediaFromUrl(url) {
     };
 }
 
+// Pling download links end with the original file name, unescaped. Names
+// with spaces or accents make curl reject the URL (exit 3), so re-encode the
+// last path segment. Already-encoded names are decoded first to avoid %2520.
+export function normalizeDownloadUrl(url) {
+    if (typeof url !== 'string' || !url)
+        return url;
+    const slash = url.lastIndexOf('/');
+    const query = url.indexOf('?', slash);
+    const end = query >= 0 ? query : url.length;
+    let name = url.slice(slash + 1, end);
+    try {
+        name = decodeURIComponent(name);
+    } catch (e) {
+        // A stray '%' that is not an escape: encode the raw name as is.
+    }
+    return url.slice(0, slash + 1) + encodeURIComponent(name) + url.slice(end);
+}
+
+// mpvpaper needs wlr-layer-shell, which GNOME's Mutter does not implement.
+function videoWallpapersSupported() {
+    const wayland = GLib.getenv('XDG_SESSION_TYPE') === 'wayland';
+    const gnome = (GLib.getenv('XDG_CURRENT_DESKTOP') || '').split(':').includes('GNOME');
+    return !(wayland && gnome);
+}
+
 export function openWallpaperStoreModal(parent, settings, T, soupSession) {
     const storeWindow = new Adw.Window({
         title: T('Wallpaper Store'),
@@ -202,17 +227,21 @@ function renderWallpaperList(container, loadingLabel, data, soupSession, T, sett
         if (!item.id && !link) return;
 
         const listedMedia = wallpaperMediaFromUrl(link);
-        const typeLabelText = listedMedia?.type === 'video' ? T('Animated Video') :
+        const videoBlocked = listedMedia?.type === 'video' && !videoWallpapersSupported();
+        const typeLabelText = videoBlocked ? T('Animated Video (not supported on GNOME Wayland)') :
+            listedMedia?.type === 'video' ? T('Animated Video') :
             listedMedia ? T('Static Image') : T('Unsupported format');
-        
-        let currentUri = settings.get_string('hydro-wallpaper-uri');
-        let isApplied = false;
-        
-        isApplied = currentUri.includes(item.id);
 
+        // Downloaded files are named "<id>_<name>.<ext>"; compare that prefix
+        // (a bare substring match made id "12" match any path containing 12).
+        const currentUri = settings.get_string('hydro-wallpaper-uri');
+        const isApplied = !!item.id && settings.get_boolean('hydro-wallpaper-enabled') &&
+            GLib.path_get_basename(currentUri).startsWith(`${String(item.id).replace(/[^a-zA-Z0-9._-]/g, '_')}_`);
+
+        // Adw rows parse titles as Pango markup; escape names from the API.
         const row = new Adw.ActionRow({
-            title: name,
-            subtitle: `${typeLabelText} ${item.rating ? '• ⭐ ' + item.rating : ''}`
+            title: GLib.markup_escape_text(String(name ?? ''), -1),
+            subtitle: GLib.markup_escape_text(`${typeLabelText} ${item.rating ? '• ⭐ ' + item.rating : ''}`, -1)
         });
 
         const picture = new Gtk.Image({
@@ -239,7 +268,7 @@ function renderWallpaperList(container, loadingLabel, data, soupSession, T, sett
             label: isApplied ? T('Applied') : T('Apply'),
             valign: Gtk.Align.CENTER,
             css_classes: isApplied ? ['pill', 'flat'] : ['pill', 'suggested-action'],
-            sensitive: !isApplied && !!listedMedia
+            sensitive: !isApplied && !!listedMedia && !videoBlocked
         });
 
         btn.connect('clicked', () => {
@@ -255,6 +284,7 @@ function renderWallpaperList(container, loadingLabel, data, soupSession, T, sett
             };
 
             const performDownloadAndApply = (downloadUrl, fileIdOverride) => {
+                downloadUrl = normalizeDownloadUrl(downloadUrl);
                 const media = wallpaperMediaFromUrl(downloadUrl);
                 if (!media) {
                     markFailed(T('Unsupported wallpaper format or download link'));
@@ -266,7 +296,8 @@ function renderWallpaperList(container, loadingLabel, data, soupSession, T, sett
                 const wpDir = GLib.get_home_dir() + '/.local/share/backgrounds/bar-enhanced';
                 GLib.mkdir_with_parents(wpDir, 0o755);
                 
-                const finalFile = `${wpDir}/${fileId}_${name.replace(/[^a-zA-Z0-9]/g, '_')}${media.extension}`;
+                const safeName = String(name || 'wallpaper').replace(/[^a-zA-Z0-9]/g, '_').slice(0, 80);
+                const finalFile = `${wpDir}/${fileId}_${safeName}${media.extension}`;
 
                 if (Gio.File.new_for_path(finalFile).query_exists(null)) {
                     applyWallpaper(finalFile, media.type, settings, btn, T);

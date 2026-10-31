@@ -214,6 +214,11 @@ if rg -q ' /tmp/(95-gdm-settings|gdm-profile)' "$EXTENSION_DIR/bar-enhanced-gdm-
     exit 1
 fi
 
+if ! rg -q "page\.add\(group\)" "$EXTENSION_DIR/prefs.js"; then
+    echo 'The theme store must add its theme group to the page, or it stays empty.' >&2
+    exit 1
+fi
+
 if ! rg -q "curl', '--fail', '--location', '--proto', '=https', '--proto-redir', '=https'," "$EXTENSION_DIR/wallpaper-store-prefs.js"; then
     echo 'Wallpaper downloads must fail safely before applying a file.' >&2
     exit 1

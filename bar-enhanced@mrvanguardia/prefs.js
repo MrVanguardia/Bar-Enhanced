@@ -31,7 +31,7 @@ import { fillMusicPillPreferences } from './dynamic-music-pill-prefs.js';
 import { fillVitalsPreferences } from './vitals-prefs.js';
 import { fillBluetoothBatteryPreferences } from './bluetooth-battery-prefs.js';
 import { fillHydroWidgetsPreferences } from './hydro-widgets-prefs.js';
-import { openWallpaperStoreModal } from './wallpaper-store-prefs.js';
+import { openWallpaperStoreModal, normalizeDownloadUrl } from './wallpaper-store-prefs.js';
 
 // Keys never taken from an imported profile: runtime flags, and backups of
 // the user's own themes/colors that only make sense on the machine they came from.
@@ -2427,6 +2427,7 @@ class BarEnhancedPrefs {
     }
 
     downloadAndInstall(url, name, type, callback) {
+        url = normalizeDownloadUrl(url);
         if (!/^https:\/\//i.test(url || '')) {
             console.error('Refusing to download a theme from a non-HTTPS URL.');
             if (callback) callback(false);
@@ -2653,12 +2654,15 @@ class BarEnhancedPrefs {
 
         const page = new Adw.PreferencesPage();
         const group = new Adw.PreferencesGroup({
-            title: T('Featured Themes & Icons'),
+            title: GLib.markup_escape_text(T('Featured Themes & Icons'), -1),
             description: T('Download community styles.')
         });
 
         const themeContainer = new Gtk.Box({ orientation: Gtk.Orientation.VERTICAL, spacing: 6 });
         group.add(themeContainer);
+        // Without this the store window stayed empty: every theme was added
+        // to a group that was never placed on the page.
+        page.add(group);
 
         const loadingLabel = new Gtk.Label({ label: T('Loading themes...'), margin_top: 20 });
         themeContainer.append(loadingLabel);
@@ -2854,11 +2858,16 @@ class BarEnhancedPrefs {
             if (loadingLabel && loadingLabel.get_parent()) container.remove(loadingLabel);
         } catch (e) { }
 
+        // The old fallback offered GitHub source tarballs of two icon themes.
+        // Those need their install.sh and do not work when simply extracted,
+        // so tell the user the store could not be reached instead.
         if (!data || !Array.isArray(data) || data.length === 0) {
-            data = [
-                { name: 'WhiteSur Icons', previewpic1: 'https://www.pling.com/img/d/7/4/1/f45a05b38d39369a4736f88f24a0d92f9f1b.png', downloadlink1: 'https://github.com/vinceliuice/WhiteSur-icon-theme/archive/refs/heads/master.tar.gz' },
-                { name: 'Tela Circle Icons', previewpic1: 'https://www.pling.com/img/5/0/0/2/026859e43673c6833b666a012c478a29b43d.png', downloadlink1: 'https://github.com/vinceliuice/Tela-circle-icon-theme/archive/refs/heads/master.tar.gz' }
-            ];
+            container.append(new Gtk.Label({
+                label: T('Could not load themes from Pling. Check your connection and try again.'),
+                margin_top: 20,
+                wrap: true,
+            }));
+            return;
         }
 
         const gnomeMajor = this.getGnomeShellVersion();
@@ -2867,19 +2876,23 @@ class BarEnhancedPrefs {
         const allInstalled = [...installedIcons, ...installedThemes];
 
         data.forEach((item) => {
-            const name = item.name;
+            const name = String(item.name ?? '');
             const link = item.downloadlink1;
             const preview = item.previewpic1 || item.previewpic2;
-            if (!item.id && !link) return;
+            if (!name || (!item.id && !link)) return;
 
             const compat = this.checkCompatibility(item, gnomeMajor);
             if (!compat.compatible) return;
 
-            const cleanName = name.toLowerCase().replace(/[^a-z0-9]/g, '');
-            const isInstalled = allInstalled.some(i => {
+            // An installed folder matches when it is the theme's name or a
+            // variant of it ("WhiteSur" -> "WhiteSur-dark"). The old check
+            // also matched any theme whose name merely contained a generic
+            // installed folder such as "gnome", "Adwaita" or "Yaru", which
+            // wrongly showed many themes as already installed.
+            const cleanName = name.toLowerCase().replace(/\s+icons?$/i, '').replace(/[^a-z0-9]/g, '');
+            const isInstalled = cleanName.length >= 3 && allInstalled.some(i => {
                 const cleanInstalled = i.toLowerCase().replace(/[^a-z0-9]/g, '');
-                return cleanName.includes(cleanInstalled) || cleanInstalled.includes(cleanName) ||
-                    name.toLowerCase().includes(i.toLowerCase()) || i.toLowerCase().includes(name.toLowerCase().replace(/\s+icons?$/i, ''));
+                return cleanInstalled === cleanName || cleanInstalled.startsWith(cleanName);
             });
 
             let typeLabelText = '';

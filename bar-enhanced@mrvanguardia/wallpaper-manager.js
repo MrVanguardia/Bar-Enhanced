@@ -36,7 +36,8 @@ export class WallpaperManager {
         this.extension = null;
     }
 
-    _sync() {
+    // Signal handlers pass (settings, key); enable() calls _sync() with no key.
+    _sync(_settings, changedKey = null) {
         if (!this.settings.get_boolean('hydro-wallpaper-enabled')) {
             this._stopVideo();
             return;
@@ -49,7 +50,12 @@ export class WallpaperManager {
             this._playVideo(uri);
         } else if (type === 'image' && uri) {
             this._stopVideo();
-            this._setImageWallpaper(uri);
+            // GNOME already stores the wallpaper. Only write it when the
+            // store changes it: enable() also runs on every unlock, and
+            // re-applying there reverted wallpapers the user later picked
+            // in GNOME Settings.
+            if (changedKey)
+                this._setImageWallpaper(uri);
         } else {
             this._stopVideo();
         }
