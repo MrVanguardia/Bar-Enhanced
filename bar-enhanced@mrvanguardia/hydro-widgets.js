@@ -7,23 +7,13 @@ import cairo from 'gi://cairo';
 import UPowerGlib from 'gi://UPowerGlib';
 import * as Mpris from 'resource:///org/gnome/shell/ui/mpris.js';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
-import { WeatherClient } from 'resource:///org/gnome/shell/misc/weather.js';
 import { WaveformVisualizer } from './dynamic-music-pill/uiVisualizers.js';
 import { ScrollLabel, CrossfadeArt } from './dynamic-music-pill/uiWidgets.js';
 
-// WeatherClient has no destroy(): each instance keeps GeoClue, GWeather and
-// settings connections alive for the rest of the session. The widgets are
-// rebuilt on every lock/unlock, so share a single client instead of leaking a
-// new one each time, and ask it to refresh when a widget is created.
-let sharedWeatherClient = null;
+// The date menu owns the Shell weather client. Reuse it so disabling this
+// extension leaves no extra GeoClue/GWeather client alive.
 function getWeatherClient() {
-    sharedWeatherClient ??= new WeatherClient();
-    try {
-        sharedWeatherClient.update?.();
-    } catch (e) {
-        console.error('BarEnhanced: weather refresh failed:', e.message);
-    }
-    return sharedWeatherClient;
+    return Main.panel.statusArea.dateMenu?._weatherItem?._weatherClient ?? null;
 }
 
 // Helper function to convert RGB/RGBA color strings to Hex format, since Pango markup
@@ -718,7 +708,7 @@ const HydroWeatherWidget = GObject.registerClass(
             this.add_child(this._pixel16Box);
 
             this._weatherClient = getWeatherClient();
-            this._weatherUpdateId = this._weatherClient.connect('changed', this._updateWeather.bind(this));
+            this._weatherUpdateId = this._weatherClient?.connect('changed', this._updateWeather.bind(this)) ?? null;
             this._updateWeather();
 
         }
@@ -944,7 +934,7 @@ const HydroCalendarWidget = GObject.registerClass(
                 if (!this._weatherClient) {
                     this._weatherClient = getWeatherClient();
                 }
-                let info = this._weatherClient.info;
+                let info = this._weatherClient?.info;
                 if (info && info.is_valid && info.is_valid()) {
                     let temp = info.get_temp_summary();
                     this._tempLabel.set_text(temp);
